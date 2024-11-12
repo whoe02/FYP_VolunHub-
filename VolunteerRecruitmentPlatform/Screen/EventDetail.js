@@ -1,18 +1,66 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from 'react-native/Libraries/NewAppScreen';
 
-const EventDetail = ({ route, navigation }) => {
+const EventDetail = ({ route }) => {
     const { top: safeTop } = useSafeAreaInsets();
     const { event } = route.params;
-    const [user] = useState('Organization');
+
     const images = event.eventImages || [];
 
+    const renderButtons = () => {
+        switch (event.status) {
+            case 'catalog':
+                return (
+                    <>
+                        <TouchableOpacity style={styles.button}>
+                            <Text style={styles.buttonText}>Enquiry Now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonApply}>
+                            <Text style={styles.buttonTextApply}>Apply Now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonShort}>
+                            <Ionicons name="bookmark-outline" size={24} color={Colors.black} />
+                        </TouchableOpacity>
+                    </>
+                );
+            case 'pending':
+                return (
+                    <>
+                        <TouchableOpacity style={styles.button}>
+                            <Text style={styles.buttonText}>Enquiry Now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonCancel}>
+                            <Text style={styles.buttonText}>Cancel Application</Text>
+                        </TouchableOpacity>
+                    </>
+                );
+            case 'active':
+                return (
+                    <>
+                        <TouchableOpacity style={styles.button}>
+                            <Text style={styles.buttonText}>Enquiry Now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonCheckIn}>
+                            <Text style={styles.buttonText}>Check In</Text>
+                        </TouchableOpacity>
+                    </>
+                );
+            case 'expired':
+                return (
+                    <TouchableOpacity style={[styles.buttonExpired, { backgroundColor: '#D3D3D3' }]}>
+                        <Text style={styles.buttonTextExpired}>Event Expired</Text>
+                    </TouchableOpacity>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
-        <ScrollView contentContainerStyle={{ paddingTop: safeTop, flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
-            {/* Horizontal scroll for multiple images */}
+        <ScrollView contentContainerStyle={{ paddingTop: safeTop }} style={styles.container}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                 {images.length > 0 ? (
                     images.map((img, index) => (
@@ -23,22 +71,8 @@ const EventDetail = ({ route, navigation }) => {
                 )}
             </ScrollView>
 
-            {/* Event Title */}
-            <View style={styles.titleRow}>
-                <Text style={styles.title}>{event.title}</Text>
-                {user === 'Organization' && (
-                    <View style={styles.iconsContainer}>
-                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
-                            <Ionicons name="pencil-outline" size={30} color={Colors.black} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
-                            <Ionicons name="trash-outline" size={30} color={Colors.black} />
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </View>
+            <Text style={styles.title}>{event.title}</Text>
 
-            {/* Event Details Section */}
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
                 <Text style={styles.detailText}>Date: {event.date}</Text>
@@ -48,7 +82,6 @@ const EventDetail = ({ route, navigation }) => {
                 <Text style={styles.detailText}>Status: {event.status}</Text>
             </View>
 
-            {/* Categories List */}
             <View style={styles.categoriesSection}>
                 <Text style={styles.detailHeading}>Categories</Text>
                 <View style={styles.categoriesWrapper}>
@@ -58,23 +91,14 @@ const EventDetail = ({ route, navigation }) => {
                 </View>
             </View>
 
-            {/* Event Description Section */}
             <View style={styles.descriptionSection}>
                 <Text style={styles.detailHeading}>Description</Text>
                 <Text style={styles.description}>{event.description}</Text>
             </View>
 
-            {/* Additional Buttons for Organization */}
-            {user === 'Organization' && (
-                <View style={styles.orgButtonContainer}>
-                    <TouchableOpacity style={styles.button}>
-                        <Text style={styles.buttonText}>Participant List</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Reviews', { event })}>
-                        <Text style={styles.buttonText}>Review</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+            <View style={styles.buttonContainer}>
+                {renderButtons()}
+            </View>
         </ScrollView>
     );
 };
@@ -106,16 +130,6 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 20,
     },
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    iconsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
     detailHeading: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -135,7 +149,6 @@ const styles = StyleSheet.create({
         padding: 10,
         shadowColor: 'grey',   
         elevation: 1,
-        marginTop: -15,
     },
     categoriesSection: {
         padding: 10,
@@ -162,10 +175,12 @@ const styles = StyleSheet.create({
         shadowColor: 'grey',   
         elevation: 1,
     },
-    orgButtonContainer: {
+    buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 10,
+        padding: 10,
+        marginTop: 20,
+        marginBottom: 40,
     },
     button: {
         flex: 1,
@@ -175,10 +190,19 @@ const styles = StyleSheet.create({
         marginRight: 10,
         alignItems: 'center',
     },
-    deleteButton: {
-        flex: 1,
-        backgroundColor: '#d9534f',
+    buttonApply: {
+        flex: 2,
+        backgroundColor: '#6a8a6d',
         paddingVertical: 15,
+        borderRadius: 8,
+        marginRight: 10,
+        alignItems: 'center',
+    },
+    buttonShort: {
+        flex: 0.5,
+        borderWidth: 0.5,
+        borderColor: Colors.darkGrey,
+        paddingVertical: 10,
         borderRadius: 8,
         alignItems: 'center',
     },
@@ -189,6 +213,33 @@ const styles = StyleSheet.create({
     },
     buttonTextApply: {
         color: 'white',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    buttonCancel: {
+        flex: 1,
+        backgroundColor: '#b83027', // Tomato color for cancel
+        paddingVertical: 15,
+        borderRadius: 8,
+        marginRight: 10,
+        alignItems: 'center',
+    },
+    buttonCheckIn: {
+        flex: 1,
+        backgroundColor: '#6a8a6d', // Lime green for check-in
+        paddingVertical: 15,
+        borderRadius: 8,
+        marginRight: 10,
+        alignItems: 'center',
+    },
+    buttonExpired: {
+        flex: 1,
+        paddingVertical: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    buttonTextExpired: {
+        color: '#888',
         fontSize: 14,
         fontWeight: 'bold',
     },

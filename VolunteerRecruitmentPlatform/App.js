@@ -14,6 +14,10 @@ import SearchPage from './Screen/SearchPage';
 import OrganizationEvent from './Screen/OraganizationEventScreen';
 import Reviews from './Screen/ReviewScreen';
 import EditEvent from './Screen/EditEventScreen';
+import Profile from './Screen/ProfilePage';
+import MyEvent from './Screen/MyEvent';
+import Notification from './Screen/NotificationPage';
+import LiveChat from './Screen/LiveChatList';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,6 +58,7 @@ const App = () => {
         <Stack.Screen name="OrganizationEvent" component={OrganizationEvent} />
         <Stack.Screen name="Reviews" component={Reviews} />
         <Stack.Screen name="EditEvent" component={EditEvent} />
+        <Stack.Screen name="Notification" component={Notification} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -76,7 +81,7 @@ const TabNavigator = () => {
             iconName = focused ? 'clipboard' : 'clipboard-outline';
           } else if (route.name === 'Rewards') {
             iconName = focused ? 'trophy' : 'trophy-outline';
-          } else if (route.name === 'Notification') {
+          } else if (route.name === 'Live Chat') {
             iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
@@ -90,9 +95,9 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Browse" component={Home} />
       <Tab.Screen name="My Event" component={OrganizationEvent} />
-      <Tab.Screen name="Rewards" component={Detail} />
-      <Tab.Screen name="Notification" component={Home} />
-      <Tab.Screen name="Profile" component={Detail} />
+      <Tab.Screen name="Rewards" component={MyEvent} />
+      <Tab.Screen name="Live Chat" component={LiveChat} />
+      <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>
   );
 };

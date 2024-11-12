@@ -12,6 +12,7 @@ const EventList = ({ activeTab }) => {
     <TouchableOpacity 
       style={styles.eventItem} 
       onPress={() => navigation.navigate('EventDetail', { event: item })} // Navigate to EventDetail with event data
+      activeOpacity={0.8}    
     >
       <View style={{ paddingTop: 15, paddingBottom: 15, }}>
         <Image source={{ uri: item.image }} style={styles.eventImage} />
@@ -32,7 +33,6 @@ const EventList = ({ activeTab }) => {
 
   return (
     <View style={styles.container}>
-      {/* forlop laider */}
       <FlatList
         data={events}
         keyExtractor={(item) => item.id.toString()}

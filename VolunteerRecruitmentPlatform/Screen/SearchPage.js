@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
+
 
 const SearchPage = () => {
     const categories = ['Volunteer', 'Community Service', 'Education', 'Environment'];
