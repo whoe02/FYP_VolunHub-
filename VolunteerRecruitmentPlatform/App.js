@@ -18,6 +18,8 @@ import Profile from './Screen/ProfilePage';
 import MyEvent from './Screen/MyEvent';
 import Notification from './Screen/NotificationPage';
 import LiveChat from './Screen/LiveChatList';
+import Chat from './Screen/Chat';
+import ManageProfile from './Screen/ManageProfile';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -59,6 +61,8 @@ const App = () => {
         <Stack.Screen name="Reviews" component={Reviews} />
         <Stack.Screen name="EditEvent" component={EditEvent} />
         <Stack.Screen name="Notification" component={Notification} />
+        <Stack.Screen name="Chat" component={Chat} />
+        <Stack.Screen name="ManageProfile" component={ManageProfile} />
       </Stack.Navigator>
     </NavigationContainer>
   );

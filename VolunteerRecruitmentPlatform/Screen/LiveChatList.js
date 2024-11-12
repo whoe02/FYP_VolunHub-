@@ -3,7 +3,6 @@ import React from 'react';
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
 const chatData = [
     { id: '1', name: 'Alice Johnson', lastMessage: 'Can we reschedule?', timestamp: '2 mins ago', avatar: 'https://via.placeholder.com/150/0000FF' },
     { id: '2', name: 'Bob Smith', lastMessage: 'See you soon!', timestamp: '1 hour ago', avatar: 'https://via.placeholder.com/150/0000FF' },
@@ -12,11 +11,12 @@ const chatData = [
 ];
 
 const LiveChatList = ({ navigation }) => {
-    const {top: safeTop} = useSafeAreaInsets();
+    const { top: safeTop } = useSafeAreaInsets();
+
     const renderChatItem = ({ item }) => (
         <TouchableOpacity
             style={styles.chatItem}
-            onPress={() => navigation.navigate('ChatDetail', { user: item.name })}
+            onPress={() => navigation.navigate('Chat', { user: item })}
             activeOpacity={0.8}
         >
             <Image source={{ uri: item.avatar }} style={styles.avatar} />
@@ -29,9 +29,8 @@ const LiveChatList = ({ navigation }) => {
     );
 
     return (
-        
         <View style={[styles.container, { paddingTop: safeTop }]}>
-        <Text style={styles.header}>Notifications</Text>
+            <Text style={styles.header}>Live Chat</Text>
             <FlatList
                 data={chatData}
                 keyExtractor={(item) => item.id}
@@ -46,7 +45,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        padding: 20,
+        paddingHorizontal: 20,
     },
     header: {
         fontSize: 24,

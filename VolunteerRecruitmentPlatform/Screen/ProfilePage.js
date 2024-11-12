@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 const profile_picture = require('../assets/img/prof.png');
 
-const ProfileScreen = () => {
+const ProfileScreen = ( { navigation } ) => {
   const {top: safeTop} = useSafeAreaInsets();
   return (
     <View style={[styles.container, { paddingTop: safeTop }]}>
@@ -19,7 +19,7 @@ const ProfileScreen = () => {
         </View>
 
         <View style={styles.buttonList}>
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9} onPress={() => navigation.navigate('ManageProfile')}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
                 <Ionicons name="person" size={25} color={'#6a8a6d'}/>
