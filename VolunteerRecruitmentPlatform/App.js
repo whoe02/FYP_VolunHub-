@@ -20,6 +20,11 @@ import Notification from './Screen/NotificationPage';
 import LiveChat from './Screen/LiveChatList';
 import Chat from './Screen/Chat';
 import ManageProfile from './Screen/ManageProfile';
+import EditPassword from './Screen/EditPassword';
+import SetEventPref from './Screen/SetEventPreference';
+import UserMan from './Screen/UserManagement';
+import AddUser from './Screen/AddUser';
+import UserDetail from './Screen/UserDetail';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -63,6 +68,11 @@ const App = () => {
         <Stack.Screen name="Notification" component={Notification} />
         <Stack.Screen name="Chat" component={Chat} />
         <Stack.Screen name="ManageProfile" component={ManageProfile} />
+        <Stack.Screen name="EditPassword" component={EditPassword} />
+        <Stack.Screen name="SetEventPref" component={SetEventPref} />
+        <Stack.Screen name="UserMan" component={UserMan} />
+        <Stack.Screen name="AddUser" component={AddUser} />
+        <Stack.Screen name="UserDetail" component={UserDetail} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -98,7 +108,7 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Browse" component={Home} />
-      <Tab.Screen name="My Event" component={OrganizationEvent} />
+      <Tab.Screen name="My Event" component={UserMan} />
       <Tab.Screen name="Rewards" component={MyEvent} />
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />

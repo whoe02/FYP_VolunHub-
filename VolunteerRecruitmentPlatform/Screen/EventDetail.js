@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     },
     buttonCancel: {
         flex: 1,
-        backgroundColor: '#b83027', // Tomato color for cancel
+        backgroundColor: '#b83027', 
         paddingVertical: 15,
         borderRadius: 8,
         marginRight: 10,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     },
     buttonCheckIn: {
         flex: 1,
-        backgroundColor: '#6a8a6d', // Lime green for check-in
+        backgroundColor: '#6a8a6d', 
         paddingVertical: 15,
         borderRadius: 8,
         marginRight: 10,

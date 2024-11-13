@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, TextInput} from 'react-native';
+import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 
 export default function InputField({
   label,
@@ -10,6 +10,7 @@ export default function InputField({
   fieldButtonFunction,
   onChangeText,
   value,
+  editable = true,  // Add editable as a prop with a default value of true
 }) {
   return (
     <View
@@ -25,23 +26,27 @@ export default function InputField({
         <TextInput
           placeholder={label}
           keyboardType={keyboardType}
-          style={{flex: 1, paddingVertical: 0}}
+          style={{ flex: 1, paddingVertical: 0, marginLeft: 10, fontSize: 16 }}
           secureTextEntry={true}
-          value={value} 
-          onChangeText={onChangeText} 
+          value={value}
+          onChangeText={onChangeText}
+          editable={editable} // Pass editable here
         />
       ) : (
         <TextInput
           placeholder={label}
           keyboardType={keyboardType}
-          style={{flex: 1, paddingVertical: 0}}
-          value={value} 
-          onChangeText={onChangeText} 
+          style={{ flex: 1, paddingVertical: 0, marginLeft: 10, fontSize: 16 }}
+          value={value}
+          onChangeText={onChangeText}
+          editable={editable} // Pass editable here
         />
       )}
-      <TouchableOpacity onPress={fieldButtonFunction}>
-        <Text style={{color: '#95c194', fontWeight: '700'}}>{fieldButtonLabel}</Text>
-      </TouchableOpacity>
+      {fieldButtonLabel && (
+        <TouchableOpacity onPress={fieldButtonFunction}>
+          <Text style={{ color: '#95c194', fontWeight: '700' }}>{fieldButtonLabel}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

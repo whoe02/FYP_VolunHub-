@@ -29,7 +29,7 @@ const ProfileScreen = ( { navigation } ) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.8} onPress={() => navigation.navigate('EditPassword')}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
                 <Ionicons name="lock-closed" size={25} color={'#6a8a6d'}/>
@@ -39,7 +39,7 @@ const ProfileScreen = ( { navigation } ) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9} onPress={() => navigation.navigate('SetEventPref')}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
                 <Ionicons name="heart" size={25}  color={'#6a8a6d'}/>

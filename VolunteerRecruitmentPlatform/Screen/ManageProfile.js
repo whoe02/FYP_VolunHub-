@@ -86,27 +86,27 @@ const ManageProfile = ({ navigation }) => {
                         label={'Full Name'}
                         value={fullName}
                         onChangeText={setFullName}
-                        icon={<Ionicons name="person-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="person" size={20} color="#6a8a6d" style={styles.icon} />}
                     />
                     <InputField
                         label={'Email ID'}
                         value={email}
                         onChangeText={setEmail}
-                        icon={<MaterialIcons name="alternate-email" size={20} color="#666" style={styles.icon} />}
+                        icon={<MaterialIcons name="alternate-email" size={20} color="#6a8a6d" style={styles.icon} />}
                         keyboardType="email-address"
                     />
                     <InputField
                         label={'Phone Number'}
                         value={phoneNumber}
                         onChangeText={setPhoneNumber}
-                        icon={<Ionicons name="call-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="call" size={20} color="#6a8a6d" style={styles.icon} />}
                         keyboardType="phone-pad"
                     />
                     <InputField
                         label={'IC Number'}
                         value={icNumber}
                         onChangeText={setIcNumber}
-                        icon={<Ionicons name="id-card-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="id-card" size={20} color="#6a8a6d" style={styles.icon} />}
                     />
                 </View>
 
@@ -117,19 +117,19 @@ const ManageProfile = ({ navigation }) => {
                         label={'Street Address'}
                         value={street}
                         onChangeText={setStreet}
-                        icon={<Ionicons name="home-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="home" size={20} color="#6a8a6d" style={styles.icon} />}
                     />
                     <InputField
                         label={'City'}
                         value={city}
                         onChangeText={setCity}
-                        icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="location" size={20} color="#6a8a6d" style={styles.icon} />}
                     />
                     <InputField
                         label={'Postal Code'}
                         value={postalCode}
                         onChangeText={setPostalCode}
-                        icon={<Ionicons name="mail-outline" size={20} color="#666" style={styles.icon} />}
+                        icon={<Ionicons name="mail" size={20} color="#6a8a6d" style={styles.icon} />}
                     />
                 </View>
 
