@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -9,93 +9,147 @@ import {
     Alert,
     StyleSheet,
 } from 'react-native';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
 import InputField from '../components/InputField';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const UserDetail = () => {
+const UserDetail = ({ route, navigation }) => {
+    const { userId } = route.params; // User ID passed via route
     const [isEditable, setIsEditable] = useState(false);
+    const [userData, setUserData] = useState(null);
 
-    const [userData, setUserData] = useState({
-        fullName: 'John Doe',
-        email: 'john.doe@example.com',
-        phoneNumber: '1234567890',
-        icNumber: '123456789012',
-        street: '123 Main Street',
-        city: 'New York',
-        postalCode: '10001',
-    });
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const userDoc = await getDoc(doc(firestore, 'User', userId));
+                if (userDoc.exists()) {
+                    setUserData(userDoc.data());
+                } else {
+                    Alert.alert('Error', 'User not found', [
+                        { text: 'OK', onPress: () => navigation.goBack() },
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                Alert.alert('Error', 'Failed to fetch user data', [
+                    { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+            }
+        };
 
-    const handleUpdatePress = () => {
+        fetchUserData();
+    }, [userId]);
+
+    const validateFields = () => {
+        if (!userData.name || !userData.email || !userData.phoneNum) {
+            Alert.alert('Validation Error', 'Please fill all required fields.');
+            return false;
+        }
+        if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+            Alert.alert('Validation Error', 'Please enter a valid email address.');
+            return false;
+        }
+        return true;
+    };
+
+    const handleUpdatePress = async () => {
+        if (isEditable) {
+            if (!validateFields()) return;
+            try {
+                await updateDoc(doc(firestore, 'User', userId), userData);
+                Alert.alert('Success', 'User updated successfully');
+            } catch (error) {
+                console.error('Error updating user:', error);
+                Alert.alert('Error', 'Failed to update user');
+            }
+        }
         setIsEditable(!isEditable);
     };
 
     const handleDeletePress = () => {
         Alert.alert('Delete User', 'Are you sure you want to delete this user?', [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', onPress: () => console.log('User deleted') },
+            {
+                text: 'Delete',
+                onPress: async () => {
+                    try {
+                        await deleteDoc(doc(firestore, 'User', userId));
+                        Alert.alert('Success', 'User deleted successfully');
+                        navigation.goBack();
+                    } catch (error) {
+                        console.error('Error deleting user:', error);
+                        Alert.alert('Error', 'Failed to delete user');
+                    }
+                },
+            },
         ]);
     };
+
+    if (!userData) {
+        return null; // Don't render anything if userData is not loaded
+    }
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollView}>
                 <View style={styles.profileImageContainer}>
-                    <Image source={{ uri: 'https://via.placeholder.com/150' }} style={styles.profileImage} />
+                    <Image
+                        source={{ uri: userData.image || 'https://via.placeholder.com/150' }}
+                        style={styles.profileImage}
+                    />
                 </View>
 
-                <View style={styles.detailContainer}>
+                <View style={styles.section}>
                     <InputField
                         label="Full Name"
-                        value={userData.fullName}
-                        onChangeText={(text) => setUserData({ ...userData, fullName: text })}
+                        value={userData.name}
+                        onChangeText={(text) => setUserData({ ...userData, name: text })}
+                        icon={<Ionicons name="person" size={20} color="#6a8a6d" style={styles.icon} />}
                         editable={isEditable}
-                        icon={<Ionicons name="person" size={20} color="#6a8a6d" />}
+                    />
+                    <InputField
+                        label="Address"
+                        value={userData.address}
+                        onChangeText={(text) => setUserData({ ...userData, address: text })}
+                        icon={<Ionicons name="home" size={20} color="#6a8a6d" style={styles.icon} />}
+                        editable={isEditable}
                     />
                     <InputField
                         label="Email ID"
                         value={userData.email}
                         onChangeText={(text) => setUserData({ ...userData, email: text })}
-                        editable={isEditable}
+                        icon={<MaterialIcons name="alternate-email" size={20} color="#6a8a6d" style={styles.icon} />}
                         keyboardType="email-address"
-                        icon={<MaterialIcons name="alternate-email" size={20} color="#6a8a6d" />}
+                        editable={isEditable}
                     />
                     <InputField
                         label="Phone Number"
-                        value={userData.phoneNumber}
-                        onChangeText={(text) => setUserData({ ...userData, phoneNumber: text })}
-                        editable={isEditable}
+                        value={userData.phoneNum}
+                        onChangeText={(text) => setUserData({ ...userData, phoneNum: text })}
+                        icon={<Ionicons name="call" size={20} color="#6a8a6d" style={styles.icon} />}
                         keyboardType="phone-pad"
-                        icon={<Ionicons name="call" size={20} color="#6a8a6d" />}
-                    />
-                    <InputField
-                        label="IC Number"
-                        value={userData.icNumber}
-                        onChangeText={(text) => setUserData({ ...userData, icNumber: text })}
                         editable={isEditable}
-                        icon={<Ionicons name="id-card" size={20} color="#6a8a6d" />}
                     />
-                    <InputField
-                        label="Street Address"
-                        value={userData.street}
-                        onChangeText={(text) => setUserData({ ...userData, street: text })}
-                        editable={isEditable}
-                        icon={<Ionicons name="home" size={20} color="#6a8a6d" />}
-                    />
-                    <InputField
-                        label="City"
-                        value={userData.city}
-                        onChangeText={(text) => setUserData({ ...userData, city: text })}
-                        editable={isEditable}
-                        icon={<Ionicons name="location" size={20} color="#6a8a6d" />}
-                    />
-                    <InputField
-                        label="Postal Code"
-                        value={userData.postalCode}
-                        onChangeText={(text) => setUserData({ ...userData, postalCode: text })}
-                        editable={isEditable}
-                        icon={<Ionicons name="mail" size={20} color="#6a8a6d" />}
-                    />
+                    {userData.role !== 'organization' && (
+                        <InputField
+                            label="IC Number"
+                            value={userData.icNum}
+                            onChangeText={(text) => setUserData({ ...userData, icNum: text })}
+                            icon={<Ionicons name="id-card" size={20} color="#6a8a6d" style={styles.icon} />}
+                            editable={isEditable}
+                        />
+                    )}
+                    {userData.role === 'organization' && (
+                        <InputField
+                            label="Business Type"
+                            value={userData.businessType}
+                            onChangeText={(text) => setUserData({ ...userData, businessType: text })}
+                            icon={<Ionicons name="briefcase" size={20} color="#6a8a6d" style={styles.icon} />}
+                            editable={isEditable}
+                        />
+                    )}
                 </View>
 
                 <View style={styles.buttonContainer}>
@@ -129,27 +183,24 @@ const styles = StyleSheet.create({
         height: 150,
         borderRadius: 75,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
+    section: {
+        width: '100%',
         marginBottom: 20,
     },
-    detailContainer: {
-        width: '100%',
+    icon: {
+        marginRight: 10,
     },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         padding: 10,
         marginTop: 20,
-        marginBottom: 40,
     },
     button: {
         flex: 1,
         backgroundColor: '#6a8a6d',
         paddingVertical: 15,
-        borderRadius: 8, 
+        borderRadius: 8,
         alignItems: 'center',
     },
     deleteButton: {

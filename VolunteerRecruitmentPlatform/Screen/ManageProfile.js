@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -7,144 +7,196 @@ import {
     TouchableOpacity,
     Image,
     Alert,
-    StyleSheet
+    StyleSheet,
+    ActivityIndicator, // Add ActivityIndicator for loading
 } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import InputField from '../components/InputField'; // Assuming InputField component is in the same directory
-import CustomButton from '../components/CustomButton'; // Assuming CustomButton component is in the same directory
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
+import InputField from '../components/InputField';
+import CustomButton from '../components/CustomButton';
+import * as ImagePicker from 'expo-image-picker';
+import UUID from 'react-native-uuid';
 
+const ManageProfile = ({ route, navigation }) => {
+    const { userId, onProfileUpdate } = route.params; 
+    const [userData, setUserData] = useState(null);
+    const [newProfileImage, setNewProfileImage] = useState(null); // Temporary image state
+    const [isLoading, setIsLoading] = useState(false); // Loading state
 
-const ManageProfile = ({ navigation }) => {
-    // Profile info states
-    const [fullName, setFullName] = useState('John Doe');
-    const [email, setEmail] = useState('john.doe@example.com');
-    const [phoneNumber, setPhoneNumber] = useState('1234567890');
-    const [icNumber, setIcNumber] = useState('123456789012');
-    const [street, setStreet] = useState('123 Main Street');
-    const [city, setCity] = useState('New York');
-    const [postalCode, setPostalCode] = useState('10001');
-    // Password states
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const {top: safeTop} = useSafeAreaInsets();
-    // Email validation regex
-    const isValidEmail = (email) => {
-        const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-        return regex.test(email);
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const userDoc = await getDoc(doc(firestore, 'User', userId));
+                if (userDoc.exists()) {
+                    setUserData(userDoc.data());
+                } else {
+                    Alert.alert('Error', 'User not found', [
+                        { text: 'OK', onPress: () => navigation.goBack() },
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                Alert.alert('Error', 'Failed to fetch user data', [
+                    { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+            }
+        };
+
+        fetchUserData();
+    }, [userId]);
+
+    // Open Image Picker
+    const handleChangeProfilePicture = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setNewProfileImage(result.assets[0].uri); // Save the selected image temporarily
+        }
     };
 
-    // Phone validation (10 or 11 digits)
-    const isValidPhoneNumber = (phone) => {
-        const regex = /^[0-9]{10,11}$/; // Accepts 10 or 11 digits
-        return regex.test(phone);
-    };
-
-    // IC Number validation (12 digits)
-    const isValidIcNumber = (ic) => {
-        const regex = /^[0-9]{12}$/; // Only 12 digits
-        return regex.test(ic);
-    };
-
-    // Validation for managing profile
-    const validateProfileUpdate = () => {
-        if (!fullName || !email || !phoneNumber || !icNumber || !street || !city || !postalCode) {
-            Alert.alert('Error', 'Please fill in all fields');
+    const validateFields = () => {
+        if (!userData.name || !userData.email || !userData.phoneNum) {
+            Alert.alert('Validation Error', 'Please fill all required fields.');
             return false;
         }
-
-        if (!isValidEmail(email)) {
-            Alert.alert('Error', 'Please enter a valid email');
+        if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+            Alert.alert('Validation Error', 'Please enter a valid email address.');
             return false;
         }
-
-        if (!isValidPhoneNumber(phoneNumber)) {
-            Alert.alert('Error', 'Please enter a valid phone number');
-            return false;
-        }
-
-        if (!isValidIcNumber(icNumber)) {
-            Alert.alert('Error', 'IC Number must be exactly 12 digits');
-            return false;
-        }
-
         return true;
     };
 
+    const randomFileName = `profile_picture_${Date.now()}_${UUID.v4()}.jpg`;
+
+    // Cloudinary configuration
+    const uploadImageToCloudinary = async (imageUri) => {
+        const data = new FormData();
+        data.append('file', {
+            uri: imageUri,
+            type: 'image/jpeg', // Adjust the type based on your file format
+            name: randomFileName,
+        });
+        data.append('upload_preset', 'profilepic'); // Replace with your upload preset
+        data.append('cloud_name', 'dnj0n4m7k'); // Replace with your cloud name
+
+        try {
+            const response = await fetch('https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload', {
+                method: 'POST',
+                body: data,
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                return result.secure_url; // Return the uploaded image's URL
+            } else {
+                console.error('Upload failed:', result);
+                Alert.alert('Error', 'Failed to upload image. Please try again.');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            Alert.alert('Error', 'Failed to upload image. Please try again.');
+            return null;
+        }
+    };
+
+    const handleSavePress = async () => {
+        if (!validateFields()) return;
+
+        setIsLoading(true); // Set loading to true
+
+        try {
+            let updatedData = { ...userData };
+
+            // If a new profile picture is selected, upload it and update the profile image URL
+            if (newProfileImage) {
+                const imageUrl = await uploadImageToCloudinary(newProfileImage);
+                if (!imageUrl) return; // Stop if image upload fails
+                updatedData.image = imageUrl;
+            }
+
+            // Update Firestore with the new data
+            await updateDoc(doc(firestore, 'User', userId), updatedData);
+            Alert.alert('Success', 'Profile updated successfully', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setIsLoading(false);
+                    if (onProfileUpdate) {
+                        onProfileUpdate(); // This triggers the callback to fetch updated data in ProfileScreen
+                      }// Call the callback to update profile screen
+                    navigation.goBack();
+                  },
+                },
+              ]);
+        } catch (error) {
+            console.error('Error updating user:', error);
+            Alert.alert('Error', 'Failed to update profile');
+        } finally {
+            setIsLoading(false); // Set loading to false after the operation
+        }
+    };
+
+    if (!userData) {
+        return null; // Render nothing if userData is not loaded
+    }
+
     return (
-        <SafeAreaView style={[styles.container, { paddingTop: safeTop }]}>
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+        <SafeAreaView style={styles.container}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollView}>
+                <View style={styles.profileImageContainer}>
+                    <Image
+                        source={{ uri: newProfileImage || userData.image || 'https://via.placeholder.com/150' }}
+                        style={styles.profileImage}
+                    />
+                    <TouchableOpacity onPress={handleChangeProfilePicture}>
+                        <Text style={styles.changePictureText}>Change Profile Picture</Text>
+                    </TouchableOpacity>
+                </View>
 
-
-                <Text style={styles.title}>Manage Profile</Text>
-
-                {/* Personal Information Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Personal Information</Text>
                     <InputField
-                        label={'Full Name'}
-                        value={fullName}
-                        onChangeText={setFullName}
-                        icon={<Ionicons name="person" size={20} color="#6a8a6d" style={styles.icon} />}
+                        label="Full Name"
+                        value={userData.name}
+                        onChangeText={(text) => setUserData({ ...userData, name: text })}
+                        editable={true}
                     />
                     <InputField
-                        label={'Email ID'}
-                        value={email}
-                        onChangeText={setEmail}
-                        icon={<MaterialIcons name="alternate-email" size={20} color="#6a8a6d" style={styles.icon} />}
+                        label="Address"
+                        value={userData.address}
+                        onChangeText={(text) => setUserData({ ...userData, address: text })}
+                        editable={true}
+                    />
+                    <InputField
+                        label="Email ID"
+                        value={userData.email}
+                        onChangeText={(text) => setUserData({ ...userData, email: text })}
                         keyboardType="email-address"
+                        editable={true}
                     />
                     <InputField
-                        label={'Phone Number'}
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
-                        icon={<Ionicons name="call" size={20} color="#6a8a6d" style={styles.icon} />}
+                        label="Phone Number"
+                        value={userData.phoneNum}
+                        onChangeText={(text) => setUserData({ ...userData, phoneNum: text })}
                         keyboardType="phone-pad"
-                    />
-                    <InputField
-                        label={'IC Number'}
-                        value={icNumber}
-                        onChangeText={setIcNumber}
-                        icon={<Ionicons name="id-card" size={20} color="#6a8a6d" style={styles.icon} />}
+                        editable={true}
                     />
                 </View>
 
-                {/* Address Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Address</Text>
-                    <InputField
-                        label={'Street Address'}
-                        value={street}
-                        onChangeText={setStreet}
-                        icon={<Ionicons name="home" size={20} color="#6a8a6d" style={styles.icon} />}
-                    />
-                    <InputField
-                        label={'City'}
-                        value={city}
-                        onChangeText={setCity}
-                        icon={<Ionicons name="location" size={20} color="#6a8a6d" style={styles.icon} />}
-                    />
-                    <InputField
-                        label={'Postal Code'}
-                        value={postalCode}
-                        onChangeText={setPostalCode}
-                        icon={<Ionicons name="mail" size={20} color="#6a8a6d" style={styles.icon} />}
-                    />
-                </View>
+                <CustomButton label="Save Profile" onPress={handleSavePress} />
 
-
-
-                <CustomButton
-                    label={'Save Profile'}
-                    onPress={() => {
-                        if (validateProfileUpdate()) {
-                            // Proceed with updating profile (e.g., make an API call or save to local storage)
-                            Alert.alert('Success', 'Profile updated successfully');
-                        }
-                    }}
-                />
-
+                {/* Show loading spinner if saving is in progress */}
+                {isLoading && (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -153,47 +205,33 @@ const ManageProfile = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
+        padding: 20,
+        backgroundColor: '#f9f9f9',
     },
-    scrollView: {
-        paddingHorizontal: 25,
-    },
-    imageContainer: {
+    profileImageContainer: {
+        marginVertical: 20,
         alignItems: 'center',
-        marginBottom: 20,
     },
     profileImage: {
-        height: 300,
-        width: 300,
-        transform: [{ rotate: '-5deg' }],
+        width: 150,
+        height: 150,
+        borderRadius: 75,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+    changePictureText: {
+        color: '#6a8a6d',
         marginTop: 15,
-        marginBottom: 15,
-        color: '#333',
+        marginBottom: 20,
+        fontSize: 16,
     },
     section: {
+        width: '100%',
         marginBottom: 20,
     },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 10,
-    },
-    icon: {
-        marginRight: 5,
-    },
-    footer: {
+    loadingContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginBottom: 30,
-    },
-    footerLink: {
-        color: '#AD40AF',
-        fontWeight: '700',
+        alignItems: 'center',
+        marginTop: 20,
     },
 });
 

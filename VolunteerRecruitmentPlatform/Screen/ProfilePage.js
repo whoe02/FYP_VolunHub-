@@ -1,50 +1,97 @@
-import React from "react";
-import { View, StyleSheet, Image, Text, TouchableOpacity, SafeAreaView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet, Image, Text, TouchableOpacity, SafeAreaView, Alert } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
+import { doc, getDoc } from "firebase/firestore";
+import { firestore } from "../firebaseConfig"; // Ensure this is correctly initialized
 
-const profile_picture = require('../assets/img/prof.png');
+const ProfileScreen = ({ navigation }) => {
+  const { top: safeTop } = useSafeAreaInsets();
+  const [userData, setUserData] = useState(null); // Store user data here
 
-const ProfileScreen = ( { navigation } ) => {
-  const {top: safeTop} = useSafeAreaInsets();
+  const fetchUserData = async () => {
+    try {
+      const userId = "VL00001"; // Replace with actual user ID logic
+      const userDoc = await getDoc(doc(firestore, "User", userId));
+
+      if (userDoc.exists()) {
+        setUserData(userDoc.data());
+      } else {
+        Alert.alert("Error", "User data not found");
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      Alert.alert("Error", "Failed to fetch user data");
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Callback function to be passed to ManageProfile
+  const handleProfileUpdate = () => {
+    fetchUserData(); // Re-fetch profile data after update
+  };
+
+  if (!userData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>Loading user data...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <View style={[styles.container, { paddingTop: safeTop }]}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topSection}>
           <View style={styles.propicArea}>
-            <Image source={profile_picture} style={styles.propic} />
+            <Image source={{ uri: userData.image }} style={styles.propic} />
           </View>
-          <Text style={styles.name}>Tasun Prasad</Text>
-          <Text style={styles.membership}>170 pts</Text>
+          <Text style={styles.name}>{userData.name}</Text>
+          <Text style={styles.membership}>@{userData.username}</Text>
         </View>
 
         <View style={styles.buttonList}>
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9} onPress={() => navigation.navigate('ManageProfile')}>
+          <TouchableOpacity
+            style={styles.buttonSection}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('ManageProfile', { userId: userData.userId, onProfileUpdate: handleProfileUpdate })} // Pass user data and callback
+          >
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
-                <Ionicons name="person" size={25} color={'#6a8a6d'}/>
+                <Ionicons name="person" size={25} color={'#6a8a6d'} />
               </View>
               <Text style={styles.buttonName}>Manage Account</Text>
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.8} onPress={() => navigation.navigate('EditPassword')}>
+          <TouchableOpacity
+            style={styles.buttonSection}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('EditPassword', { userId: userData.userId })} // Pass user data here
+          >
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
-                <Ionicons name="lock-closed" size={25} color={'#6a8a6d'}/>
+                <Ionicons name="lock-closed" size={25} color={'#6a8a6d'} />
               </View>
               <Text style={styles.buttonName}>Change Password</Text>
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9} onPress={() => navigation.navigate('SetEventPref')}>
+          <TouchableOpacity
+            style={styles.buttonSection}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('SetEventPref', { userId: userData.userId })} // Pass user data here
+          >
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
-                <Ionicons name="heart" size={25}  color={'#6a8a6d'}/>
+                <Ionicons name="heart" size={25} color={'#6a8a6d'} />
               </View>
-              <Text style={styles.buttonName}>Set Event Prefrence</Text>
+              <Text style={styles.buttonName}>Set Event Preference</Text>
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
@@ -62,7 +109,7 @@ const ProfileScreen = ( { navigation } ) => {
           <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
-                <Ionicons name="log-out" size={25} color={'#6a8a6d'}/>
+                <Ionicons name="log-out" size={25} color={'#6a8a6d'} />
               </View>
               <Text style={styles.buttonName}>Logout</Text>
             </View>
@@ -73,13 +120,10 @@ const ProfileScreen = ( { navigation } ) => {
   );
 };
 
-export default ProfileScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-
   },
   safeArea: {
     flex: 1,
@@ -92,7 +136,6 @@ const styles = StyleSheet.create({
   propicArea: {
     width: 170,
     height: 170,
-
   },
   propic: {
     width: '100%',
@@ -115,7 +158,6 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
     paddingLeft: 20,
     paddingHorizontal: 20,
-
   },
   buttonArea: {
     flexDirection: 'row',
@@ -140,3 +182,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'lightgrey',
   },
 });
+
+export default ProfileScreen;

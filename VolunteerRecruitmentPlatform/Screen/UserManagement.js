@@ -1,23 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const volunteerData = [
-  { id: '1', name: 'John Doe', email: 'johndoe@example.com', profilePic: 'https://via.placeholder.com/150' },
-  { id: '2', name: 'Jane Smith', email: 'janesmith@example.com', profilePic: 'https://via.placeholder.com/150' },
-];
-
-const organizationData = [
-  { id: '1', name: 'Helping Hands Org', email: 'contact@helpinghands.org', profilePic: 'https://via.placeholder.com/150' },
-  { id: '2', name: 'Green Earth', email: 'info@greenearth.org', profilePic: 'https://via.placeholder.com/150' },
-];
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig'; // Adjust the path to your Firebase config
 
 const UserManagement = ({ navigation }) => {
   const [selectedTab, setSelectedTab] = useState('Volunteer');
   const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch data based on the selected tab
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const userType = selectedTab.toLowerCase(); // "volunteer", "organization", or "admin"
+      const q = query(collection(firestore, 'User'), where('role', '==', userType));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [selectedTab]);
 
   // Filter users based on search query
-  const filteredData = (selectedTab === 'Volunteer' ? volunteerData : organizationData).filter((user) =>
+  const filteredData = users.filter((user) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -25,12 +42,16 @@ const UserManagement = ({ navigation }) => {
   const renderUser = ({ item }) => (
     <TouchableOpacity
       style={styles.userContainer}
-      onPress={() => navigation.navigate('UserDetail')} // Navigate to UserDetail page
+      onPress={() => navigation.navigate('UserDetail', { userId: item.id }) }
+      activeOpacity={0.7}
     >
-      <Image source={{ uri: item.profilePic }} style={styles.profilePic} />
+      <Image
+        source={{ uri: item.image }}  // Use the Cloudinary URL stored in Firestore
+        style={styles.profilePic}
+      />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.name}</Text>
-        <Text style={styles.userEmail}>{item.email}</Text>
+        <Text style={styles.userEmail}>{item.userId}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -47,30 +68,32 @@ const UserManagement = ({ navigation }) => {
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'Volunteer' && styles.activeTab]}
-          onPress={() => setSelectedTab('Volunteer')}
-        >
-          <Text style={styles.tabText}>Volunteer</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'Organization' && styles.activeTab]}
-          onPress={() => setSelectedTab('Organization')}
-        >
-          <Text style={styles.tabText}>Organization</Text>
-        </TouchableOpacity>
+        {['Volunteer', 'Organization', 'Admin'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, selectedTab === tab && styles.activeTab]}
+            onPress={() => setSelectedTab(tab)}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.tabText}>{tab}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* List of Users */}
-      <FlatList
-        data={filteredData}
-        renderItem={renderUser}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#6a8a6d" />
+      ) : (
+        <FlatList
+          data={filteredData}
+          renderItem={renderUser}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
 
       {/* Add Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddUser')}>
+      <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddUser')} activeOpacity={0.7}>
         <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -149,8 +172,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#6a8a6d',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5, // For shadow on Android
-    shadowColor: '#000', // For shadow on iOS
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3.84,
