@@ -11,7 +11,6 @@ import Home from './Screen/Browse';
 import Detail from './Screen/Detail';
 import EventDetail from './Screen/EventDetail';
 import SearchPage from './Screen/SearchPage';
-import OrganizationEvent from './Screen/OraganizationEventScreen';
 import Reviews from './Screen/ReviewScreen';
 import EditEvent from './Screen/EditEventScreen';
 import Profile from './Screen/ProfilePage';
@@ -62,7 +61,6 @@ const App = () => {
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="EventDetail" component={EventDetail} />
         <Stack.Screen name="SearchPage" component={SearchPage} />
-        <Stack.Screen name="OrganizationEvent" component={OrganizationEvent} />
         <Stack.Screen name="Reviews" component={Reviews} />
         <Stack.Screen name="EditEvent" component={EditEvent} />
         <Stack.Screen name="Notification" component={Notification} />
