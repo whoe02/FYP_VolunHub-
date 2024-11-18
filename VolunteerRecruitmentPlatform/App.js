@@ -24,6 +24,8 @@ import SetEventPref from './Screen/SetEventPreference';
 import UserMan from './Screen/UserManagement';
 import AddUser from './Screen/AddUser';
 import UserDetail from './Screen/UserDetail';
+import AddEvent from './Screen/AddEventScreen'
+import RewardScreen from './Screen/RewardScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -70,6 +72,7 @@ const App = () => {
         <Stack.Screen name="SetEventPref" component={SetEventPref} />
         <Stack.Screen name="UserMan" component={UserMan} />
         <Stack.Screen name="AddUser" component={AddUser} />
+        <Stack.Screen name="AddEvent" component={AddEvent} />
         <Stack.Screen name="UserDetail" component={UserDetail} />
       </Stack.Navigator>
     </NavigationContainer>
@@ -106,8 +109,8 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Browse" component={Home} />
-      <Tab.Screen name="My Event" component={UserMan} />
-      <Tab.Screen name="Rewards" component={MyEvent} />
+      <Tab.Screen name="My Event" component={MyEvent} />
+      <Tab.Screen name="Rewards" component={RewardScreen} />
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>
