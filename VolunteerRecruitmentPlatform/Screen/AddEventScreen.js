@@ -74,7 +74,6 @@ const AddEventScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        <Text style={styles.headerText}>Add Event</Text>
 
         {/* Display event images horizontally */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>

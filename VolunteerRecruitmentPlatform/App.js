@@ -29,6 +29,7 @@ import RewardScreen from './Screen/RewardScreen';
 import RewardCatalogue from './Screen/RewardCatalogue';
 import MyRewardsScreen from './Screen/MyReward';
 import RewardsHistory from './Screen/RewardHistory';
+import EventParticipant from './Screen/EventParticipant';
 
 
 const Stack = createNativeStackNavigator();
@@ -81,6 +82,7 @@ const App = () => {
         <Stack.Screen name="RewardCatalogue" component={RewardCatalogue} />
         <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
         <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
+        <Stack.Screen name="EventParticipant" component={EventParticipant} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -14,12 +14,14 @@ const RewardScreen = ({ navigation }) => {
   const renderVouchers = () => {
     return vouchers.map((voucher) => (
       <View key={voucher.id} style={styles.voucherCard}>
-        {/* Image */}
-        <Image source={{ uri: voucher.image }} style={styles.voucherImage} />
-        
-        {/* Type Label */}
-        <View style={styles.typeLabel}>
-          <Text style={styles.typeLabelText}>{voucher.type}</Text>
+        {/* Image Container */}
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: voucher.image }} style={styles.voucherImage} />
+          
+          {/* Type Label */}
+          <View style={styles.typeLabel}>
+            <Text style={styles.typeLabelText}>{voucher.type}</Text>
+          </View>
         </View>
         
         {/* Title and Points */}
@@ -49,10 +51,10 @@ const RewardScreen = ({ navigation }) => {
             <Text style={styles.navButtonText}>Catalogue</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('MyRewards')}>
-            <Text style={styles.navButtonText}>My Rewards</Text>
+            <Text style={styles.navButtonText}>Rewards</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('RewardsHistory')}>
-            <Text style={styles.navButtonText}>Point History</Text>
+            <Text style={styles.navButtonText}>History</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -110,12 +112,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: '#2d7a34',
-    marginVertical: 10,
+    marginVertical: 2,
   },
   navigationButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
   },
   navButton: {
     paddingVertical: 12,
@@ -143,6 +144,7 @@ const styles = StyleSheet.create({
   },
   voucherCard: {
     backgroundColor: '#ffffff',
+    marginBottom:10,
     padding: 15,
     borderRadius: 12,
     marginRight: 15,
@@ -154,19 +156,24 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
   },
-  voucherImage: {
+  imageContainer: {
+    position: 'relative',
     width: '100%',
     height: 120,
+  },
+  voucherImage: {
+    width: '100%',
+    height: '100%',
     borderRadius: 12,
-    marginBottom: 10,
   },
   typeLabel: {
-    backgroundColor: '#4caf50',
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#d6b069', 
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginBottom: 10,
-    alignSelf: 'center',
   },
   typeLabelText: {
     color: '#ffffff',
@@ -178,6 +185,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#616161',
     textAlign: 'center',
+    marginTop: 10,
   },
   pointsText: {
     fontSize: 12,
@@ -200,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 20,
-    marginTop: 0,
+    marginTop: -10,
     elevation: 5,
     shadowColor: '#000',
     shadowOpacity: 0.1,

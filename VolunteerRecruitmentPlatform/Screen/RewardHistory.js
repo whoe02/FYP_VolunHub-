@@ -100,7 +100,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
-    borderLeftWidth: 1,
+    borderLeftWidth: 5,
+    borderLeftColor: '#6a8a6d',
   },
   transactionHeader: {
     flexDirection: 'row',

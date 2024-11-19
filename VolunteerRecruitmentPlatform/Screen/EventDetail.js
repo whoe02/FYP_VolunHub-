@@ -115,7 +115,7 @@ const EventDetail = ({ route, navigation }) => {
             )}
             {user === 'Organization' && (
                 <View style={styles.orgButtonContainer}>
-                    <TouchableOpacity style={styles.button}>
+                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EventParticipant', { event })}>
                         <Text style={styles.buttonText}>Participant List</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Reviews', { event })}>

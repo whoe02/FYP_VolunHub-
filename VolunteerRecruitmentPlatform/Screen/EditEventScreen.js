@@ -75,7 +75,6 @@ const EditEventScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        <Text style={styles.headerText}>Edit Event</Text>
 
         {/* Display event images horizontally */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
@@ -157,7 +156,7 @@ const EditEventScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center' },
+  container: { flex: 1, justifyContent: 'center',marginTop:20, },
   scrollView: { paddingHorizontal: 25 },
   headerText: {
     fontFamily: 'Roboto-Medium',
