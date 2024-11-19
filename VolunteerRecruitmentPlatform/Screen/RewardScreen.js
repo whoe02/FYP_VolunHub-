@@ -45,13 +45,13 @@ const RewardScreen = ({ navigation }) => {
 
         {/* Navigation Buttons */}
         <View style={styles.navigationButtonsContainer}>
-          <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Catalogue')}>
+          <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('RewardCatalogue')}>
             <Text style={styles.navButtonText}>Catalogue</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('MyRewards')}>
             <Text style={styles.navButtonText}>My Rewards</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('PointHistory')}>
+          <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('RewardsHistory')}>
             <Text style={styles.navButtonText}>Point History</Text>
           </TouchableOpacity>
         </View>

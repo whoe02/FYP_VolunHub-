@@ -26,6 +26,10 @@ import AddUser from './Screen/AddUser';
 import UserDetail from './Screen/UserDetail';
 import AddEvent from './Screen/AddEventScreen'
 import RewardScreen from './Screen/RewardScreen';
+import RewardCatalogue from './Screen/RewardCatalogue';
+import MyRewardsScreen from './Screen/MyReward';
+import RewardsHistory from './Screen/RewardHistory';
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -74,6 +78,9 @@ const App = () => {
         <Stack.Screen name="AddUser" component={AddUser} />
         <Stack.Screen name="AddEvent" component={AddEvent} />
         <Stack.Screen name="UserDetail" component={UserDetail} />
+        <Stack.Screen name="RewardCatalogue" component={RewardCatalogue} />
+        <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
+        <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
       </Stack.Navigator>
     </NavigationContainer>
   );
