@@ -6,20 +6,18 @@ import InputField from '../components/InputField';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
-const EditEventScreen = ({ route, navigation }) => {
-  const { event } = route.params;
-
+const AddEventScreen = ({ navigation }) => {
   // Initial states
-  const [title, setTitle] = useState(event.title || '');
-  const [date, setDate] = useState(new Date(event.date) || new Date());
-  const [time, setTime] = useState(event.time || '');
-  const [address, setAddress] = useState(event.address || '');
-  const [capacity, setCapacity] = useState(String(event.capacity) || '');
-  const [description, setDescription] = useState(event.description || '');
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState('');
+  const [address, setAddress] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [description, setDescription] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dobLabel, setDobLabel] = useState(event.date || 'Select Date');
-  const [photo, setPhoto] = useState(event.photo || null); // Assuming `event.photo` contains existing photo URL
-  const [eventImages, setEventImages] = useState(event.eventImages || []); // To store multiple event images
+  const [dobLabel, setDobLabel] = useState('Select Date');
+  const [photo, setPhoto] = useState(null);
+  const [eventImages, setEventImages] = useState([]);
 
   // Request permissions for accessing media
   const requestPermission = async () => {
@@ -51,15 +49,15 @@ const EditEventScreen = ({ route, navigation }) => {
     });
 
     if (!result.canceled) {
-      setPhoto(result.uri); // Store the URI of the selected image
+      setPhoto(result.uri);
     }
   };
 
   // Remove image function
   const handleRemoveImage = (index) => {
     const updatedImages = [...eventImages];
-    updatedImages.splice(index, 1); // Remove the image at the specified index
-    setEventImages(updatedImages); // Update the event images array
+    updatedImages.splice(index, 1);
+    setEventImages(updatedImages);
   };
 
   // Validation and save function
@@ -68,7 +66,8 @@ const EditEventScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    Alert.alert('Success', 'Event details updated');
+    // Save event logic here
+    Alert.alert('Success', 'New event added');
     navigation.goBack();
   };
 
@@ -78,7 +77,7 @@ const EditEventScreen = ({ route, navigation }) => {
 
         {/* Display event images horizontally */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-          {eventImages && eventImages.length > 0 ? (
+          {eventImages.length > 0 ? (
             eventImages.map((img, index) => (
               <View key={index} style={styles.imageContainer}>
                 <Image source={{ uri: img }} style={styles.image} />
@@ -95,12 +94,10 @@ const EditEventScreen = ({ route, navigation }) => {
           )}
         </ScrollView>
 
-        {/* Existing Photo */}
-        {photo && (
-          <Image source={{ uri: photo }} style={styles.photo} />
-        )}
+        {/* Selected Photo */}
+        {photo && <Image source={{ uri: photo }} style={styles.photo} />}
         <TouchableOpacity onPress={handlePickImage} style={styles.photoButton}>
-          <Text style={styles.photoButtonText}>Upload New Photo</Text>
+          <Text style={styles.photoButtonText}>Upload Event Photo</Text>
         </TouchableOpacity>
 
         {/* Form Fields */}
@@ -149,17 +146,16 @@ const EditEventScreen = ({ route, navigation }) => {
           numberOfLines={4}
         />
 
-        <CustomButton label="Save Changes" onPress={validateAndSave} />
+        <CustomButton label="Add Event" onPress={validateAndSave} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center',marginTop:20, },
+  container: { flex: 1, justifyContent: 'center' },
   scrollView: { paddingHorizontal: 25 },
   headerText: {
-    fontFamily: 'Roboto-Medium',
     fontSize: 28,
     fontWeight: '500',
     color: '#333',
@@ -221,4 +217,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EditEventScreen;
+export default AddEventScreen;

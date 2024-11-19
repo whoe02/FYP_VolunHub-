@@ -11,7 +11,6 @@ import Home from './Screen/Browse';
 import Detail from './Screen/Detail';
 import EventDetail from './Screen/EventDetail';
 import SearchPage from './Screen/SearchPage';
-import OrganizationEvent from './Screen/OraganizationEventScreen';
 import Reviews from './Screen/ReviewScreen';
 import EditEvent from './Screen/EditEventScreen';
 import Profile from './Screen/ProfilePage';
@@ -25,6 +24,13 @@ import SetEventPref from './Screen/SetEventPreference';
 import UserMan from './Screen/UserManagement';
 import AddUser from './Screen/AddUser';
 import UserDetail from './Screen/UserDetail';
+import AddEvent from './Screen/AddEventScreen'
+import RewardScreen from './Screen/RewardScreen';
+import RewardCatalogue from './Screen/RewardCatalogue';
+import MyRewardsScreen from './Screen/MyReward';
+import RewardsHistory from './Screen/RewardHistory';
+import EventParticipant from './Screen/EventParticipant';
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -62,7 +68,6 @@ const App = () => {
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="EventDetail" component={EventDetail} />
         <Stack.Screen name="SearchPage" component={SearchPage} />
-        <Stack.Screen name="OrganizationEvent" component={OrganizationEvent} />
         <Stack.Screen name="Reviews" component={Reviews} />
         <Stack.Screen name="EditEvent" component={EditEvent} />
         <Stack.Screen name="Notification" component={Notification} />
@@ -72,7 +77,12 @@ const App = () => {
         <Stack.Screen name="SetEventPref" component={SetEventPref} />
         <Stack.Screen name="UserMan" component={UserMan} />
         <Stack.Screen name="AddUser" component={AddUser} />
+        <Stack.Screen name="AddEvent" component={AddEvent} />
         <Stack.Screen name="UserDetail" component={UserDetail} />
+        <Stack.Screen name="RewardCatalogue" component={RewardCatalogue} />
+        <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
+        <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
+        <Stack.Screen name="EventParticipant" component={EventParticipant} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -108,8 +118,8 @@ const TabNavigator = () => {
       })}
     >
       <Tab.Screen name="Browse" component={Home} />
-      <Tab.Screen name="My Event" component={UserMan} />
-      <Tab.Screen name="Rewards" component={MyEvent} />
+      <Tab.Screen name="My Event" component={MyEvent} />
+      <Tab.Screen name="Rewards" component={RewardScreen} />
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>

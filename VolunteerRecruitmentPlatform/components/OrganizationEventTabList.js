@@ -2,25 +2,25 @@ const homeTabList = [
     {
         id: 1,
         title: 'Upcoming',
-        slug: 'Upcoming',
+        slug: 'upcoming',
         selected: false,
     },
     {
         id: 2,
         title: 'In Progress',
-        slug: 'In Progress',
+        slug: 'inProgress',
         selected: false,
     },
     {
         id: 3,
         title: 'Completed',
-        slug: 'Completed',
+        slug: 'completed',
         selected: false,
     },
     {
         id: 4,
         title: 'Canceled',
-        slug: 'Canceled',
+        slug: 'canceled',
         selected: false,
     },
     

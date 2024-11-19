@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from 'react-native/Libraries/NewAppScreen';
 
-const EventDetail = ({ route }) => {
+const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
     const { event } = route.params;
-
+    const [user] = useState('Organization');
     const images = event.eventImages || [];
 
+    console.log(event);
     const renderButtons = () => {
         switch (event.status) {
             case 'catalog':
@@ -60,7 +61,7 @@ const EventDetail = ({ route }) => {
     };
 
     return (
-        <ScrollView contentContainerStyle={{ paddingTop: safeTop }} style={styles.container}>
+        <ScrollView contentContainerStyle={{ paddingTop: safeTop, flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                 {images.length > 0 ? (
                     images.map((img, index) => (
@@ -71,8 +72,19 @@ const EventDetail = ({ route }) => {
                 )}
             </ScrollView>
 
-            <Text style={styles.title}>{event.title}</Text>
-
+            <View style={styles.titleRow}>
+                <Text style={styles.title}>{event.title}</Text>
+                {user === 'Organization' && (
+                    <View style={styles.iconsContainer}>
+                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
+                            <Ionicons name="pencil-outline" size={30} color={Colors.black} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
+                            <Ionicons name="trash-outline" size={30} color={Colors.black} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
                 <Text style={styles.detailText}>Date: {event.date}</Text>
@@ -96,9 +108,21 @@ const EventDetail = ({ route }) => {
                 <Text style={styles.description}>{event.description}</Text>
             </View>
 
+            {user === 'Volunteer' && (
             <View style={styles.buttonContainer}>
                 {renderButtons()}
             </View>
+            )}
+            {user === 'Organization' && (
+                <View style={styles.orgButtonContainer}>
+                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EventParticipant', { event })}>
+                        <Text style={styles.buttonText}>Participant List</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Reviews', { event })}>
+                        <Text style={styles.buttonText}>Review</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </ScrollView>
     );
 };
@@ -242,6 +266,21 @@ const styles = StyleSheet.create({
         color: '#888',
         fontSize: 14,
         fontWeight: 'bold',
+    },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    orgButtonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    iconsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
 });
 
