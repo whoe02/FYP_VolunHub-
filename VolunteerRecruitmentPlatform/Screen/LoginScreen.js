@@ -5,47 +5,79 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  Alert,  // To show alert messages
+  Alert,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { getDoc, getDocs, collection, doc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig'; 
 
-import CustomButton from '../components/CustomButton'; 
-import InputField from '../components/InputField'; 
+import CustomButton from '../components/CustomButton';
+import InputField from '../components/InputField';
 
-const loginImage = require('../assets/misc/login.png'); 
-const googleImage = require('../assets/misc/google.png'); 
-const facebookImage = require('../assets/misc/facebook.png'); 
-const twitterImage = require('../assets/misc/twitter.png'); 
+const loginImage = require('../assets/misc/login.png');
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Email validation regex
+  // Function to validate email format
   const isValidEmail = (email) => {
     const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
     return regex.test(email);
   };
 
-  // Login handler
-  const handleLogin = () => {
+  // Handle login functionality
+  const handleLogin = async () => {
+    if (email.trim() === '' || password.trim() === '') {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-    // if (email.trim() === '' || password.trim() === '') {
-    //   Alert.alert('Error', 'Please fill in fields required');
-    //   return;
-    // }
+    // Validate email format
+    if (!isValidEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email');
+      return;
+    }
 
-    // if (!isValidEmail(email)) {
-    //   Alert.alert('Error', 'Please enter a valid email');
-    //   return;
-    // }
+    try {
+      console.log('Fetching user data for email:', email); // Log the email being searched for
 
-    // Proceed with login if everything is fine
-    Alert.alert('Login Successful', 'You have logged in successfully');
-    // navigation.navigate('Home'); 
-    navigation.replace('VolunHub'); 
+      // Fetch all users from Firestore collection
+      const usersQuery = await getDocs(collection(firestore, 'User'));
+      let userDocRef = null;
 
+      // Iterate through users to find the one matching the email
+      usersQuery.forEach((docSnapshot) => {
+        const userData = docSnapshot.data();
+        if (userData.email === email) {
+          userDocRef = doc(firestore, 'User', docSnapshot.id); // Get the user document reference by userId
+        }
+      });
+
+      if (!userDocRef) {
+        console.log('User not found!');
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+
+      const userDoc = await getDoc(userDocRef);
+      const userData = userDoc.data();
+      console.log('Fetched User Data:', userData); // Log the fetched data
+
+      // Check if the password matches
+      if (password !== userData.password) {
+        Alert.alert('Error', 'Invalid email or password');
+        return;
+      }
+
+      Alert.alert('Login Successful', 'You have logged in successfully');
+      navigation.replace('VolunHub', { user: userData });
+
+    } catch (error) {
+      console.error('Error logging in:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again later');
+    }
   };
 
   return (
@@ -66,38 +98,22 @@ const LoginScreen = ({ navigation }) => {
             fontWeight: '500',
             color: '#333',
             marginBottom: 30,
-          }}>
-          {"\n"}
+          }}
+        >
           Login
         </Text>
 
-        {/* Email Input */}
         <InputField
           label={'Email ID'}
-          icon={
-            <MaterialIcons
-              name="mail"
-              size={20}
-              color="#666"
-              style={{ marginRight: 5 }}
-            />
-          }
+          icon={<MaterialIcons name="mail" size={20} color="#666" style={{ marginRight: 5 }} />}
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
 
-        {/* Password Input */}
         <InputField
           label={'Password'}
-          icon={
-            <Ionicons
-              name="lock-closed"
-              size={20}
-              color="#666"
-              style={{ marginRight: 5 }}
-            />
-          }
+          icon={<Ionicons name="lock-closed" size={20} color="#666" style={{ marginRight: 5 }} />}
           inputType="password"
           fieldButtonLabel={"Forgot?"}
           fieldButtonFunction={() => { navigation.navigate('Forgot') }}
@@ -105,47 +121,27 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={setPassword}
         />
 
-        {/* Login Button */}
         <CustomButton label={"Login"} onPress={handleLogin} />
 
-        <Text style={{ textAlign: 'center', color: '#666', marginBottom: 30 }}>
-          Or, login with ...
+        <Text style={{ textAlign: 'center', marginVertical: 15 }}>
+          Or, sign up as{' '}
+          <Text
+            style={{ color: '#95c194', fontWeight: '700' }}
+            onPress={() => navigation.navigate('Register', { role: 'Volunteer' })}
+          >
+            Volunteer
+          </Text>{' '}
+          or{' '}
+          <Text
+            style={{ color: '#95c194', fontWeight: '700' }}
+            onPress={() => navigation.navigate('Register', { role: 'Organization' })}
+          >
+            Organization
+          </Text>
         </Text>
-
-        {/* Social Login Buttons */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 }}>
-          <TouchableOpacity onPress={() => { }} style={styles.socialButton}>
-            <Image source={googleImage} style={{ height: 24, width: 24 }} resizeMode="contain" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { }} style={styles.socialButton}>
-            <Image source={facebookImage} style={{ height: 24, width: 24 }} resizeMode="contain" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { }} style={styles.socialButton}>
-            <Image source={twitterImage} style={{ height: 24, width: 24 }} resizeMode="contain" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Register Link */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
-          <Text>New to the app?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={{ color: '#95c194', fontWeight: '700' }}> Register</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </SafeAreaView>
   );
-};
-
-// Style for social buttons
-const styles = {
-  socialButton: {
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-  },
 };
 
 export default LoginScreen;

@@ -22,7 +22,6 @@ const generateUsers = async () => {
         {
             userId: 'VL00001',
             name: 'Chew Jia Xian',
-            username: 'jxchew0909',
             password: 'chew1234',
             address: 'dudsudsjdsjdjs dsudsdsj dusdusjdsjd',
             email: 'jxchew2015@gmail.com',
@@ -31,12 +30,12 @@ const generateUsers = async () => {
             rewardPoint: '150',
             role: 'volunteer',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg'
         },
         {
             userId: 'VL00002',
             name: 'Chew Jia Xian',
-            username: 'jxchew0910',
             password: 'chew1234',
             address: 'dudsudsjdsjdjs dsudsdsj dusdusjdsjd',
             email: 'jxchew2016@gmail.com',
@@ -45,20 +44,20 @@ const generateUsers = async () => {
             rewardPoint: '150',
             role: 'volunteer',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/daeogkboj4lzmx6mkrqk.jpg'
         },
         {
             userId: 'VL00003',
             name: 'Chew Jia Xian',
-            username: 'jxchew0911',
             password: 'chew1234',
-            address: 'dudsudsjdsjdjs dsudsdsj dusdusjdsjd',
-            email: 'jxchew2017@gmail.com',
+            address: 'dudsudsjdsjdjs dsudsdsj dusdusj',
             icNum: '010203101852',
             phoneNum: '0123456789',
             rewardPoint: '150',
             role: 'volunteer',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/d8or1ix2r8rg5fsz7fgy.jpg'
         },
         // Add more volunteer data here...
@@ -68,7 +67,6 @@ const generateUsers = async () => {
         {
             userId: 'OG00001',
             name: 'Org Name',
-            username: 'orgusername',
             password: 'orgpass123',
             address: 'organization address example',
             email: 'orgemail@example.com',
@@ -76,12 +74,12 @@ const generateUsers = async () => {
             role: 'organization',
             businessType: 'example',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/xctd0jtkbbvteiag6546.jpg'
         },
         {
             userId: 'OG00002',
             name: 'Org Name',
-            username: 'orgusername2',
             password: 'orgpass123',
             address: 'organization address example',
             email: 'orgemail1@example.com',
@@ -89,12 +87,12 @@ const generateUsers = async () => {
             role: 'organization',
             businessType: 'example',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/izmo9ofcbhn7zygxvcsu.jpg'
         },
         {
             userId: 'OG00003',
             name: 'Org Name',
-            username: 'orgusername3',
             password: 'orgpass123',
             address: 'organization address example',
             email: 'orgemail2@example.com',
@@ -102,6 +100,7 @@ const generateUsers = async () => {
             role: 'organization',
             businessType: 'example',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/rwo9llb8lx9cq3wrx3bk.jpg'
         },
         // Add more organization data here...
@@ -111,7 +110,6 @@ const generateUsers = async () => {
         {
             userId: 'AD00001',
             name: 'Admin Name',
-            username: 'adminusername',
             password: 'adminpass123',
             address: 'admin address example',
             email: 'adminemail@example.com',
@@ -119,13 +117,13 @@ const generateUsers = async () => {
             phoneNum: '0171234567',
             role: 'admin',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/l3hcsly51prvzrirbliq.jpg'
 
         },
         {
             userId: 'AD00002',
             name: 'Admin Name',
-            username: 'adminusername2',
             password: 'adminpass123',
             address: 'admin address example',
             email: 'adminemail2@example.com',
@@ -133,12 +131,12 @@ const generateUsers = async () => {
             phoneNum: '0171234567',
             role: 'admin',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663773/UserProfilePic/njehb69k53qb45rrdrm2.jpg'
         },
         {
             userId: 'AD00003',
             name: 'Admin Name',
-            username: 'adminusername3',
             password: 'adminpass123',
             address: 'admin address example',
             email: 'adminemail3@example.com',
@@ -146,6 +144,7 @@ const generateUsers = async () => {
             phoneNum: '0171234567',
             role: 'admin',
             status: 'active',
+            birthDate: '1995-05-15',
             image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663773/UserProfilePic/vdoarj0jyqriptpu4jpw.jpg'
 
         },

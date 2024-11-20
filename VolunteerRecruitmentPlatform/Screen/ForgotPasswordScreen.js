@@ -1,37 +1,76 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert } from 'react-native';
 import InputField from '../components/InputField';
 import CustomButton from '../components/CustomButton';
+import { getDocs, query, where, collection } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig'; // Your Firestore config
 
-const VerificationScreen = ({ navigation }) => {
+const loginImage = require('../assets/misc/login.png'); 
+
+const ForgotPasswordScreen = ({ navigation }) => {
   const [verificationCode, setVerificationCode] = useState('');
-  const [verificationCodeSent, setVerificationCodeSent] = useState('1');
+  const [verificationCodeSent, setVerificationCodeSent] = useState('');
   const [email, setEmail] = useState('');
-  const loginImage = require('../assets/misc/login.png'); 
+  const [userData, setUserData] = useState(null); // To store the user data
 
-  const handleVerify = () => {
-    console.log("Email:", email);  // Log the email value
-    console.log("Verification Code:", verificationCode);  // Log the verification code
+  const generateVerificationCode = () => {
+    // Generate a 6-digit random verification code
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
 
+  const handleVerify = async () => {
     if (email.trim() === '') {
-      alert('Please fill in the email');
-    } else if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
-      alert('Please enter a valid email address');
-    } else {
-      alert('Verification Code Sent');
+      Alert.alert('Error', 'Please fill in the email');
+      return;
     }
+    if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Check if the email exists in the Firestore database
+    const q = query(collection(firestore, 'User'), where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      Alert.alert('Error', 'Email not found');
+      return;
+    }
+
+    // User exists, generate verification code
+    const verificationCodeGenerated = generateVerificationCode();
+    setVerificationCodeSent(verificationCodeGenerated);
+
+    // Optionally, you can send the verification code to the user's email via a service
+    console.log('Verification Code Sent:', verificationCodeGenerated);
+    // For example, here you would integrate with an email service like Firebase functions
+
+    Alert.alert('Success', 'Verification Code Sent');
   };
 
   const handleSubmit = () => {
-
     if (email.trim() === '' || verificationCode.trim() === '') {
-      alert('Please fill in both the email and the verification code.');
-    } else if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
-      alert('Please enter a valid email address');
-    } else if (verificationCode === verificationCodeSent){
-      navigation.navigate('ChangePassword');
+      Alert.alert('Error', 'Please fill in both the email and the verification code');
+      return;
+    }
+
+    if (verificationCode === verificationCodeSent) {
+      // Fetch the user data and navigate to the ChangePassword screen
+      const fetchUserData = async () => {
+        const q = query(collection(firestore, 'User'), where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const user = querySnapshot.docs[0].data(); // Get user data
+          setUserData(user); // Store user data
+
+          navigation.navigate('ChangePassword', { userData: user }); // Pass the user data to the next screen
+        }
+      };
+
+      fetchUserData();
     } else {
-      alert('Wrong Verification Code(1)');
+      Alert.alert('Error', 'Wrong Verification Code');
     }
   };
 
@@ -47,23 +86,21 @@ const VerificationScreen = ({ navigation }) => {
 
       <Text style={styles.label}>{"\n"}Email:</Text>
 
-      {/* Pass value and onChangeText for email */}
       <InputField
         label="Enter Email"
         keyboardType="email-address"
-        value={email} // Passing the email state
-        onChangeText={setEmail} // Updating the state on text change
+        value={email}
+        onChangeText={setEmail}
       />
 
       <Text style={styles.label}>Enter Verification Code:</Text>
 
       <View style={styles.verifyContainer}>
-        {/* Pass value and onChangeText for verification code */}
         <InputField
           label="Enter Verification Code"
           keyboardType="number-pad"
-          value={verificationCode} // Passing the verification code state
-          onChangeText={setVerificationCode} // Updating the state on text change
+          value={verificationCode}
+          onChangeText={setVerificationCode}
         />
         <CustomButton
           label="Verify"
@@ -99,4 +136,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VerificationScreen;
+export default ForgotPasswordScreen;
