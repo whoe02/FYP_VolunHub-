@@ -122,6 +122,7 @@ const RegisterScreen = ({ route, navigation }) => {
         phoneNumber,
         icNumber,
         address: fullAddress, // Store combined address
+        rewardPoint: 0,
         gender,
         birthDate: date.toLocaleDateString(),
         password,
