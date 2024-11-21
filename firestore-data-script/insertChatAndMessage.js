@@ -19,41 +19,41 @@ const db = getFirestore(app);
 const generateData = async () => {
     const chatDataList = [
         {
-            participants: ["/User/VL00001", "/User/OG00001"],
-            senderId: "/User/VL00001",
+            participants: ["VL00001", "OG00001"],
+            senderId: "VL00001",
             text: "Hello, how are you?",
             messages: [
-                { senderId: "/User/VL00001", text: "Hello, how are you?" },
-                { senderId: "/User/OG00001", text: "I’m good, thank you!" },
-                { senderId: "/User/VL00001", text: "Ok!" },
-                { senderId: "/User/VL00001", text: "I’m good too." },
+                { senderId: "VL00001", text: "Hello, how are you?" },
+                { senderId: "OG00001", text: "I’m good, thank you!" },
+                { senderId: "VL00001", text: "Ok!" },
+                { senderId: "VL00001", text: "I’m good too." },
             ],
         },
         {
-            participants: ["/User/VL00001", "/User/OG00002"],
-            senderId: "/User/VL00001",
+            participants: ["VL00001", "OG00002"],
+            senderId: "VL00001",
             text: "Hello, how are you? I'm fine.",
             messages: [
-                { senderId: "/User/VL00001", text: "Hello, how are you?" },
-                { senderId: "/User/OG00001", text: "I’m not good, thank you!" },
+                { senderId: "VL00001", text: "Hello, how are you?" },
+                { senderId: "OG00001", text: "I’m not good, thank you!" },
             ],
         },
         {
-            participants: ["/User/VL00002", "/User/OG00002"],
-            senderId: "/User/VL00002",
+            participants: ["VL00002", "OG00002"],
+            senderId: "VL00002",
             text: "Are you available for the event?",
             messages: [
-                { senderId: "/User/VL00002", text: "Are you available for the event?" },
-                { senderId: "/User/OG00002", text: "Yes, I’ll be there!" },
+                { senderId: "VL00002", text: "Are you available for the event?" },
+                { senderId: "OG00002", text: "Yes, I’ll be there!" },
             ],
         },
         {
-            participants: ["/User/VL00003", "/User/OG00003"],
-            senderId: "/User/VL00003",
+            participants: ["VL00003", "OG00003"],
+            senderId: "VL00003",
             text: "Let’s discuss the plan.",
             messages: [
-                { senderId: "/User/VL00003", text: "Let’s discuss the plan." },
-                { senderId: "/User/OG00003", text: "Sure, what’s on your mind?" },
+                { senderId: "VL00003", text: "Let’s discuss the plan." },
+                { senderId: "OG00003", text: "Sure, what’s on your mind?" },
             ],
         },
     ];
