@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUserContext } from '../UserContext';
 import { firestore } from '../firebaseConfig';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
@@ -8,12 +9,12 @@ const LiveChatList = ({ navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
     const [chatData, setChatData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { user, setUser } = useUserContext();
+
 
     useEffect(() => {
-        const userId = "/User/VL00001";
-
         // Real-time listener to fetch chats for the user
-        const chatQuery = query(collection(firestore, "Chat"), where("participants", "array-contains", userId));
+        const chatQuery = query(collection(firestore, "Chat"), where("participants", "array-contains", user.userId));
         const unsubscribe = onSnapshot(chatQuery, async (chatSnapshots) => {
             try {
                 const chats = await Promise.all(
@@ -21,8 +22,8 @@ const LiveChatList = ({ navigation }) => {
                         const chat = chatDoc.data();
 
                         // Get other participant
-                        const otherParticipantId = chat.participants.find((id) => id !== userId);
-                        const otherParticipantDoc = await getDoc(doc(firestore, "User", otherParticipantId.split("/")[2]));
+                        const otherParticipantId = chat.participants.find((id) => id !== user.userId);
+                        const otherParticipantDoc = await getDoc(doc(firestore, "User", otherParticipantId));
                         const otherParticipant = otherParticipantDoc.data();
 
                         return {
