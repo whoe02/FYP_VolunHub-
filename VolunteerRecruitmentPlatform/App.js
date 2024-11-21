@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import LoginScreen from './Screen/LoginScreen';
-import RegisterScreen from './Screen/RegisterScreen'; 
+import RegisterScreen from './Screen/RegisterScreen';
 import ForgotPasswordScreen from './Screen/ForgotPasswordScreen';
 import ChangePasswordScreen from './Screen/ChangePasswordScreen';
 import Home from './Screen/Browse';
@@ -71,7 +71,9 @@ const App = () => {
         <Stack.Screen name="Reviews" component={Reviews} />
         <Stack.Screen name="EditEvent" component={EditEvent} />
         <Stack.Screen name="Notification" component={Notification} />
-        <Stack.Screen name="Chat" component={Chat} />
+        <Stack.Screen name="Chat" component={Chat} options={{
+          headerShown: false, // This hides the header only for the "Home" screen
+        }} />
         <Stack.Screen name="ManageProfile" component={ManageProfile} />
         <Stack.Screen name="EditPassword" component={EditPassword} />
         <Stack.Screen name="SetEventPref" component={SetEventPref} />
