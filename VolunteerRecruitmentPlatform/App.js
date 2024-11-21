@@ -3,10 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { UserProvider } from './UserContext';
-
 import LoginScreen from './Screen/LoginScreen';
-import RegisterScreen from './Screen/RegisterScreen'; 
+import RegisterScreen from './Screen/RegisterScreen';
 import ForgotPasswordScreen from './Screen/ForgotPasswordScreen';
 import ChangePasswordScreen from './Screen/ChangePasswordScreen';
 import Home from './Screen/Browse';
@@ -57,38 +55,38 @@ const theme = {
 // Main App Component
 const App = () => {
   return (
-    <UserProvider>
-      <NavigationContainer theme={theme}>
-        <Stack.Navigator initialRouteName="Login">
-          {/* Stack Screens */}
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="Forgot" component={ForgotPasswordScreen} />
-          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+    <NavigationContainer theme={theme}>
+      <Stack.Navigator initialRouteName="Login">
+        {/* Stack Screens */}
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="Forgot" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
 
-          {/* Add Tab Navigator as a screen */}
-          <Stack.Screen name="VolunHub" component={TabNavigator} />
-          <Stack.Screen name="Home" component={Home} />
-          <Stack.Screen name="EventDetail" component={EventDetail} />
-          <Stack.Screen name="SearchPage" component={SearchPage} />
-          <Stack.Screen name="Reviews" component={Reviews} />
-          <Stack.Screen name="EditEvent" component={EditEvent} />
-          <Stack.Screen name="Notification" component={Notification} />
-          <Stack.Screen name="Chat" component={Chat} />
-          <Stack.Screen name="ManageProfile" component={ManageProfile} />
-          <Stack.Screen name="EditPassword" component={EditPassword} />
-          <Stack.Screen name="SetEventPref" component={SetEventPref} />
-          <Stack.Screen name="UserMan" component={UserMan} />
-          <Stack.Screen name="AddUser" component={AddUser} />
-          <Stack.Screen name="AddEvent" component={AddEvent} />
-          <Stack.Screen name="UserDetail" component={UserDetail} />
-          <Stack.Screen name="RewardCatalogue" component={RewardCatalogue} />
-          <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
-          <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
-          <Stack.Screen name="EventParticipant" component={EventParticipant} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </UserProvider>
+        {/* Add Tab Navigator as a screen */}
+        <Stack.Screen name="VolunHub" component={TabNavigator} />
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="EventDetail" component={EventDetail} />
+        <Stack.Screen name="SearchPage" component={SearchPage} />
+        <Stack.Screen name="Reviews" component={Reviews} />
+        <Stack.Screen name="EditEvent" component={EditEvent} />
+        <Stack.Screen name="Notification" component={Notification} />
+        <Stack.Screen name="Chat" component={Chat} options={{
+          headerShown: false, // This hides the header only for the "Home" screen
+        }} />
+        <Stack.Screen name="ManageProfile" component={ManageProfile} />
+        <Stack.Screen name="EditPassword" component={EditPassword} />
+        <Stack.Screen name="SetEventPref" component={SetEventPref} />
+        <Stack.Screen name="UserMan" component={UserMan} />
+        <Stack.Screen name="AddUser" component={AddUser} />
+        <Stack.Screen name="AddEvent" component={AddEvent} />
+        <Stack.Screen name="UserDetail" component={UserDetail} />
+        <Stack.Screen name="RewardCatalogue" component={RewardCatalogue} />
+        <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
+        <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
+        <Stack.Screen name="EventParticipant" component={EventParticipant} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
