@@ -7,7 +7,7 @@ import { Colors } from 'react-native/Libraries/NewAppScreen';
 const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
     const { event } = route.params;
-    const [user] = useState('Organization');
+    const [user] = useState('Volunteer');
     const images = event.eventImages || [];
 
     console.log(event);

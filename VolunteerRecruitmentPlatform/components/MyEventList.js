@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import myEventData from './mockEventData';
+import myEventData from './myEventData';
 
 const MyEventList = ({ activeTab }) => {
     const navigation = useNavigation();

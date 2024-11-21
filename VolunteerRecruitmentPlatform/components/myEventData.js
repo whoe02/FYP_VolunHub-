@@ -4,7 +4,8 @@ const myEventData = {
         {
             id: 1,
             title: 'Community Cleanup',
-            image: [
+            image:'https://via.placeholder.com/150/0000FF',
+            imageEvent: [
                 'https://via.placeholder.com/150/0000FF',
                 'https://via.placeholder.com/150/FF0000',
                 'https://via.placeholder.com/150/00FF00'
@@ -21,7 +22,8 @@ const myEventData = {
         {
             id: 2,
             title: 'Tree Planting Drive',
-            image: [
+            image:'https://via.placeholder.com/150/0000FF',
+            imageEvent: [
                 'https://via.placeholder.com/150/0000FF',
                 'https://via.placeholder.com/150/FF0000',
                 'https://via.placeholder.com/150/00FF00'
@@ -38,7 +40,8 @@ const myEventData = {
         {
             id: 3,
             title: 'Food Distribution',
-            image: [
+            image:'https://via.placeholder.com/150/0000FF',
+            imageEvent: [
                 'https://via.placeholder.com/150/0000FF',
                 'https://via.placeholder.com/150/FF0000',
                 'https://via.placeholder.com/150/00FF00'
@@ -55,7 +58,8 @@ const myEventData = {
         {
             id: 4,
             title: 'Charity Walkathon',
-            image: [
+            image:'https://via.placeholder.com/150/0000FF',
+            imageEvent: [
                 'https://via.placeholder.com/150/0000FF',
                 'https://via.placeholder.com/150/FF0000',
                 'https://via.placeholder.com/150/00FF00'
@@ -68,134 +72,86 @@ const myEventData = {
             status: "expired"
         },
     ],
-        upcoming: [
+    upcoming: [
         {
-            id: 5,
-            title: 'Beach Cleanup Day',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'A day dedicated to cleaning up the beach.',
-            date: '2024-12-15',
-            time: '7:00 AM',
-            address: 'Sunset Beach',
-            categories: ['Environment', 'Community'],
-            status: "upcoming"
-        },
+          id: 8,
+          title: 'Urban Gardening',
+          image: 'https://via.placeholder.com/150',
+          eventImages: [
+            'https://via.placeholder.com/150/007700',
+            'https://via.placeholder.com/150/55FF55',
+            'https://via.placeholder.com/150/AAFFAA'
+          ],
+          description: 'Help grow food in an urban environment.',
+          date: '2024-11-25',
+          time: '10:00 AM',
+          address: '123 Urban Garden Rd',
+          capacity: 15,
+          status: 'Open',
+          categories: ['Environment', 'Community', 'Gardening'],
+          status: "catalog"
+        }
+      ],
+      inProgress: [
         {
-            id: 6,
-            title: 'Toy Donation Drive',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'Donate toys for children in need.',
-            date: '2024-12-20',
-            time: '11:00 AM',
-            address: 'Charity Center, 12th Ave',
-            categories: ['Charity', 'Community'],
-            status: "upcoming"
-        },
-    ],
-    inProgress: [
+          id: 9,
+          title: 'Beach Yoga',
+          image: 'https://via.placeholder.com/150',
+          eventImages: [
+            'https://via.placeholder.com/150/9999FF',
+            'https://via.placeholder.com/150/FF99AA',
+            'https://via.placeholder.com/150/66AAFF'
+          ],
+          description: 'Relax and rejuvenate at the beach with a yoga session.',
+          date: '2024-11-12',
+          time: '7:00 AM',
+          address: '123 Ocean Blvd',
+          capacity: 40,
+          status: 'Open',
+          categories: ['Health', 'Outdoors', 'Volunteer'],
+          status: "catalog"
+        }
+      ],
+      completed: [
         {
-            id: 7,
-            title: 'Elderly Assistance Program',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'Assist elderly people with daily activities.',
-            date: '2024-11-18',
-            time: '9:00 AM',
-            address: 'Sunrise Elderly Home, Block B',
-            categories: ['Community', 'Health'],
-            status: "in-progress"
-        },
+          id: 10,
+          title: 'Food Bank Volunteering',
+          image: 'https://via.placeholder.com/150',
+          eventImages: [
+            'https://via.placeholder.com/150/FFBB00',
+            'https://via.placeholder.com/150/FFDD88',
+            'https://via.placeholder.com/150/AA88CC'
+          ],
+          description: 'Join us in distributing food at the local food bank.',
+          date: '2024-11-30',
+          time: '4:00 PM',
+          address: '789 Foodbank Rd',
+          capacity: 100,
+          status: 'Open',
+          categories: ['Charity', 'Community', 'Volunteer'],
+          status: "catalog"
+        }
+      ],
+      canceled: [
         {
-            id: 8,
-            title: 'Book Collection Campaign',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'Collect books to set up a library for kids.',
-            date: '2024-11-18',
-            time: '3:00 PM',
-            address: 'Central Library Hall',
-            categories: ['Education', 'Charity'],
-            status: "in-progress"
-        },
-    ],
-    completed: [
-        {
-            id: 9,
-            title: 'Blood Donation Camp',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'Donate blood to save lives.',
-            date: '2024-10-20',
-            time: '9:00 AM',
-            address: 'City Hospital',
-            categories: ['Health', 'Charity'],
-            status: "completed"
-        },
-        {
-            id: 10,
-            title: 'Recycling Workshop',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'Learn the basics of recycling.',
-            date: '2024-09-15',
-            time: '10:00 AM',
-            address: 'Green Earth Center',
-            categories: ['Environment', 'Education'],
-            status: "completed"
-        },
-    ],
-    canceled: [
-        {
-            id: 11,
-            title: 'Neighborhood Potluck',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'A community potluck event.',
-            date: '2024-08-12',
-            time: '6:00 PM',
-            address: 'Park Avenue Community Hall',
-            categories: ['Community', 'Food'],
-            status: "canceled"
-        },
-        {
-            id: 12,
-            title: 'Music for a Cause',
-            image: [
-                'https://via.placeholder.com/150/0000FF',
-                'https://via.placeholder.com/150/FF0000',
-                'https://via.placeholder.com/150/00FF00'
-              ],
-            description: 'A concert event for charity fundraising.',
-            date: '2024-08-01',
-            time: '7:00 PM',
-            address: 'Downtown Concert Hall',
-            categories: ['Charity', 'Music'],
-            status: "canceled"
-        },
-    ],
+          id: 11,
+          title: 'Urban Gardening',
+          image: 'https://via.placeholder.com/150',
+          eventImages: [
+            'https://via.placeholder.com/150/007700',
+            'https://via.placeholder.com/150/55FF55',
+            'https://via.placeholder.com/150/AAFFAA'
+          ],
+          description: 'Help grow food in an urban environment.',
+          date: '2024-11-25',
+          time: '10:00 AM',
+          address: '123 Urban Garden Rd',
+          capacity: 15,
+          status: 'Open',
+          categories: ['Environment', 'Community', 'Gardening'],
+          status: "catalog"
+        }
+      ],
 };
 
 export default myEventData;
