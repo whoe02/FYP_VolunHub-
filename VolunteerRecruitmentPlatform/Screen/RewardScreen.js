@@ -1,22 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useUserContext } from '../UserContext'; // Adjust the path to your context file
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig'; // Import Firestore configuration
 
 const RewardScreen = ({ navigation }) => {
-  const [points, setPoints] = useState(1200);
+  const { user, setUser } = useUserContext(); // Get user data from context and a method to update it
+  const [vouchers, setVouchers] = useState([]); // State to store fetched rewards data
+  const [loading, setLoading] = useState(false); // State to handle loading indicator
+  const [isCheckedInToday, setIsCheckedInToday] = useState(false); // State to track if user checked in today
 
-  const vouchers = [
-    { id: 1, title: '10% off on next purchase', pointsRequired: 500, type: 'Discount', image: 'https://via.placeholder.com/150' },
-    { id: 2, title: 'Free Shipping', pointsRequired: 1000, type: 'Shipping', image: 'https://via.placeholder.com/150' },
-    { id: 3, title: 'Gift Card $50', pointsRequired: 1500, type: 'Gift Card', image: 'https://via.placeholder.com/150' },
-  ];
+  // Fetch rewards from Firestore
+  const fetchVouchers = async () => {
+    setLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(firestore, 'Rewards'));
+      const rewardsData = querySnapshot.docs.map((doc) => ({
+        rewardId: doc.id,
+        ...doc.data(),
+      }));
+      setVouchers(rewardsData);
+    } catch (error) {
+      console.error("Error fetching rewards:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Check if user has checked in today
+  const checkUserCheckInStatus = async () => {
+    try {
+      const userRef = doc(firestore, 'User', user.userId);
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const lastCheckInDate = userData.lastCheckInDate;
+
+        // Compare last check-in date with today's date
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        setIsCheckedInToday(lastCheckInDate === today);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  // Handle the check-in action
+  const handleCheckIn = async () => {
+    if (isCheckedInToday) {
+      alert('You have already checked in today!');
+      return;
+    }
+
+    try {
+      const userRef = doc(firestore, 'User', user.userId);
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentRewardPoints = parseInt(userData.rewardPoint || 0);
+
+        // Update the reward points and last check-in date
+        await updateDoc(userRef, {
+          rewardPoint: currentRewardPoints + 10,
+          lastCheckInDate: new Date().toISOString().split('T')[0], // Set today's date as the last check-in date
+        });
+
+        alert('You have successfully checked in and earned 10 points!');
+        
+        // Fetch updated user data to refresh the points
+        const updatedUserDoc = await getDoc(userRef);
+        if (updatedUserDoc.exists()) {
+          const updatedUserData = updatedUserDoc.data();
+          setUser({ ...user, rewardPoint: updatedUserData.rewardPoint }); // Update user context with new points
+        }
+        
+        checkUserCheckInStatus(); // Re-fetch the check-in status to update the UI
+      }
+    } catch (error) {
+      console.error("Error during check-in:", error);
+    }
+  };
+
+  // Fetch rewards and user check-in status when the component mounts
+  useEffect(() => {
+    fetchVouchers();
+    checkUserCheckInStatus(); // Check if the user has already checked in today
+  }, []);
+
+  // Render the reward vouchers
   const renderVouchers = () => {
-    return vouchers.map((voucher) => (
-      <View key={voucher.id} style={styles.voucherCard}>
+    // Slice the vouchers array to show only the first 7
+    const limitedVouchers = vouchers.slice(0, 7);
+  
+    return limitedVouchers.map((voucher) => (
+      <View key={voucher.rewardId} style={styles.voucherCard}>
         {/* Image Container */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: voucher.image }} style={styles.voucherImage} />
+          <Image source={{ uri: voucher.imageVoucher }} style={styles.voucherImage} />
           
           {/* Type Label */}
           <View style={styles.typeLabel}>
@@ -42,7 +125,10 @@ const RewardScreen = ({ navigation }) => {
       <View style={styles.pointsAndNavSection}>
         <View style={styles.pointsSection}>
           <Text style={styles.pointsTitle}>Your Points</Text>
-          <Text style={styles.points}>{points}</Text>
+          {/* Ensure the rewardPoint is valid */}
+          <Text style={styles.points}>
+            {user && user.rewardPoint !== undefined ? user.rewardPoint : 0} {/* Fallback to 0 if undefined */}
+          </Text>
         </View>
 
         {/* Navigation Buttons */}
@@ -61,9 +147,13 @@ const RewardScreen = ({ navigation }) => {
 
       {/* Vouchers Section */}
       <Text style={styles.sectionTitle}>Available Vouchers</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.voucherScroll}>
-        {renderVouchers()}
-      </ScrollView>
+      {loading ? (
+        <ActivityIndicator size="large" color="#6a8a6d" />
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.voucherScroll}>
+          {renderVouchers()}
+        </ScrollView>
+      )}
 
       {/* Daily Check-In Section */}
       <View style={styles.dailyCheckInBox}>
@@ -74,8 +164,12 @@ const RewardScreen = ({ navigation }) => {
             Check-in now and earn points!
           </Text>
         </View>
-        <TouchableOpacity style={styles.dailyCheckInButton}>
-          <Text style={styles.checkInButtonText}>Check-In</Text>
+        <TouchableOpacity 
+          style={styles.dailyCheckInButton} 
+          onPress={handleCheckIn}
+          disabled={isCheckedInToday} // Disable the button if already checked in
+        >
+          <Text style={styles.checkInButtonText}>{isCheckedInToday ? 'Checked In Today' : 'Check-In'}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -144,11 +238,12 @@ const styles = StyleSheet.create({
   },
   voucherCard: {
     backgroundColor: '#ffffff',
-    marginBottom:10,
+    marginBottom: 10,
     padding: 15,
     borderRadius: 12,
     marginRight: 15,
-    width: 230,
+    width: 200,
+    height:290,
     alignItems: 'center',
     elevation: 5,
     shadowColor: '#000',
@@ -213,36 +308,33 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
   },
   dailyCheckInContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
   },
   dailyCheckInTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#4caf50',
-    marginTop: 10,
+    marginLeft: 10,
   },
   dailyCheckInDescription: {
     fontSize: 14,
-    color: '#616161',
-    textAlign: 'center',
-    marginTop: 5,
+    color: '#757575',
+    marginLeft: 5,
+    marginRight:15,
   },
   dailyCheckInButton: {
     backgroundColor: '#6a8a6d',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 8,
+    marginTop: 15,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
   },
   checkInButtonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
 });
