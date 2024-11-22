@@ -1,49 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
+import { collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig'; // Import your Firebase configuration
+import { useUserContext } from '../UserContext'; // Import user context
 
 const PointHistoryScreen = () => {
-  const [pointHistory, setPointHistory] = useState([
-    {
-      id: '1',
-      title: '10% Off',
-      type: 'Discount',
-      points: -500, // Negative for used points
-      description: 'Get 10% off on your next purchase.',
-      date: '2024-11-15',
-    },
-    {
-      id: '2',
-      title: 'Free Shipping',
-      type: 'Shipping',
-      points: -800, // Negative for used points
-      description: 'Enjoy free shipping on your order.',
-      date: '2024-11-17',
-    },
-    {
-      id: '3',
-      title: 'Gift Card Earned',
-      type: 'Gift',
-      points: 1500, // Positive for earned points
-      description: 'Earned a $50 gift card.',
-      date: '2024-11-18',
-    },
-    {
-      id: '4',
-      title: '20% Off',
-      type: 'Discount',
-      points: -700, // Negative for used points
-      description: 'Save 20% on your favorite items.',
-      date: '2024-11-19',
-    },
-  ]);
+  const { user } = useUserContext(); // Get user context
+  const [pointHistory, setPointHistory] = useState([]);
+  const [loading, setLoading] = useState(true); // To show a loading indicator while fetching data
 
-  // Sort the history array by date (latest first)
-  const sortedPointHistory = [...pointHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Fetch point history from Firestore
+  const fetchPointHistory = async () => {
+    setLoading(true);
+    try {
+      const historyRef = collection(firestore, 'User', user.userId, 'usersReward');
+      const historySnapshot = await getDocs(historyRef);
+      const historyData = historySnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((item) => item.status === 'redeemed'); // Filter for redeemed items
+      // Sort data by date in descending order
+      const sortedHistory = historyData.sort((a, b) => new Date(b.dateUsed) - new Date(a.dateUsed));
+      setPointHistory(sortedHistory);
+    } catch (error) {
+      console.error('Error fetching point history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  // Use Effect to fetch data on component mount
+  useEffect(() => {
+    fetchPointHistory();
+  }, []);
 
   const renderTransaction = ({ item }) => (
     <View style={styles.transactionCard}>
@@ -51,25 +49,36 @@ const PointHistoryScreen = () => {
         <Text style={[styles.transactionTitle, styles.boldLeft]}>{item.title}</Text>
         <Text style={styles.transactionType}>{item.type}</Text>
       </View>
-      <Text style={styles.transactionAmount}>
-        {item.points < 0 ? '-' : '+'} {Math.abs(item.points)} Points
+      <Text
+        style={[
+          styles.transactionAmount,
+          item.points < 0 ? styles.decreaseColor : styles.increaseColor,
+        ]}
+      >
+        {item.pointsRequired < 0 ? '-' : '+'} {Math.abs(item.pointsRequired)} Points
       </Text>
       <Text style={styles.transactionDescription}>{item.description}</Text>
-      <Text style={styles.transactionDate}>Date: {item.date}</Text>
+      <Text style={styles.transactionDate}>Date: {item.dateUsed}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Point History</Text>
-
-      {/* Point History List */}
-      <FlatList
-        data={sortedPointHistory}
-        renderItem={renderTransaction}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.historyList}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#6a8a6d" />
+      ) : pointHistory.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No transaction history found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={pointHistory}
+          renderItem={renderTransaction}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.historyList}
+        />
+      )}
     </View>
   );
 };
@@ -109,10 +118,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   decrease: {
-    borderLeftColor: '#d32f2f', // Red color for decrease
+    borderLeftColor: '#d32f2f',
   },
   boldLeft: {
-    fontWeight: '700', // Bold the left side title text
+    fontWeight: '700',
   },
   transactionTitle: {
     fontSize: 18,
@@ -128,7 +137,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginVertical: 10,
-    color: '#2e7d32', // Green for increase
+  },
+  increaseColor: {
+    color: '#2e7d32',
+  },
+  decreaseColor: {
+    color: '#d32f2f',
   },
   transactionDescription: {
     fontSize: 14,
@@ -138,6 +152,15 @@ const styles = StyleSheet.create({
   transactionDate: {
     fontSize: 12,
     color: '#616161',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#757575',
   },
 });
 
