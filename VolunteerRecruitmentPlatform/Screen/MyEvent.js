@@ -12,7 +12,8 @@ const MyEventPage = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('all');
     const [user] = useState('Volunteer');
     return (
-        <View style={[{ flex: 1 }, { paddingTop: safeTop }]}>
+        <View style={[{ flex: 1 }, { paddingTop: safeTop }, {    backgroundColor: '#f9f9f9',
+}]}>
 
             {user === 'Organization' && (
                 <OrganizationEventTab onTabChanged={setActiveTab} />

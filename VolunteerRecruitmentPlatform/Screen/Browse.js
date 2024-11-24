@@ -20,7 +20,8 @@ const Home = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: safeTop }]}>
+    <View style={[styles.container, { paddingTop: safeTop }, {    backgroundColor: '#f9f9f9',
+}]}>
       <Header/>
       <SearchBar onPress={handleSearchBarPress}/>
       <HomeTab onTabChanged={onTabChanged}/>

@@ -2,17 +2,18 @@ import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Image, Text, TouchableOpacity, SafeAreaView, Alert } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
+import { useUserContext } from '../UserContext';
 import { doc, getDoc } from "firebase/firestore";
 import { firestore } from "../firebaseConfig"; // Ensure this is correctly initialized
 
 const ProfileScreen = ({ navigation }) => {
   const { top: safeTop } = useSafeAreaInsets();
   const [userData, setUserData] = useState(null); // Store user data here
+  const { user, setUser } = useUserContext();
 
   const fetchUserData = async () => {
     try {
-      const userId = "VL00001"; // Replace with actual user ID logic
-      const userDoc = await getDoc(doc(firestore, "User", userId));
+      const userDoc = await getDoc(doc(firestore, "User", user.userId));
 
       if (userDoc.exists()) {
         setUserData(userDoc.data());
@@ -50,7 +51,7 @@ const ProfileScreen = ({ navigation }) => {
             <Image source={{ uri: userData.image }} style={styles.propic} />
           </View>
           <Text style={styles.name}>{userData.name}</Text>
-          <Text style={styles.membership}>@{userData.username}</Text>
+          <Text style={styles.membership}>{userData.email}</Text>
         </View>
 
         <View style={styles.buttonList}>
@@ -124,6 +125,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#f9f9f9',
   },
   safeArea: {
     flex: 1,
@@ -149,7 +151,7 @@ const styles = StyleSheet.create({
   },
   membership: {
     color: '#6a8a6d',
-    fontSize: 18,
+    fontSize: 14,
     marginBottom: 20,
   },
 
