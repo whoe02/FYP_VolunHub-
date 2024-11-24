@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   rewardCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#e8e3df',
     borderRadius: 12,
     padding: 15,
     marginBottom: 20,
@@ -227,6 +227,7 @@ const styles = StyleSheet.create({
   },
   viewButton: {
     marginTop: 10,
+    marginLeft:10,
     backgroundColor: '#6a8a6d',
     paddingVertical: 8,
     paddingHorizontal: 15,

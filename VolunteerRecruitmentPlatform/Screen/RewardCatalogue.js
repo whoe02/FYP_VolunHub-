@@ -174,6 +174,7 @@ const CatalogueScreen = () => {
       });
       formData.append('upload_preset', 'rewardqr');
       formData.append('cloud_name', 'dnj0n4m7k');
+      formData.append('folder', 'rewardQr');
   
       const response = await axios.post(
         'https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload',
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#e8e3df',
     borderRadius: 12,
     padding: 15,
     marginBottom: 20,

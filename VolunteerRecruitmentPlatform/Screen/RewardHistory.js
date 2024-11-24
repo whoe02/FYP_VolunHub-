@@ -19,16 +19,36 @@ const PointHistoryScreen = () => {
   const fetchPointHistory = async () => {
     setLoading(true);
     try {
-      const historyRef = collection(firestore, 'User', user.userId, 'usersReward');
-      const historySnapshot = await getDocs(historyRef);
-      const historyData = historySnapshot.docs
-        .map((doc) => ({
+      // Fetch `usersReward` collection
+      const rewardsRef = collection(firestore, 'User', user.userId, 'usersReward');
+      const rewardsSnapshot = await getDocs(rewardsRef);
+      const rewardsData = rewardsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
           id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((item) => item.status === 'redeemed'); // Filter for redeemed items
-      // Sort data by date in descending order
-      const sortedHistory = historyData.sort((a, b) => new Date(b.dateUsed) - new Date(a.dateUsed));
+          ...data,
+          date: data.dateGet, // Use `dateGet` field from `usersReward`
+          type: 'Reward', // Tag to identify reward items
+        };
+      });
+
+      // Fetch `userHistory` subcollection
+      const historyRef = collection(firestore, 'User', user.userId, 'userHistory');
+      const historySnapshot = await getDocs(historyRef);
+      const historyData = historySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        type: 'History', // Tag to identify history items
+      }));
+
+      // Combine `usersReward` and `userHistory` into one array
+      const combinedData = [...rewardsData, ...historyData];
+
+      // Sort by date in descending order
+      const sortedHistory = combinedData.sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+
       setPointHistory(sortedHistory);
     } catch (error) {
       console.error('Error fetching point history:', error);
@@ -36,7 +56,6 @@ const PointHistoryScreen = () => {
       setLoading(false);
     }
   };
-  
 
   // Use Effect to fetch data on component mount
   useEffect(() => {
@@ -45,20 +64,19 @@ const PointHistoryScreen = () => {
 
   const renderTransaction = ({ item }) => (
     <View style={styles.transactionCard}>
-      <View style={[styles.transactionHeader, item.points < 0 && styles.decrease]}>
-        <Text style={[styles.transactionTitle, styles.boldLeft]}>{item.title}</Text>
-        <Text style={styles.transactionType}>{item.type}</Text>
+      <View style={styles.transactionHeader}>
+        <Text style={[styles.transactionTitle, styles.boldLeft]}>
+          {item.type === 'Reward' ? item.title : `${item.title}`}
+        </Text>
+        <Text style={styles.transactionAmount}>
+          {item.pointsUsed < 0 || item.pointsRequired < 0 ? '-' : '+'}{' '}
+          {Math.abs(item.pointGet || item.pointsRequired)} Points
+        </Text>
       </View>
-      <Text
-        style={[
-          styles.transactionAmount,
-          item.points < 0 ? styles.decreaseColor : styles.increaseColor,
-        ]}
-      >
-        {item.pointsRequired < 0 ? '-' : '+'} {Math.abs(item.pointsRequired)} Points
+      <Text style={styles.transactionDescription}>
+        {item.description || 'No description available.'}
       </Text>
-      <Text style={styles.transactionDescription}>{item.description}</Text>
-      <Text style={styles.transactionDate}>Date: {item.dateUsed}</Text>
+      <Text style={styles.transactionDate}>Date: {item.date || 'N/A'}</Text>
     </View>
   );
 
@@ -117,9 +135,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  decrease: {
-    borderLeftColor: '#d32f2f',
-  },
   boldLeft: {
     fontWeight: '700',
   },
@@ -128,21 +143,11 @@ const styles = StyleSheet.create({
     color: '#424242',
     flex: 1,
   },
-  transactionType: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#616161',
-  },
   transactionAmount: {
     fontSize: 16,
     fontWeight: '700',
     marginVertical: 10,
-  },
-  increaseColor: {
     color: '#2e7d32',
-  },
-  decreaseColor: {
-    color: '#d32f2f',
   },
   transactionDescription: {
     fontSize: 14,
@@ -152,6 +157,11 @@ const styles = StyleSheet.create({
   transactionDate: {
     fontSize: 12,
     color: '#616161',
+  },
+  transactionHistoryId: {
+    fontSize: 12,
+    color: '#616161',
+    fontStyle: 'italic',
   },
   emptyContainer: {
     flex: 1,
