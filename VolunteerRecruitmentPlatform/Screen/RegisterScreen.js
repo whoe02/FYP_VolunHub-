@@ -38,7 +38,6 @@ const RegisterScreen = ({ route, navigation }) => {
   const [userId, setUserId] = useState('');
 
   useEffect(() => {
-    // Fetch the latest userId for the role selected (volunteer, organization, admin)
     const fetchLatestUserId = async () => {
       let prefix = '';
       switch (role) {
@@ -56,7 +55,6 @@ const RegisterScreen = ({ route, navigation }) => {
       const usersQuerySnapshot = await getDocs(collection(firestore, 'User'));
       const ids = [];
 
-      // Collect all userIds with the specific prefix
       usersQuerySnapshot.forEach((doc) => {
         const userData = doc.data();
         if (userData.userId.startsWith(prefix)) {
@@ -66,10 +64,8 @@ const RegisterScreen = ({ route, navigation }) => {
       });
 
       if (ids.length === 0) {
-        // If no user exists for the role, start from 1
         setUserId(`${prefix}00001`);
       } else {
-        // Increment the highest userId by 1
         const maxId = Math.max(...ids);
         setUserId(`${prefix}${String(maxId + 1).padStart(5, '0')}`);
       }
@@ -86,9 +82,15 @@ const RegisterScreen = ({ route, navigation }) => {
   };
 
   const validateRegistration = () => {
-    if (!fullName || !email || !phoneNumber || !icNumber || !street || !city || !postalCode || !password || !confirmPassword || !gender) {
+    if (!fullName || !email || !phoneNumber || !street || !city || !postalCode || !password || !confirmPassword || !gender) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
+    }
+    if (role === 'Volunteer' || role === 'Admin') {
+      if (!icNumber) {
+        Alert.alert('Error', 'IC Number is required for this role');
+        return false;
+      }
     }
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
@@ -97,7 +99,6 @@ const RegisterScreen = ({ route, navigation }) => {
     return true;
   };
 
-  // Function to check if email is unique
   const isEmailUnique = async (email) => {
     const q = query(collection(firestore, 'User'), where('email', '==', email));
     const querySnapshot = await getDocs(q);
@@ -111,29 +112,54 @@ const RegisterScreen = ({ route, navigation }) => {
         Alert.alert('Error', 'Email already exists');
         return;
       }
-
-      // Combine street, city, and postal code into a single address string
+  
       const fullAddress = `${street}, ${city}, ${postalCode}`;
-
       const userData = {
         userId,
         fullName,
         email,
         phoneNumber,
-        icNumber,
-        address: fullAddress, // Store combined address
-        rewardPoint: 0,
+        address: fullAddress,
         gender,
         birthDate: date.toLocaleDateString(),
         password,
         role,
         status: 'active',
-        image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg', 
+        image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg',
       };
-
-      // Save user data to Firestore
+  
+      if (role === 'Volunteer') {
+        userData.icNumber = icNumber;
+        userData.rewardPoint = 0;
+        userData.location = [];
+        userData.preference = [];
+        userData.skills = [];
+      } else if (role === 'Organization') {
+        userData.businessType = '';
+      } else if (role === 'Admin') {
+        userData.icNumber = icNumber;
+      }
+  
       try {
-        await setDoc(doc(firestore, 'User', userData.userId), userData);
+        // Create the user document
+        const userDocRef = doc(firestore, 'User', userData.userId);
+        await setDoc(userDocRef, userData);
+  
+        // If role is Volunteer, initialize the usersReward subcollection
+        if (role === 'Volunteer') {
+          const usersRewardRef = collection(userDocRef, 'usersReward');
+          await setDoc(doc(usersRewardRef, 'usersReward'), {
+            userRewardId: '',            
+            rewardCode: '',         
+            title: '',              
+            description: '',         
+            expirationDate: '',      
+            userRewardId: '',        
+            pointsRequired: 0,        
+            image: ''                
+          });
+        }
+  
         Alert.alert('Success', 'Registration Successful');
         navigation.goBack();
       } catch (error) {
@@ -142,6 +168,7 @@ const RegisterScreen = ({ route, navigation }) => {
       }
     }
   };
+  
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center' }}>
@@ -190,13 +217,24 @@ const RegisterScreen = ({ route, navigation }) => {
           icon={<Ionicons name="call-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
           keyboardType="phone-pad"
         />
-        <InputField
-          label={'IC Number'}
-          value={icNumber}
-          onChangeText={setIcNumber}
-          icon={<Ionicons name="id-card-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
-        />
-        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomColor: '#ccc', borderBottomWidth: 1, marginBottom: 10, marginTop: -20 }}>
+        {role !== 'Organization' && (
+          <InputField
+            label={'IC Number'}
+            value={icNumber}
+            onChangeText={setIcNumber}
+            icon={<Ionicons name="id-card-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+          />
+        )}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderBottomColor: '#ccc',
+            borderBottomWidth: 1,
+            marginBottom: 10,
+            marginTop: -20,
+          }}
+        >
           <Ionicons name="male-female-outline" size={20} color="#666" style={{ marginRight: 10 }} />
           <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666' }}>
             <Picker.Item label="Select Gender" value="" color="#aaa" />
@@ -206,7 +244,16 @@ const RegisterScreen = ({ route, navigation }) => {
           </Picker>
         </View>
 
-        <View style={{ flexDirection: 'row', borderBottomColor: '#ccc', borderBottomWidth: 1, paddingBottom: 8, marginBottom: 20, marginTop: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            borderBottomColor: '#ccc',
+            borderBottomWidth: 1,
+            paddingBottom: 8,
+            marginBottom: 20,
+            marginTop: 10,
+          }}
+        >
           <Ionicons name="calendar-outline" size={20} color="#666" style={{ marginRight: 10 }} />
           <TouchableOpacity onPress={() => setShow(true)}>
             <Text style={{ color: '#666', marginLeft: 5, marginTop: 5 }}>{dobLabel}</Text>
@@ -214,13 +261,46 @@ const RegisterScreen = ({ route, navigation }) => {
         </View>
         {show && <DateTimePicker value={date} mode="date" display="default" onChange={onChange} />}
 
-        <InputField label={'Street'} value={street} onChangeText={setStreet} icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />} />
-        <InputField label={'City'} value={city} onChangeText={setCity} icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />} />
-        <InputField label={'Postal Code'} value={postalCode} onChangeText={setPostalCode} icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />} keyboardType="numeric" />
-        <InputField label={'Password'} value={password} onChangeText={setPassword} icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={{ marginRight: 10 }} />} secureTextEntry />
-        <InputField label={'Confirm Password'} value={confirmPassword} onChangeText={setConfirmPassword} icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={{ marginRight: 10 }} />} secureTextEntry />
+        <InputField
+          label={'Street'}
+          value={street}
+          onChangeText={setStreet}
+          icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+        />
+        <InputField
+          label={'City'}
+          value={city}
+          onChangeText={setCity}
+          icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+        />
+        <InputField
+          label={'Postal Code'}
+          value={postalCode}
+          onChangeText={setPostalCode}
+          icon={<Ionicons name="mail-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+        />
+        <InputField
+          label={'Password'}
+          value={password}
+          onChangeText={setPassword}
+          icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+          secureTextEntry={true}
+        />
+        <InputField
+          label={'Confirm Password'}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
+          secureTextEntry={true}
+        />
 
         <CustomButton label="Register" onPress={handleRegister} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
+          <Text>Already have an account?</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={{ color: '#6a8a6d', fontWeight: '700', marginLeft: 5 }}>Login</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

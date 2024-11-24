@@ -1,124 +1,170 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, Modal, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Image, Modal, Alert, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg'; // QR code generator
+import { useUserContext } from '../UserContext';
+import { collection, getDocs, deleteDoc, updateDoc, doc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
 
 const MyRewardsScreen = () => {
+  const { user } = useUserContext(); // Get user context
+  const [userRewards, setUserRewards] = useState([]);
+  const [loading, setLoading] = useState(true); // To handle loading state
   const [showQRCode, setShowQRCode] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState(null); // Store selected voucher to show its QR
-  const [redeemedVouchers, setRedeemedVouchers] = useState([
-    {
-      id: 1,
-      title: '10% Off',
-      type: 'Discount',
-      pointsRequired: 500,
-      description: 'Redeemed 10% off voucher for your next purchase.',
-      image: require('../assets/img/prof.png'),
-      redeemedDate: '2024-11-15',
-    },
-    {
-      id: 2,
-      title: 'Free Shipping',
-      type: 'Shipping',
-      pointsRequired: 800,
-      description: 'Redeemed free shipping on your next order.',
-      image: require('../assets/img/prof.png'),
-      redeemedDate: '2024-11-16',
-    },
-    {
-      id: 3,
-      title: '$50 Gift Card',
-      type: 'Gift',
-      pointsRequired: 1500,
-      description: 'Redeemed a $50 gift card for your purchases.',
-      image: require('../assets/img/prof.png'),
-      redeemedDate: '2024-11-17',
-    },
-  ]);
+  const [selectedReward, setSelectedReward] = useState(null); // Store selected reward to show its QR code
 
-  const handleRedeemPress = (voucher) => {
-    setSelectedVoucher(voucher); // Store the selected voucher
+  // Fetch the user's redeemed rewards
+  const fetchUserRewards = async () => {
+    setLoading(true);
+    try {
+      const userRewardsRef = collection(firestore, 'User', user.userId, 'usersReward');
+      const rewardsSnapshot = await getDocs(userRewardsRef);
+      const rewardsData = rewardsSnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((reward) => reward.status === 'active'); // Filter active rewards
+      console.log('Fetched active rewards:', rewardsData);
+      setUserRewards(rewardsData);
+    } catch (error) {
+      console.error('Error fetching user rewards:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  useEffect(() => {
+    fetchUserRewards(); // Call the function to fetch rewards on mount
+  }, []); // Empty dependency array means it runs once when the component is mounted
+
+  const handleShowQRCode = (reward) => {
+    setSelectedReward(reward); // Store the selected reward
     setShowQRCode(true); // Show the QR code modal
   };
 
-  const handleRedeemVoucher = () => {
+  const handleCloseQRCode = () => {
+    setShowQRCode(false); // Close the QR code modal
+  };
+
+  const handleRedeemReward = async () => {
     Alert.alert(
       'Redeem Voucher',
-      `Are you sure you want to redeem the "${selectedVoucher.title}" voucher?`,
+      `Are you sure you want to redeem the "${selectedReward.title}" voucher?`,
       [
         {
           text: 'Cancel',
-          onPress: () => setShowQRCode(false), // Close the modal without removing the voucher
+          onPress: () => setShowQRCode(false),
           style: 'cancel',
         },
         {
           text: 'Confirm',
-          onPress: () => {
-            // Remove the redeemed voucher from the list
-            setRedeemedVouchers((prevVouchers) =>
-              prevVouchers.filter((voucher) => voucher.id !== selectedVoucher.id)
-            );
-            setShowQRCode(false); // Close the modal after redeeming
-            Alert.alert('Success', 'Voucher redeemed successfully!');
+          onPress: async () => {
+            try {
+              const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+              const rewardRef = doc(firestore, 'User', user.userId, 'usersReward', selectedReward.id);
+              
+              // Update reward in Firestore
+              await updateDoc(rewardRef, {
+                status: 'redeemed',
+                dateUsed: currentDate,
+              });
+  
+              // Remove redeemed reward from local state
+              setUserRewards((prevRewards) =>
+                prevRewards.filter((reward) => reward.id !== selectedReward.id)
+              );
+  
+              setShowQRCode(false);
+              Alert.alert('Success', 'Voucher redeemed successfully!');
+            } catch (error) {
+              console.error('Error redeeming voucher:', error);
+              Alert.alert('Error', 'Something went wrong while redeeming the voucher.');
+            }
           },
         },
       ],
       { cancelable: false }
     );
   };
+  
+
+  const renderReward = ({ item }) => (
+    <View style={styles.rewardCard}>
+      <Image source={{ uri: item.image }} style={styles.rewardImage} />
+      <View style={styles.rewardDetails}>
+        <Text style={styles.rewardTitle}>{item.title}</Text>
+        <Text style={styles.rewardDescription}>{item.description}</Text>
+        <Text style={styles.rewardPoints}>{item.pointsRequired} Points</Text>
+      </View>
+      <TouchableOpacity
+        style={styles.viewButton}
+        onPress={() => handleShowQRCode(item)} // Trigger QR code modal
+      >
+        <Text style={styles.viewButtonText}>Show QR</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={redeemedVouchers}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={item.image} style={styles.cardImage} />
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDescription}>{item.description}</Text>
-              <Text style={styles.cardPoints}>{item.pointsRequired} Points</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.redeemButton}
-              onPress={() => handleRedeemPress(item)}
-            >
-              <Text style={styles.redeemButtonText}>Show QR</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        keyExtractor={(item) => item.id.toString()}
-      />
-
+      {loading ? (
+        <ActivityIndicator size="large" color="#6a8a6d" />
+      ) : userRewards.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Image
+            source={require('../assets/img/prof.png')} 
+            style={styles.emptyImage}
+          />
+          <Text style={styles.emptyText}>No Rewards Available</Text>
+          <Text style={styles.emptySubText}>
+            You haven't redeemed any rewards yet. Start exploring and redeeming!
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={userRewards}
+          renderItem={renderReward}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.rewardList}
+        />
+      )}
+  
       {/* Modal to show QR code */}
       <Modal
         visible={showQRCode}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowQRCode(false)}
+        onRequestClose={handleCloseQRCode}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            {selectedVoucher && (
+            {selectedReward ? (
               <>
-                <Text style={styles.qrTitle}>Voucher QR Code: {selectedVoucher.title}</Text>
-                <QRCode
-                  value={`Voucher ID: ${selectedVoucher.id}, Title: ${selectedVoucher.title}, Redeemed on: ${selectedVoucher.redeemedDate}`}
-                  size={200}
-                  backgroundColor="white"
-                  color="black"
-                />
+                <Text style={styles.qrTitle}>
+                  Voucher QR Code: {selectedReward.title}
+                </Text>
+                {selectedReward.rewardCode ? (
+                  <QRCode
+                    value={selectedReward.rewardCode}
+                    size={200}
+                    backgroundColor="white"
+                    color="black"
+                  />
+                ) : (
+                  <Text>No QR Code available for this reward.</Text> // Fallback message
+                )}
               </>
+            ) : (
+              <Text>Loading...</Text>
             )}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setShowQRCode(false)}
+                onPress={handleCloseQRCode}
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.redeemButton}
-                onPress={handleRedeemVoucher}
+                onPress={handleRedeemReward} // Redeem the voucher
               >
                 <Text style={styles.redeemButtonText}>Redeem</Text>
               </TouchableOpacity>
@@ -128,6 +174,7 @@ const MyRewardsScreen = () => {
       </Modal>
     </View>
   );
+  
 };
 
 const styles = StyleSheet.create({
@@ -136,7 +183,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     padding: 15,
   },
-  card: {
+  rewardList: {
+    marginBottom: 20,
+  },
+  rewardCard: {
     backgroundColor: '#e8e3df',
     borderRadius: 12,
     padding: 15,
@@ -151,37 +201,39 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     borderLeftColor: '#6a8a6d',
   },
-  cardImage: {
+  rewardImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     marginRight: 15,
   },
-  cardContent: {
+  rewardDetails: {
     flex: 1,
   },
-  cardTitle: {
+  rewardTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#4caf50',
     marginBottom: 5,
   },
-  cardDescription: {
+  rewardDescription: {
     fontSize: 14,
     color: '#616161',
     marginBottom: 8,
   },
-  cardPoints: {
+  rewardPoints: {
     fontSize: 14,
     color: '#757575',
   },
-  redeemButton: {
+  viewButton: {
+    marginTop: 10,
+    marginLeft:10,
     backgroundColor: '#6a8a6d',
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 8,
   },
-  redeemButtonText: {
+  viewButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
@@ -217,10 +269,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalButtons: {
+    marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
     width: '100%',
+  },
+  redeemButton: {
+    backgroundColor: '#6a8a6d',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  redeemButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
