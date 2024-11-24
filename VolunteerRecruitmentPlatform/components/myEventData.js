@@ -10,7 +10,7 @@ const myEventData = {
                 'https://via.placeholder.com/150/FF0000',
                 'https://via.placeholder.com/150/00FF00'
               ],
-            description: 'A neighborhood cleanup event.',
+            description: 'A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. A neighborhood cleanup event. ',
             date: '2024-11-25',
             time: '9:00 AM',
             address: '123 Cleanup St',

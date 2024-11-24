@@ -8,7 +8,7 @@ const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
     const { event } = route.params;
     const [user] = useState('Volunteer');
-    const images = event.eventImages || [];
+    const images = event.imageEvent || [];
 
     console.log(event);
     const renderButtons = () => {
@@ -61,16 +61,8 @@ const EventDetail = ({ route, navigation }) => {
     };
 
     return (
-        <ScrollView contentContainerStyle={{ paddingTop: safeTop, flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-                {images.length > 0 ? (
-                    images.map((img, index) => (
-                        <Image key={index} source={{ uri: img }} style={styles.image} />
-                    ))
-                ) : (
-                    <Text style={styles.noImageText}>No images available</Text>
-                )}
-            </ScrollView>
+        <ScrollView contentContainerStyle={{  flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
+            
 
             <View style={styles.titleRow}>
                 <Text style={styles.title}>{event.title}</Text>
@@ -85,6 +77,15 @@ const EventDetail = ({ route, navigation }) => {
                     </View>
                 )}
             </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+                {images.length > 0 ? (
+                    images.map((img, index) => (
+                        <Image key={index} source={{ uri: img }} style={styles.image} />
+                    ))
+                ) : (
+                    <Text style={styles.noImageText}>No images available</Text>
+                )}
+            </ScrollView>
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
                 <Text style={styles.detailText}>Date: {event.date}</Text>
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
-        backgroundColor: '#fff',
+        backgroundColor: '#f9f9f9',
     },
     imageScroll: {
         marginBottom: 15,
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     title: {
-        fontSize: 30,
+        fontSize: 24,
         fontWeight: '900',
         marginTop: 20,
         marginBottom: 20,
@@ -171,13 +172,21 @@ const styles = StyleSheet.create({
     },
     detailSection: {
         padding: 10,
-        shadowColor: 'grey',   
-        elevation: 1,
+        paddingBottom: 20,
+        borderRadius: 10,
+        backgroundColor: '#ffffff',
+        marginBottom: 15,
+        elevation: 2,
+        shadowColor: 'grey',
     },
     categoriesSection: {
         padding: 10,
+        paddingBottom: 20,
         shadowColor: 'grey',   
-        elevation: 1,
+        borderRadius: 10,
+        backgroundColor: '#ffffff',
+        marginBottom: 15,
+        elevation: 2,
     },
     categoriesWrapper: {
         flexDirection: 'row',
@@ -196,13 +205,16 @@ const styles = StyleSheet.create({
     descriptionSection: {
         marginBottom: 5,
         padding: 10,
+        paddingBottom: 20,
+        borderRadius: 10,
         shadowColor: 'grey',   
-        elevation: 1,
+        backgroundColor: '#ffffff',
+        elevation: 2,
     },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        padding: 10,
+        paddingVertical: 10,
         marginTop: 20,
         marginBottom: 40,
     },
@@ -224,7 +236,7 @@ const styles = StyleSheet.create({
     },
     buttonShort: {
         flex: 0.5,
-        borderWidth: 0.5,
+
         borderColor: Colors.darkGrey,
         paddingVertical: 10,
         borderRadius: 8,
