@@ -37,10 +37,10 @@ function Header() {
     return (
         <View style={styles.container} >
             <View style={styles.userInfo}>
-                <Image source={{ uri: userData.image }} style={styles.userImg} />
+                <Image source={require('../assets/img/prof.png')} style={styles.userImg} />
                 <View style={{ gap: 3 }}>
                     <Text style={styles.welcomeText}>Welcome</Text>
-                    <Text style={styles.userName}>{userData.name}</Text>
+                    <Text style={styles.userName}>Jx</Text>
                 </View>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
