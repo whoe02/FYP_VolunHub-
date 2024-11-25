@@ -32,6 +32,9 @@ import RewardCatalogue from './Screen/RewardCatalogue';
 import MyRewardsScreen from './Screen/MyReward';
 import RewardsHistory from './Screen/RewardHistory';
 import EventParticipant from './Screen/EventParticipant';
+import RewardManagement from './Screen/RewardManagement';
+import EditRewardScreen from './Screen/EditRewardScreen';
+import AddRewardScreen from './Screen/AddRewardScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -86,6 +89,8 @@ const App = () => {
           <Stack.Screen name="MyRewards" component={MyRewardsScreen} />
           <Stack.Screen name="RewardsHistory" component={RewardsHistory} />
           <Stack.Screen name="EventParticipant" component={EventParticipant} />
+          <Stack.Screen name="EditRewardScreen" component={EditRewardScreen} />
+          <Stack.Screen name="AddRewardScreen" component={AddRewardScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
@@ -123,7 +128,8 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Browse" component={Home} />
       <Tab.Screen name="My Event" component={MyEvent} />
-      <Tab.Screen name="Rewards" component={RewardScreen} />
+      {/* <Tab.Screen name="Rewards" component={RewardScreen} />  */}
+      <Tab.Screen name="Rewards" component={RewardManagement} /> 
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>
