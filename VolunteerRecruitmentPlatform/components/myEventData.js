@@ -1,3 +1,5 @@
+import { average } from "firebase/firestore";
+
 // myEventData.js
 const myEventData = {
     watchlist: [
@@ -14,6 +16,7 @@ const myEventData = {
             date: '2024-11-25',
             time: '9:00 AM',
             address: '123 Cleanup St',
+            averageRating: 4,
             categories: ['Community', 'Environment'],
             status: "catalog"
         },
@@ -32,6 +35,7 @@ const myEventData = {
             date: '2024-12-05',
             time: '10:00 AM',
             address: '456 Forest Rd',
+            averageRating: 4,
             categories: ['Environment', 'Volunteer'],
             status: "pending"
         },
@@ -50,6 +54,7 @@ const myEventData = {
             date: '2024-11-10',
             time: '2:00 PM',
             address: '789 Foodbank Rd',
+            averageRating: 4,
             categories: ['Charity', 'Community'],
             status: "active"
         },
@@ -68,6 +73,7 @@ const myEventData = {
             date: '2024-10-01',
             time: '8:00 AM',
             address: '101 Health St',
+            averageRating: 4,
             categories: ['Health', 'Charity'],
             status: "expired"
         },
@@ -88,6 +94,7 @@ const myEventData = {
           address: '123 Urban Garden Rd',
           capacity: 15,
           status: 'Open',
+          averageRating: 4,
           categories: ['Environment', 'Community', 'Gardening'],
           status: "catalog"
         }
@@ -108,6 +115,7 @@ const myEventData = {
           address: '123 Ocean Blvd',
           capacity: 40,
           status: 'Open',
+          averageRating: 4,
           categories: ['Health', 'Outdoors', 'Volunteer'],
           status: "catalog"
         }
@@ -128,6 +136,7 @@ const myEventData = {
           address: '789 Foodbank Rd',
           capacity: 100,
           status: 'Open',
+          averageRating: 4,
           categories: ['Charity', 'Community', 'Volunteer'],
           status: "catalog"
         }
@@ -148,6 +157,7 @@ const myEventData = {
           address: '123 Urban Garden Rd',
           capacity: 15,
           status: 'Open',
+          averageRating: 4,
           categories: ['Environment', 'Community', 'Gardening'],
           status: "catalog"
         }

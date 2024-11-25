@@ -10,7 +10,7 @@ import OrganizationEventTab from '../components/OrganizationEventTab';
 const MyEventPage = ({ navigation }) => {
     const {top: safeTop} = useSafeAreaInsets();
     const [activeTab, setActiveTab] = useState('all');
-    const [user] = useState('Volunteer');
+    const [user] = useState('Organization');
     return (
         <View style={[{ flex: 1 }, { paddingTop: safeTop }]}>
 
