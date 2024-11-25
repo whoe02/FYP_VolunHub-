@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
-    const { event } = route.params;
-    const [user] = useState('Volunteer');
-    const images = event.imageEvent || [];
+    const { event, userRole } = route.params; // Use passed user role
+    const images = event?.image || [];
+    const [loading, setLoading] = useState(false);
 
-    console.log(event);
     const renderButtons = () => {
         switch (event.status) {
-            case 'catalog':
+            case 'upcoming':
                 return (
                     <>
                         <TouchableOpacity style={styles.button}>
@@ -23,7 +21,7 @@ const EventDetail = ({ route, navigation }) => {
                             <Text style={styles.buttonTextApply}>Apply Now</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.buttonShort}>
-                            <Ionicons name="bookmark-outline" size={24} color={Colors.black} />
+                            <Ionicons name="bookmark-outline" size={24} color="black" />
                         </TouchableOpacity>
                     </>
                 );
@@ -60,19 +58,25 @@ const EventDetail = ({ route, navigation }) => {
         }
     };
 
-    return (
-        <ScrollView contentContainerStyle={{  flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
-            
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#6a8a6d" />
+            </View>
+        );
+    }
 
+    return (
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
             <View style={styles.titleRow}>
                 <Text style={styles.title}>{event.title}</Text>
-                {user === 'Organization' && (
+                {userRole === 'Organization' && (
                     <View style={styles.iconsContainer}>
                         <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
-                            <Ionicons name="pencil-outline" size={30} color={Colors.black} />
+                            <Ionicons name="pencil-outline" size={30} color="black" />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
-                            <Ionicons name="trash-outline" size={30} color={Colors.black} />
+                            <Ionicons name="trash-outline" size={30} color="black" />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -88,38 +92,45 @@ const EventDetail = ({ route, navigation }) => {
             </ScrollView>
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
-                <Text style={styles.detailText}>Date: {event.date}</Text>
-                <Text style={styles.detailText}>Time: {event.time}</Text>
-                <Text style={styles.detailText}>Address: {event.address}</Text>
-                <Text style={styles.detailText}>Capacity: {event.capacity}</Text>
-                <Text style={styles.detailText}>Status: {event.status}</Text>
+                <Text style={styles.detailText}>Date: {event.startDate || 'N/A'} - {event.endDate || 'N/A'}</Text>
+                <Text style={styles.detailText}>Time: {event.startTime || 'N/A'} - {event.endTime || 'N/A'}</Text>
+                <Text style={styles.detailText}>Address: {event.address || 'N/A'}</Text>
+                <Text style={styles.detailText}>Capacity: {event.capacity || 'N/A'}</Text>
+                <Text style={styles.detailText}>Status: {event.status || 'N/A'}</Text>
             </View>
-
             <View style={styles.categoriesSection}>
                 <Text style={styles.detailHeading}>Categories</Text>
                 <View style={styles.categoriesWrapper}>
-                    {event.categories.map((category, index) => (
-                        <Text key={index} style={styles.categoryText}>{category}</Text>
-                    ))}
+                    {event.categories && event.categories.length > 0 ? (
+                        event.categories.map((category, index) => (
+                            <Text key={index} style={styles.categoryText}>
+                                {category}
+                            </Text>
+                        ))
+                    ) : (
+                        <Text style={styles.noCategoryText}>No categories available</Text>
+                    )}
                 </View>
             </View>
-
             <View style={styles.descriptionSection}>
                 <Text style={styles.detailHeading}>Description</Text>
-                <Text style={styles.description}>{event.description}</Text>
+                <Text style={styles.description}>{event.description || 'No description available'}</Text>
             </View>
-
-            {user === 'Volunteer' && (
-            <View style={styles.buttonContainer}>
-                {renderButtons()}
-            </View>
+            {userRole === 'Volunteer' && (
+                <View style={styles.buttonContainer}>{renderButtons()}</View>
             )}
-            {user === 'Organization' && (
+            {userRole === 'Organization' && (
                 <View style={styles.orgButtonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EventParticipant', { event })}>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate('EventParticipant', { event })}
+                    >
                         <Text style={styles.buttonText}>Participant List</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Reviews', { event })}>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate('Reviews', { event })}
+                    >
                         <Text style={styles.buttonText}>Review</Text>
                     </TouchableOpacity>
                 </View>
@@ -169,6 +180,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
         color: "#616161",
+        textAlign: 'justify',
     },
     detailSection: {
         padding: 10,
@@ -237,7 +249,7 @@ const styles = StyleSheet.create({
     buttonShort: {
         flex: 0.5,
 
-        borderColor: Colors.darkGrey,
+        borderColor: 'darkGrey',
         paddingVertical: 10,
         borderRadius: 8,
         alignItems: 'center',

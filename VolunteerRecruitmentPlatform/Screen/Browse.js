@@ -25,7 +25,7 @@ const Home = ({ navigation }) => {
       <Header/>
       <SearchBar onPress={handleSearchBarPress}/>
       <HomeTab onTabChanged={onTabChanged}/>
-      <EventList activeTab={activeTab}/>    
+      <EventList activeTab={activeTab} navigation={navigation}/>    
     </View>
   );
 };

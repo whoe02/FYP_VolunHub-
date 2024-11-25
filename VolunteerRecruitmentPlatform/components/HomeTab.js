@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react'
 import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 import homeTabList from './HomeTabList';
 
 
