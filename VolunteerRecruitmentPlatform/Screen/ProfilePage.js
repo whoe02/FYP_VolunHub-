@@ -107,7 +107,14 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
+          <TouchableOpacity 
+            style={styles.buttonSection} 
+            activeOpacity={0.9}
+            onPress={() => {
+              setUser(null);  
+              navigation.navigate('Login'); 
+            }}
+          >
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
                 <Ionicons name="log-out" size={25} color={'#6a8a6d'} />
