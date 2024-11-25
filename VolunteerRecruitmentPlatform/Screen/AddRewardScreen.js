@@ -87,7 +87,7 @@ const AddRewardScreen = ({ navigation }) => {
           source={{ uri: newImageUri }}
           style={styles.rewardImage}
         />
-        <Text style={styles.changeImageText}>Pick Image</Text>
+        <Text style={styles.changeImageText}>Pick Image:</Text>
       </TouchableOpacity>
 
       {/* Title Input */}
@@ -103,7 +103,7 @@ const AddRewardScreen = ({ navigation }) => {
 
       {/* Description Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Description</Text>
+        <Text style={styles.inputLabel}>Description:</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Reward Description"
@@ -115,7 +115,7 @@ const AddRewardScreen = ({ navigation }) => {
 
       {/* Points Required Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Points Required</Text>
+        <Text style={styles.inputLabel}>Points Required:</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Points Required"
@@ -127,7 +127,7 @@ const AddRewardScreen = ({ navigation }) => {
 
       {/* Remaining Stock Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Remaining Stock</Text>
+        <Text style={styles.inputLabel}>Remaining Stock:</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Remaining Stock"
@@ -139,7 +139,7 @@ const AddRewardScreen = ({ navigation }) => {
 
       {/* Reward Type Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Reward Type</Text>
+        <Text style={styles.inputLabel}>Reward Type:</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Reward Type"
@@ -150,7 +150,7 @@ const AddRewardScreen = ({ navigation }) => {
 
       {/* Date Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Date</Text>
+        <Text style={styles.inputLabel}>Date: (YYYY-MM-DD)</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Date (YYYY-MM-DD)"
