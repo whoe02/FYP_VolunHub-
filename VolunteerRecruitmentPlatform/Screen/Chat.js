@@ -1,104 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, Image, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUserContext } from '../UserContext';
 import { firestore } from '../firebaseConfig';
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import { Video } from 'expo-av';
 
 const Chat = ({ route }) => {
     const { chat } = route.params;
-    const { user, setUser } = useUserContext();
-
+    const { user } = useUserContext();
     const { top: safeTop } = useSafeAreaInsets();
+
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
-    const [mInputMessage, setMInputMessage] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
     const [previewModalVisible, setPreviewModalVisible] = useState(false);
-    const [fullscreenImage, setFullscreenImage] = useState(null);
+    const [fullscreenMedia, setFullscreenMedia] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [dynamicHeight, setDynamicHeight] = useState(40); // Start with minimum height
+
+
+    const flatListRef = useRef();
 
     useEffect(() => {
         const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
         const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const groupedMessages = snapshot.docs.reduce((acc, doc) => {
-                const data = doc.data();
-                const date = new Date(data.timestamp.toDate()).toDateString();
-                if (!acc[date]) acc[date] = [];
-                acc[date].push({
-                    id: doc.id,
-                    text: data.text,
-                    sender: data.senderId,
-                    timestamp: data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    media: data.media || null,
-                });
-                return acc;
-            }, {});
+            const groupedMessages = [];
+            let lastDate = null;
 
-            setMessages(Object.entries(groupedMessages));
+            snapshot.docs.forEach((doc) => {
+                const messageData = {
+                    id: doc.id,
+                    ...doc.data(),
+                    timestamp: doc.data().timestamp.toDate(),
+                };
+
+                const messageDate = messageData.timestamp.toDateString();
+
+                if (messageDate !== lastDate) {
+                    // Add a date separator
+                    groupedMessages.push({
+                        id: `date-${messageDate}`,
+                        dateHeader: true,
+                        date: messageDate,
+                    });
+                    lastDate = messageDate;
+                }
+
+                groupedMessages.push(messageData);
+            });
+
+            setMessages(groupedMessages);
         });
 
         return () => unsubscribe();
     }, [chat.id]);
 
-    const uploadToCloudinary = async (uri) => {
+        // Check the size of the file before uploading
+        const checkFileSize = async (uri) => {
+            const fileInfo = await FileSystem.getInfoAsync(uri);
+            if (fileInfo.size > 16 * 1024 * 1024) { // 16 MB limit
+                Alert.alert('File too large', 'The selected file exceeds the 16 MB size limit.');
+                return false;
+            }
+            return true;
+        };
+
+
+    const uploadToCloudinary = async (uri, type) => {
+
+        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', {
             uri,
-            type: 'image/jpeg',
+            type: type.startsWith('video') ? 'video/mp4' : 'image/jpeg',
+            name: uri.split('/').pop(),
         });
         formData.append('upload_preset', 'chatmedia');
         formData.append('cloud_name', 'dnj0n4m7k');
 
         try {
-            const response = await fetch('https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload', {
+            const response = await fetch('https://api.cloudinary.com/v1_1/dnj0n4m7k/upload', {
                 method: 'POST',
                 body: formData,
             });
+
             const data = await response.json();
+            setIsUploading(false);
             return data.secure_url;
         } catch (error) {
+            setIsUploading(false);
             console.error('Error uploading to Cloudinary:', error);
             return null;
         }
     };
 
     const sendMessage = async () => {
+
         if (inputMessage.trim().length === 0 && !selectedImage) {
-            console.warn('Message or image required to send.');
+            console.warn('Message or media required to send.');
             return;
         }
 
         try {
             let mediaUrl = null;
 
-            // If an image is selected, upload it to Cloudinary
             if (selectedImage) {
-                const formData = new FormData();
-                formData.append('file', {
-                    uri: selectedImage,
-                    type: 'image/jpeg',
-                    name: 'chat-image.jpg',
-                });
-                formData.append('upload_preset', 'chatmedia');
-                formData.append('cloud_name', 'dnj0n4m7k');
-
-                const response = await fetch('https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                const data = await response.json();
-                if (data.secure_url) {
-                    mediaUrl = data.secure_url;
-                } else {
-                    console.error('Failed to upload image to Cloudinary:', data);
-                    return;
-                }
+                const type = selectedImage.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg';
+                mediaUrl = await uploadToCloudinary(selectedImage, type);
+                if (!mediaUrl) return;
             }
 
             const newMessage = {
@@ -108,42 +124,42 @@ const Chat = ({ route }) => {
                 timestamp: new Date(),
             };
 
-            // Add the message to Firestore
             const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
             await addDoc(messagesRef, newMessage);
 
-            // Update the last message in the chat
+            // Update the chat's last message
             const chatRef = doc(firestore, 'Chat', chat.id);
             await updateDoc(chatRef, {
                 lastMessage: {
-                    text: inputMessage || (mediaUrl ? '[Image]' : ''),
+                    text: inputMessage || (mediaUrl ? '[Media]' : ''),
                     senderId: user.userId,
                     timestamp: new Date(),
                 },
             });
 
-            // Reset states
+
             setInputMessage('');
             setSelectedImage(null);
             setPreviewModalVisible(false);
         } catch (error) {
-            console.error('Error sending message:', error.message || error);
+            console.error('Error sending message:', error);
         }
     };
-    const pickImage = async () => {
+
+    const pickMedia = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both images and videos
             quality: 1,
         });
-        if (!result.canceled) {
+        if (!result.canceled && (await checkFileSize(result.assets[0].uri))) {
             setSelectedImage(result.assets[0].uri);
             setPreviewModalVisible(true);
         }
     };
 
-    const takePhoto = async () => {
+    const takeMedia = async () => {
         const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both images and videos
             quality: 1,
         });
         if (!result.canceled) {
@@ -151,33 +167,85 @@ const Chat = ({ route }) => {
             setPreviewModalVisible(true);
         }
     };
+    const downloadMedia = async (uri) => {
+        try {
+            const fileUri = FileSystem.documentDirectory + uri.split('/').pop(); // Get file name
+            await FileSystem.downloadAsync(uri, fileUri); // Download file
+            await MediaLibrary.createAssetAsync(fileUri);
+            Alert.alert('Success', 'File has been saved to your gallery!');
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            Alert.alert('Error', 'Failed to download file.');
+        }
+    };
+
+
+
 
     const renderMessage = ({ item }) => {
-        const isCurrentUser = item.sender === user.userId;
-        const openFullscreenImage = (uri) => {
-            setFullscreenImage(uri);
-        };
+        if (item.dateHeader) {
+            return (
+                <View style={styles.dateHeader}>
+                    <Text style={styles.dateText}>{item.date}</Text>
+                </View>
+            );
+        }
+
+        const isCurrentUser = item.senderId === user.userId;
 
         return (
             <View style={[styles.messageContainer, isCurrentUser ? styles.myMessage : styles.otherMessage]}>
                 {item.media && (
-                    <TouchableOpacity onPress={() => openFullscreenImage(item.media)}>
-                        <Image source={{ uri: item.media }} style={styles.media} />
+                    <TouchableOpacity onPress={() => setFullscreenMedia(item.media)}>
+                        {item.media.endsWith('.mp4') ? (
+                            <Video
+                                source={{ uri: item.media }}
+                                style={styles.media}
+                                resizeMode="cover"
+                                shouldPlay={false}
+                                isLooping
+                                useNativeControls
+                            />
+                        ) : (
+                            <Image source={{ uri: item.media }} style={styles.media} />
+                        )}
                     </TouchableOpacity>
                 )}
-                {item.text ? (
-                    <Text style={isCurrentUser ? styles.messageText : styles.otherMessageText}>{item.text}</Text>
-                ) : null}
-                <Text style={isCurrentUser ? styles.myTimestamp : styles.timestamp}>{item.timestamp}</Text>
+                {item.text ? <Text style={isCurrentUser ? styles.messageText : styles.otherMessageText}>{item.text}</Text> : null}
+                <Text style={isCurrentUser ? styles.myTimestamp : styles.timestamp}>
+                    {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
             </View>
         );
     };
 
-    const renderDateHeader = ({ item }) => (
-        <View style={styles.dateHeader}>
-            <Text style={styles.dateText}>{item[0]}</Text>
-        </View>
-    );
+    const renderFullscreenMedia = () => {
+        if (!fullscreenMedia) return null;
+
+        return (
+            <Modal visible={true} transparent={true} onRequestClose={() => setFullscreenMedia(null)}>
+                <View style={styles.fullscreenModal}>
+                    {fullscreenMedia.endsWith('.mp4') ? (
+                        <Video
+                            source={{ uri: fullscreenMedia }}
+                            style={styles.fullscreenImage}
+                            resizeMode="contain"
+                            shouldPlay
+                            useNativeControls
+                        />
+                    ) : (
+                        <Image source={{ uri: fullscreenMedia }} style={styles.fullscreenImage} />
+                    )}
+                    <TouchableOpacity onPress={() => downloadMedia(fullscreenMedia)} style={styles.downloadButton}>
+                        <Ionicons name="download-outline" size={30} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setFullscreenMedia(null)} style={styles.closeButton}>
+                        <Text style={styles.closeButtonText}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -185,59 +253,38 @@ const Chat = ({ route }) => {
                 <Image source={{ uri: chat.avatar }} style={styles.avatar} />
                 <Text style={styles.header}>{chat.name}</Text>
             </View>
-
             <FlatList
+                ref={flatListRef}
                 data={messages}
-                keyExtractor={(item) => item[0]}
-                renderItem={({ item }) => (
-                    <>
-                        {renderDateHeader({ item })}
-                        {item[1].map((message) => renderMessage({ item: message }))}
-                    </>
-                )}
-                style={styles.messageList}
+                keyExtractor={(item) => item.id}
+                renderItem={renderMessage}
+                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
             />
-
+            {/* Message Input */}
             <View style={styles.inputContainer}>
-                <TouchableOpacity onPress={pickImage}>
-                    <Ionicons name="image" size={30} color="#6a8a6d" style={{ marginRight: 3 }} />
+                <TouchableOpacity onPress={pickMedia}>
+                    <Ionicons name="image" size={30} color="#6a8a6d" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={takePhoto}>
+                <TouchableOpacity onPress={takeMedia}>
                     <Ionicons name="camera" size={30} color="#6a8a6d" />
                 </TouchableOpacity>
                 <TextInput
-                    style={[styles.input, { height: Math.min(150, Math.max(40, dynamicHeight)) }]}
+                    style={styles.input}
                     placeholder="Type a message"
                     value={inputMessage}
                     onChangeText={setInputMessage}
-                    multiline={true}
-                    onContentSizeChange={(e) => {
-                        setDynamicHeight(e.nativeEvent.contentSize.height); // Dynamically adjust based on content
-                    }}
+                    multiline
                 />
-                <TouchableOpacity
-                    onPress={sendMessage}
-                    style={[
-                        styles.sendButton,
-                        { backgroundColor: inputMessage.trim() || selectedImage ? '#6a8a6d' : '#ccc' }, // Disabled style
-                    ]}
-                    disabled={!inputMessage.trim() && !selectedImage} // Disable condition
-                >
-                    <Ionicons name="send" size={24} color="#fff" />
+                <TouchableOpacity onPress={sendMessage} disabled={isUploading}>
+                    {isUploading ? (
+                        <ActivityIndicator size="small" color="#6a8a6d" />
+                    ) : (
+                        <Ionicons name="send" size={24} color="#6a8a6d" />
+                    )}
                 </TouchableOpacity>
             </View>
-
-            {/* Fullscreen Image Modal */}
-            {fullscreenImage && (
-                <Modal visible={true} transparent={true} onRequestClose={() => setFullscreenImage(null)}>
-                    <View style={styles.fullscreenModal}>
-                        <Image source={{ uri: fullscreenImage }} style={styles.fullscreenImage} />
-                        <TouchableOpacity onPress={() => setFullscreenImage(null)} style={styles.closeButton}>
-                            <Text style={styles.closeButtonText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Modal>
-            )}
+            {renderFullscreenMedia()}
             {previewModalVisible && (
                 <Modal transparent={true} animationType="fade" visible={previewModalVisible}>
                     <View style={styles.modalContainer}>
@@ -253,9 +300,18 @@ const Chat = ({ route }) => {
                                 <Ionicons name="close" size={24} color="#000" />
                             </TouchableOpacity>
 
-                            {/* Preview Image */}
-                            <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-
+                            {/* Preview Media */}
+                            {selectedImage?.endsWith('.mp4') ? (
+                                <Video
+                                    source={{ uri: selectedImage }}
+                                    style={styles.previewImage}
+                                    resizeMode="contain"
+                                    shouldPlay
+                                    useNativeControls
+                                />
+                            ) : (
+                                <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+                            )}
                             <View style={styles.modalInputContainer}>
                                 <TextInput
                                     style={[styles.input, { height: Math.min(150, Math.max(40, dynamicHeight)) }]}
@@ -267,8 +323,16 @@ const Chat = ({ route }) => {
                                         setDynamicHeight(e.nativeEvent.contentSize.height); // Dynamically adjust based on content
                                     }}
                                 />
-                                <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
-                                    <Ionicons name="send" size={24} color="#fff" />
+                                <TouchableOpacity
+                                    style={styles.sendButton}
+                                    onPress={sendMessage}
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Ionicons name="send" size={24} color="#fff" />
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -286,6 +350,7 @@ export default Chat;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingHorizontal:5,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -364,7 +429,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 10,
         maxHeight: 150, // Set a max height for input
         minHeight: 40, // Set a min height for input
-        textAlignVertical: 'top', // Align text at the top
+        textAlignVertical: 'center', // Align text at the top
     },
     sendButton: {
         backgroundColor: '#6a8a6d',
