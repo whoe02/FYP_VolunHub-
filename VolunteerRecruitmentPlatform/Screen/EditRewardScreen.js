@@ -195,7 +195,7 @@ const EditRewardScreen = ({ route, navigation }) => {
 
       {/* Date Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Date:</Text>
+        <Text style={styles.inputLabel}>Date: (YYYY-MM-DD)</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter Date (YYYY-MM-DD)"

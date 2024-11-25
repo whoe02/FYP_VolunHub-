@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { firestore } from '../firebaseConfig'; // Adjust the path to your Firebase config
-import { collection, addDoc } from 'firebase/firestore'; // Added addDoc for adding new document
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore'; // Use doc and setDoc for custom document ID
 import * as ImagePicker from 'expo-image-picker'; // For image picker functionality
 
 const AddRewardScreen = ({ navigation }) => {
@@ -26,7 +26,17 @@ const AddRewardScreen = ({ navigation }) => {
     }
   };
 
-  // Add new reward to Firestore
+  // Generate Reward ID based on the existing rewards count
+  const generateRewardId = async () => {
+    const rewardsRef = collection(firestore, 'Rewards');
+    const rewardsSnapshot = await getDocs(rewardsRef);
+
+    // Generate new Reward ID based on the number of rewards in the collection
+    const newRewardId = `RW${(rewardsSnapshot.size + 1).toString().padStart(5, '0')}`;
+    return newRewardId;
+  };
+
+  // Add new reward to Firestore with a custom document ID
   const handleAddReward = async () => {
     if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
       Alert.alert('Error', 'Please fill all fields');
@@ -35,10 +45,11 @@ const AddRewardScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const rewardsCollectionRef = collection(firestore, 'Rewards');
+      const rewardId = await generateRewardId(); // Generate Reward ID before adding
 
       // Prepare the new reward data
       const newReward = {
+        rewardId,
         title,
         description,
         pointsRequired: parseInt(pointsRequired),
@@ -48,8 +59,12 @@ const AddRewardScreen = ({ navigation }) => {
         date,
       };
 
-      // Add the new reward to Firestore
-      await addDoc(rewardsCollectionRef, newReward);
+      // Get the reference to the custom document ID in the Rewards collection
+      const rewardDocRef = doc(firestore, 'Rewards', rewardId); // Custom document ID: rewardId
+
+      // Use setDoc() to add the new reward with the custom ID
+      await setDoc(rewardDocRef, newReward);
+
       Alert.alert('Success', 'Reward added successfully');
       navigation.goBack();
     } catch (error) {
