@@ -1,64 +1,249 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { doc, collection, query, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
 
 const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
-    const { event, user } = route.params; // Use passed user role
+    const { event, user } = route.params;
     const userRole = user?.role;
     const images = event?.image || [];
     const [loading, setLoading] = useState(false);
+    const [isWatchlisted, setIsWatchlisted] = useState(false); // Button state
+    const [approvedParticipantsCount, setApprovedParticipantsCount] = useState(0);
+    const [userApplicationStatus, setUserApplicationStatus] = useState('');
 
-    const renderButtons = () => {
-        switch (event.status) {
-            case 'upcoming':
-                return (
-                    <>
-                        <TouchableOpacity style={styles.button}>
-                            <Text style={styles.buttonText}>Enquiry Now</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonApply}>
-                            <Text style={styles.buttonTextApply}>Apply Now</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonShort}>
-                            <Ionicons name="chatbubble-outline" size={24} color="black" />
-                        </TouchableOpacity>
-                    </>
-                );
-            case 'pending':
-                return (
-                    <>
-                        <TouchableOpacity style={styles.button}>
-                            <Text style={styles.buttonText}>Enquiry Now</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonCancel}>
-                            <Text style={styles.buttonText}>Cancel Application</Text>
-                        </TouchableOpacity>
-                    </>
-                );
-            case 'active':
-                return (
-                    <>
-                        <TouchableOpacity style={styles.button}>
-                            <Text style={styles.buttonText}>Enquiry Now</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonCheckIn}>
-                            <Text style={styles.buttonText}>Check In</Text>
-                        </TouchableOpacity>
-                    </>
-                );
-            case 'expired':
-                return (
-                    <TouchableOpacity style={[styles.buttonExpired, { backgroundColor: '#D3D3D3' }]}>
-                        <Text style={styles.buttonTextExpired}>Event Expired</Text>
-                    </TouchableOpacity>
-                );
-            default:
-                return null;
+    // Check if event is already in the watchlist when the component mounts
+    useEffect(() => {
+        const checkWatchlistStatus = async () => {
+            if (!user?.userId || !event?.eventId) return;
+
+            const userRef = doc(firestore, 'User', user.userId);
+            const eventDocId = event.eventId;
+            const eventRef = doc(userRef, 'UserEvent', eventDocId);
+
+            try {
+                const eventSnapshot = await getDoc(eventRef);
+                if (eventSnapshot.exists() && eventSnapshot.data().status === 'watchlist') {
+                    setIsWatchlisted(true);
+                }
+            } catch (error) {
+                console.error('Error fetching event status:', error);
+            }
+        };
+
+        checkWatchlistStatus();
+    }, [user, event]);
+
+    useEffect(() => {
+        const fetchEventParticipantData = async () => {
+            try {
+                // Get the number of approved participants
+                const participantsRef = collection(firestore, 'Event', event.eventId, 'EventParticipant');
+                const approvedParticipantsQuery = query(participantsRef, where('status', '==', 'approved'));
+                const querySnapshot = await getDocs(approvedParticipantsQuery);
+                setApprovedParticipantsCount(querySnapshot.size); // Set count of approved participants
+
+                // Check user's application status
+                const userEventRef = doc(firestore, 'User', user.userId, 'UserEvent', event.eventId);
+                const userEventSnapshot = await getDoc(userEventRef);
+                if (userEventSnapshot.exists()) {
+                    setUserApplicationStatus(userEventSnapshot.data().applicationStatus); // Set user's application status
+                }
+            } catch (error) {
+                console.error('Error fetching participant data:', error);
+            }
+        };
+
+        fetchEventParticipantData();
+    }, [event.eventId, user.userId]);
+
+    const handleWatchlist = async () => {
+        try {
+            if (!user?.userId || !event?.eventId) {
+                throw new Error('User ID or Event ID is missing.');
+            }
+
+            setLoading(true);
+
+            const userRef = doc(firestore, 'User', user.userId);
+            const eventDocId = event.eventId || `${user.userId}_${event.eventId}`;
+            const eventRef = doc(userRef, 'UserEvent', eventDocId);
+
+            // Prepare event data for watchlist
+            const eventData = {
+                eventId: event.id,
+                lastUpdated: new Date(),
+                status: isWatchlisted ? 'catalog' : 'watchlist',
+            };
+
+            await setDoc(eventRef, eventData, { merge: true });
+
+            setIsWatchlisted(!isWatchlisted); // Toggle watchlist state
+
+            // Show alert based on action
+            const alertMessage = isWatchlisted
+                ? 'Removed from Watchlist'
+                : 'Added to Watchlist';
+            Alert.alert('Watchlist Update', alertMessage);
+
+        } catch (error) {
+            console.error('Error updating watchlist:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
+    const handleApplyNow = () => {
+        // Step 1: Show confirmation prompt
+        Alert.alert(
+            'Confirm Application',
+            'Are you sure you want to apply for this event?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Confirm',
+                    onPress: () => applyForEvent(),
+                },
+            ],
+            { cancelable: false }
+        );
+    };
+
+    const applyForEvent = async () => {
+        try {
+            if (!user?.userId || !event?.eventId) {
+                throw new Error('User ID or Event ID is missing.');
+            }
+
+            setLoading(true);
+
+            // Step 2: Add or update the EventParticipant subcollection
+            const eventRef = doc(firestore, 'Event', event.eventId);
+            const participantRef = doc(eventRef, 'EventParticipant', user.userId);
+
+            const participantData = {
+                status: 'pending', // Set the participant status as pending
+            };
+
+            await setDoc(participantRef, participantData, { merge: true });
+
+            // Step 3: Update the UserEvent applicationStatus to 'pending'
+            const userRef = doc(firestore, 'User', user.userId);
+            const userEventRef = doc(userRef, 'UserEvent', event.eventId);
+
+            const userEventData = {
+                eventId: event.eventId,
+                applicationStatus: 'pending', // Update user application status
+                lastUpdated: new Date(),
+            };
+
+            await setDoc(userEventRef, userEventData, { merge: true });
+
+            // Step 4: Update local state to reflect the application status
+            setUserApplicationStatus('pending');  // Update state immediately after applying
+
+            Alert.alert('Application Submitted', 'Your application is now pending.');
+        } catch (error) {
+            console.error('Error applying for event:', error);
+            Alert.alert('Error', 'Something went wrong while submitting your application.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancelApplication = () => {
+
+    };
+
+    const renderWatchlistButton = () => {
+        return (
+            <TouchableOpacity onPress={handleWatchlist} disabled={loading}>
+                {loading ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                    <Ionicons
+                        name={isWatchlisted ? 'bookmark' : 'bookmark-outline'}
+                        size={24}
+                        color={isWatchlisted ? "#6a8a6d" : "black"}
+                    />
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    // Update renderButtons to reflect the new application status
+    const renderButtons = () => {
+        // Determine the appropriate button rendering logic
+        switch (event.status) {
+            case 'upcoming':
+                if (userApplicationStatus !== 'pending' && userApplicationStatus !== 'approved' && approvedParticipantsCount < event.capacity) {
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.button}>
+                                <Text style={styles.buttonText}>Enquiry Now</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonApply} onPress={handleApplyNow}>
+                                <Text style={styles.buttonTextApply}>Apply Now</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+                    );
+                } else if (userApplicationStatus === 'pending' && approvedParticipantsCount < event.capacity) {
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.button}>
+                                <Text style={styles.buttonText}>Enquiry Now</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonCancel} onPress={handleCancelApplication}>
+                                <Text style={styles.buttonText}>Cancel Application</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+                    );
+                } else if (userApplicationStatus === 'approved') {
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.button}>
+                                <Text style={styles.buttonText}>Enquiry Now</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonCheckIn} disabled>
+                                <Text style={styles.buttonText}>Check In</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+                    );
+                } else if (approvedParticipantsCount >= event.capacity) {
+                    return (
+                        <>
+                            <TouchableOpacity style={[styles.buttonExpired, { backgroundColor: '#D3D3D3' }]} >
+                                <Text style={styles.buttonTextExpired}>Event Not Available</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+
+                    );
+                }
+                break;
+            default:
+                return null;
+        }
+
+        return null;
+    };
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -71,22 +256,18 @@ const EventDetail = ({ route, navigation }) => {
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
             <View style={styles.titleRow}>
                 <Text style={styles.title}>{event.title}</Text>
-                {userRole === 'volunteer' && (
-                    <TouchableOpacity style={styles.iconsContainer}>
-                        <Ionicons name="bookmark-outline" size={24} color="black" />
-                    </TouchableOpacity>
-                )}
-                {userRole === 'organization' && (
-                    <View style={styles.iconsContainer}>
-                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
-                            <Ionicons name="pencil-outline" size={30} color="black" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
-                            <Ionicons name="trash-outline" size={30} color="black" />
-                        </TouchableOpacity>
-                    </View>
-                )}
+                {userRole === 'volunteer' && renderWatchlistButton()}
             </View>
+            {userRole === 'organization' && (
+                <View style={styles.iconsContainer}>
+                    <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
+                        <Ionicons name="pencil-outline" size={30} color="black" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
+                        <Ionicons name="trash-outline" size={30} color="black" />
+                    </TouchableOpacity>
+                </View>
+            )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                 {images.length > 0 ? (
                     images.map((img, index) => (
@@ -234,7 +415,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingVertical: 10,
         marginTop: 20,
-        marginBottom: 40,
+        marginBottom: 0,
     },
     button: {
         flex: 1,
@@ -270,7 +451,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     buttonCancel: {
-        flex: 1,
+        flex: 2,
         backgroundColor: '#b83027',
         paddingVertical: 15,
         borderRadius: 8,
@@ -278,7 +459,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonCheckIn: {
-        flex: 1,
+        flex: 2,
         backgroundColor: '#6a8a6d',
         paddingVertical: 15,
         borderRadius: 8,
@@ -286,7 +467,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonExpired: {
-        flex: 1,
+        flex: 4,
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: 'center',
@@ -310,6 +491,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    watchlistButton: {
+        backgroundColor: '#d3d3d3',
+        padding: 10,
+        borderRadius: 8,
+    },
+    watchlistButtonActive: {
+        backgroundColor: '#6a8a6d',
     },
 });
 
