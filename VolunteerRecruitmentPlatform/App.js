@@ -128,8 +128,8 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Browse" component={Home} />
       <Tab.Screen name="My Event" component={MyEvent} />
-      {/* <Tab.Screen name="Rewards" component={RewardScreen} />  */}
-      <Tab.Screen name="Rewards" component={RewardManagement} /> 
+      <Tab.Screen name="Rewards" component={RewardScreen} /> 
+      {/* <Tab.Screen name="Rewards" component={RewardManagement} />  */}
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>

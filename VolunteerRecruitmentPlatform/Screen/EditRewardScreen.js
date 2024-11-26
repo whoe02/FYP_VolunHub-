@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { firestore } from '../firebaseConfig'; // Adjust the path to your Firebase config
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
-import * as ImagePicker from 'expo-image-picker'; // For image picker functionality
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { firestore } from '../firebaseConfig';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
+import InputField from '../components/InputField'; // Import InputField component
+import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
 
 const EditRewardScreen = ({ route, navigation }) => {
-  const { rewardId } = route.params; // Get the rewardId passed from the RewardManagement screen
+  const { rewardId } = route.params;
   const [reward, setReward] = useState(null);
   const [loading, setLoading] = useState(false);
   const [newImageUri, setNewImageUri] = useState(null);
@@ -16,7 +18,6 @@ const EditRewardScreen = ({ route, navigation }) => {
   const [rewardType, setRewardType] = useState('');
   const [date, setDate] = useState('');
 
-  // Fetch reward data when screen is loaded
   useEffect(() => {
     const fetchRewardData = async () => {
       setLoading(true);
@@ -31,7 +32,7 @@ const EditRewardScreen = ({ route, navigation }) => {
           setPointsRequired(rewardData.pointsRequired.toString());
           setRemainingStock(rewardData.remainingStock.toString());
           setRewardType(rewardData.type);
-          setDate(rewardData.date); // Assuming 'date' is stored as a string or in a format you can display
+          setDate(rewardData.date);
         } else {
           Alert.alert('Error', 'Reward not found');
         }
@@ -46,7 +47,6 @@ const EditRewardScreen = ({ route, navigation }) => {
     fetchRewardData();
   }, [rewardId]);
 
-  // Handle image picker for updating the reward image
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -58,7 +58,6 @@ const EditRewardScreen = ({ route, navigation }) => {
     }
   };
 
-  // Update the reward in Firestore
   const handleUpdateReward = async () => {
     if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
       Alert.alert('Error', 'Please fill all fields');
@@ -69,15 +68,14 @@ const EditRewardScreen = ({ route, navigation }) => {
     try {
       const rewardDocRef = doc(firestore, 'Rewards', rewardId);
 
-      // Prepare the updated data
       const updatedReward = {
         title,
         description,
         pointsRequired: parseInt(pointsRequired),
-        imageVoucher: newImageUri || reward.imageVoucher, // If no new image, keep the old one
+        imageVoucher: newImageUri || reward.imageVoucher,
         remainingStock: parseInt(remainingStock),
         type: rewardType,
-        date, // Keep the existing date value as is, unless you want to update it
+        date,
       };
 
       await updateDoc(rewardDocRef, updatedReward);
@@ -91,7 +89,6 @@ const EditRewardScreen = ({ route, navigation }) => {
     }
   };
 
-  // Handle deleting the reward
   const handleDeleteReward = async () => {
     Alert.alert(
       'Delete Reward',
@@ -138,22 +135,20 @@ const EditRewardScreen = ({ route, navigation }) => {
       {/* Title Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Title:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Title"
+        <InputField
           value={title}
           onChangeText={setTitle}
+          placeholder="Enter Reward Title"
         />
       </View>
 
       {/* Description Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Description:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Description"
+        <InputField
           value={description}
           onChangeText={setDescription}
+          placeholder="Enter Reward Description"
           multiline
         />
       </View>
@@ -161,46 +156,47 @@ const EditRewardScreen = ({ route, navigation }) => {
       {/* Points Required Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Points Required:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Points Required"
+        <InputField
           value={pointsRequired}
           onChangeText={setPointsRequired}
           keyboardType="numeric"
+          placeholder="Enter Points Required"
         />
       </View>
 
       {/* Remaining Stock Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Remaining Stock:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Remaining Stock"
+        <InputField
           value={remainingStock}
           onChangeText={setRemainingStock}
           keyboardType="numeric"
+          placeholder="Enter Remaining Stock"
         />
       </View>
 
-      {/* Reward Type Input */}
-      <View style={styles.inputGroup}>
+      {/* Reward Type Dropdown */}
+      <View style={styles.dropdown}>
         <Text style={styles.inputLabel}>Reward Type:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Type"
-          value={rewardType}
-          onChangeText={setRewardType}
-        />
+        <Picker
+          selectedValue={rewardType}
+          onValueChange={(itemValue) => setRewardType(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Discount" value="Discount" />
+          <Picker.Item label="Gift" value="Gift" />
+          <Picker.Item label="Shipping" value="Shipping" />
+          <Picker.Item label="Other" value="Other" />
+        </Picker>
       </View>
 
       {/* Date Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Date: (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Date (YYYY-MM-DD)"
+        <Text style={styles.inputLabel}>Date (YYYY-MM-DD):</Text>
+        <InputField
           value={date}
           onChangeText={setDate}
+          placeholder="Enter Date (YYYY-MM-DD)"
         />
       </View>
 
@@ -238,13 +234,11 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
     marginBottom: 10,
+    borderRadius: 75,
   },
   changeImageText: {
     color: '#6a8a6d',
     fontWeight: 'bold',
-  },
-  inputGroup: {
-    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
@@ -252,7 +246,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: '#333',
   },
-  input: {
+  picker: {
     height: 45,
     borderColor: '#ddd',
     borderWidth: 1,
@@ -291,6 +285,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  dropdown: {
+    marginBottom: 20,
+  }
 });
 
 export default EditRewardScreen;
