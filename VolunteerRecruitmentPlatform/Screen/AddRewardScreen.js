@@ -1,172 +1,221 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { firestore } from '../firebaseConfig'; // Adjust the path to your Firebase config
-import { doc, setDoc, collection, getDocs } from 'firebase/firestore'; // Use doc and setDoc for custom document ID
-import * as ImagePicker from 'expo-image-picker'; // For image picker functionality
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { firestore } from '../firebaseConfig';
+import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
+import InputField from '../components/InputField'; // Import InputField component
+import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
 
 const AddRewardScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [pointsRequired, setPointsRequired] = useState('');
   const [remainingStock, setRemainingStock] = useState('');
-  const [rewardType, setRewardType] = useState('');
+  const [rewardType, setRewardType] = useState('');  // Default to an empty string
   const [date, setDate] = useState('');
   const [newImageUri, setNewImageUri] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Handle image picker for adding reward image
+  // Function to handle image picking
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
 
-    if (!result.canceled) {
-      setNewImageUri(result.uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImageUri = result.assets[0].uri;
+        setNewImageUri(selectedImageUri);
+      } else {
+        console.log('Image selection canceled or no assets found');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+      console.error('Image picker error:', error);
     }
   };
 
-  // Generate Reward ID based on the existing rewards count
+  const uploadToCloudinary = async (uri) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri,
+        type: 'image/jpeg',
+        name: `reward_${Date.now()}.jpg`,
+      });
+      formData.append('upload_preset', 'rewardqr');
+      formData.append('cloud_name', 'dnj0n4m7k');
+      formData.append('folder', 'rewardPic');
+
+      const response = await axios.post(
+        'https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (response.data.secure_url) {
+        return response.data.secure_url;
+      } else {
+        throw new Error('Cloudinary did not return a secure URL');
+      }
+    } catch (error) {
+      console.error('Error uploading image to Cloudinary:', error);
+      throw error;
+    }
+  };
+
   const generateRewardId = async () => {
     const rewardsRef = collection(firestore, 'Rewards');
     const rewardsSnapshot = await getDocs(rewardsRef);
 
-    // Generate new Reward ID based on the number of rewards in the collection
-    const newRewardId = `RW${(rewardsSnapshot.size + 1).toString().padStart(5, '0')}`;
-    return newRewardId;
+    return `RW${(rewardsSnapshot.size + 1).toString().padStart(5, '0')}`;
   };
 
-  // Add new reward to Firestore with a custom document ID
   const handleAddReward = async () => {
+    // Validate inputs
     if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
-      Alert.alert('Error', 'Please fill all fields');
+      Alert.alert('Validation Error', 'All fields are required.');
       return;
     }
 
-    setLoading(true);
-    try {
-      const rewardId = await generateRewardId(); // Generate Reward ID before adding
+    if (!newImageUri) {
+      Alert.alert('Validation Error', 'Please select an image for the reward.');
+      return;
+    }
 
-      // Prepare the new reward data
+    // Validate remainingStock
+    const remainingStockInt = parseInt(remainingStock, 10);
+    if (isNaN(remainingStockInt) || remainingStockInt <= 0) {
+      Alert.alert('Validation Error', 'Remaining stock must be a valid positive number.');
+      return;
+    }
+
+    setLoading(true); // Show loading spinner
+    try {
+      const rewardId = await generateRewardId(); // Generate a new Reward ID
+      const cloudinaryUrl = await uploadToCloudinary(newImageUri); // Upload the image
+
       const newReward = {
         rewardId,
         title,
         description,
-        pointsRequired: parseInt(pointsRequired),
-        imageVoucher: newImageUri || '', // If no image is selected, use an empty string
-        remainingStock: parseInt(remainingStock),
+        pointsRequired: parseInt(pointsRequired, 10),
+        imageVoucher: cloudinaryUrl,
+        remainingStock: remainingStockInt,
         type: rewardType,
         date,
       };
 
-      // Get the reference to the custom document ID in the Rewards collection
-      const rewardDocRef = doc(firestore, 'Rewards', rewardId); // Custom document ID: rewardId
-
-      // Use setDoc() to add the new reward with the custom ID
-      await setDoc(rewardDocRef, newReward);
+      const rewardDocRef = doc(firestore, 'Rewards', rewardId); // Reference for Firestore document
+      await setDoc(rewardDocRef, newReward); // Save reward to Firestore
 
       Alert.alert('Success', 'Reward added successfully');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to add reward');
+      Alert.alert('Error', 'Failed to add reward. Please try again.');
       console.error('Error adding reward:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Hide loading spinner
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need media library permissions to select an image.');
+      }
+    })();
+  }, []);
+
+  // Render loading spinner
   if (loading) {
-    return <ActivityIndicator size="large" color="#6a8a6d" />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6a8a6d" />
+      </View>
+    );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Image picker */}
+      {/* Image Picker */}
       <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
         <Image
-          source={{ uri: newImageUri }}
+          source={newImageUri ? { uri: newImageUri } : require('../assets/img/prof.png')}
           style={styles.rewardImage}
         />
-        <Text style={styles.changeImageText}>Pick Image:</Text>
+        <Text style={styles.changeImageText}>Pick Image</Text>
       </TouchableOpacity>
 
-      {/* Title Input */}
+      {/* Reward Input Fields */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Title"
+        <Text style={styles.inputLabel}>Title:</Text>
+        <InputField
           value={title}
           onChangeText={setTitle}
+          placeholder="Enter Reward Title"
         />
       </View>
 
-      {/* Description Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Description:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Description"
+        <InputField
           value={description}
           onChangeText={setDescription}
-          multiline
+          placeholder="Enter Reward Description"
         />
       </View>
 
-      {/* Points Required Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Points Required:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Points Required"
+        <InputField
           value={pointsRequired}
           onChangeText={setPointsRequired}
           keyboardType="numeric"
+          placeholder="Enter Points Required"
         />
       </View>
 
-      {/* Remaining Stock Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Remaining Stock:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Remaining Stock"
+        <InputField
           value={remainingStock}
           onChangeText={setRemainingStock}
           keyboardType="numeric"
+          placeholder="Enter Remaining Stock"
         />
       </View>
 
-      {/* Reward Type Input */}
-      <View style={styles.inputGroup}>
+      {/* Reward Type Dropdown */}
+      <View style={styles.dropdown}>
         <Text style={styles.inputLabel}>Reward Type:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Reward Type"
-          value={rewardType}
-          onChangeText={setRewardType}
-        />
+        <Picker
+          selectedValue={rewardType}
+          onValueChange={(itemValue) => setRewardType(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Discount" value="Discount" />
+          <Picker.Item label="Gift" value="Gift" />
+          <Picker.Item label="Shipping" value="Shipping" />
+          <Picker.Item label="Other" value="Other" />
+        </Picker>
       </View>
 
-      {/* Date Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Date: (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Date (YYYY-MM-DD)"
+        <Text style={styles.inputLabel}>Expiration Date (YYYY-MM-DD):</Text>
+        <InputField
           value={date}
           onChangeText={setDate}
+          placeholder="Enter Expiration Date"
         />
       </View>
 
-      {/* Add Button */}
-      <TouchableOpacity onPress={handleAddReward} style={styles.addButton}>
-        <Text style={styles.buttonText}>Add Reward</Text>
-      </TouchableOpacity>
-
-      {/* Cancel Button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>
-        <Text style={styles.buttonText}>Cancel</Text>
+      {/* Save Button */}
+      <TouchableOpacity onPress={handleAddReward} style={styles.saveButton}>
+        <Text style={styles.saveButtonText}>Save Reward</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -174,7 +223,6 @@ const AddRewardScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
     padding: 20,
     backgroundColor: '#fff',
   },
@@ -185,15 +233,12 @@ const styles = StyleSheet.create({
   rewardImage: {
     width: 150,
     height: 150,
-    borderRadius: 8,
+    borderRadius: 75,
     marginBottom: 10,
   },
   changeImageText: {
+    fontSize: 16,
     color: '#6a8a6d',
-    fontWeight: 'bold',
-  },
-  inputGroup: {
-    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
@@ -201,32 +246,32 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: '#333',
   },
-  input: {
-    height: 45,
-    borderColor: '#ddd',
+  picker: {
+    height: 50,
+    width: '100%',
+    borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
-    paddingLeft: 10,
-    fontSize: 16,
   },
-  addButton: {
+  saveButton: {
     backgroundColor: '#6a8a6d',
     paddingVertical: 15,
     borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cancelButton: {
-    backgroundColor: '#ccc',
-    paddingVertical: 15,
-    borderRadius: 8,
+    marginTop: 20,
     alignItems: 'center',
   },
-  buttonText: {
+  saveButtonText: {
+    fontSize: 18,
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdown: {
+    marginBottom: 20,
+  }
 });
 
 export default AddRewardScreen;
