@@ -8,7 +8,7 @@ const homeTabList = [
     {
         id: 2,
         title: 'In Progress',
-        slug: 'inProgress',
+        slug: 'inprogress',
         selected: false,
     },
     {
