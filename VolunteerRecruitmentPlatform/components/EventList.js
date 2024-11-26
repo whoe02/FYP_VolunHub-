@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
-const EventList = ({ activeTab , navigation, user  }) => {
+const EventList = ({ activeTab, navigation, user }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
-
   const fetchOrganizationNames = async (userIds) => {
+    if (userIds.length === 0) {
+      return {}; // Return empty object if no userIds
+    }
+
     try {
       const userQuery = query(
         collection(firestore, 'User'),
@@ -30,8 +33,11 @@ const EventList = ({ activeTab , navigation, user  }) => {
     }
   };
 
-
   const fetchCategoryNames = async (categoryIds) => {
+    if (categoryIds.length === 0) {
+      return {}; // Return empty object if no categoryIds
+    }
+
     try {
       const categoryQuery = query(
         collection(firestore, 'Category'),
@@ -53,45 +59,53 @@ const EventList = ({ activeTab , navigation, user  }) => {
     }
   };
 
-
   const fetchEvents = async () => {
     setLoading(true);
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
-
-      if (activeTab === 'all') {
+  
+      // Filter based on selected tab
+      if (activeTab === 'upcoming') {
+        eventQuery = query(eventCollection, where('status', '==', 'upcoming'));
+      } else if (activeTab === 'inprogress') {
+        eventQuery = query(eventCollection, where('status', '==', 'inprogress'));
+      } else if (activeTab === 'completed') {
+        eventQuery = query(eventCollection, where('status', '==', 'completed'));
+      } else if (activeTab === 'canceled') {
+        eventQuery = query(eventCollection, where('status', '==', 'canceled'));
+      } else if (activeTab === 'all') {
+        // For volunteers, fetch all events
         eventQuery = query(eventCollection);
       } else if (activeTab === 'latest') {
+        // For volunteers, fetch latest events
         eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
       }
-
+  
       const querySnapshot = await getDocs(eventQuery);
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          categoryIds: [data.location, ...data.preference, ...data.skills], // Combine category IDs
-          userId: data.userId, // Include the userId
+          categoryIds: [data.location, ...data.preference, ...data.skills].filter(item => item != null),
+          userId: data.userId, 
         };
       });
-
-      // Extract all unique category IDs and userIds
+  
+      // Fetch additional data like categories and organization names
       const allCategoryIds = [...new Set(fetchedEvents.flatMap((event) => event.categoryIds))];
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-
-      // Fetch category names and organization names
+  
       const categoryMap = await fetchCategoryNames(allCategoryIds);
       const organizationMap = await fetchOrganizationNames(allUserIds);
-
-      // Map category IDs and userIds to meaningful values
+  
       const eventsWithDetails = fetchedEvents.map((event) => ({
         ...event,
         categories: event.categoryIds.map((id) => categoryMap[id] || 'Unknown'),
         organizationName: organizationMap[event.userId] || 'Unknown Organization',
       }));
-
+  
       setEvents(eventsWithDetails);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -99,16 +113,15 @@ const EventList = ({ activeTab , navigation, user  }) => {
       setLoading(false);
     }
   };
-
+  
 
   useEffect(() => {
-    fetchEvents();
+    fetchEvents(); // Fetch events based on the current user role and active tab
   }, [activeTab]);
 
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
       onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
-
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <View style={styles.organizationWrapper}>
@@ -144,8 +157,6 @@ const EventList = ({ activeTab , navigation, user  }) => {
   );
 };
 
-export default EventList;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -180,7 +191,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#333', // Dark text for readability
     fontWeight: 'bold',
-
   },
   eventDate: {
     color: '#555',
@@ -204,7 +214,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   organizationWrapper: {
-
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingVertical: 5,
@@ -214,3 +223,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default EventList;
