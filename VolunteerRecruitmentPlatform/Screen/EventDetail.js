@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 const EventDetail = ({ route, navigation }) => {
     const { top: safeTop } = useSafeAreaInsets();
-    const { event, userRole } = route.params; // Use passed user role
+    const { event, user } = route.params; // Use passed user role
+    const userRole = user?.role;
     const images = event?.image || [];
     const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,7 @@ const EventDetail = ({ route, navigation }) => {
                             <Text style={styles.buttonTextApply}>Apply Now</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.buttonShort}>
-                            <Ionicons name="bookmark-outline" size={24} color="black" />
+                            <Ionicons name="chatbubble-outline" size={24} color="black" />
                         </TouchableOpacity>
                     </>
                 );
@@ -70,7 +71,12 @@ const EventDetail = ({ route, navigation }) => {
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }} style={styles.container}>
             <View style={styles.titleRow}>
                 <Text style={styles.title}>{event.title}</Text>
-                {userRole === 'Organization' && (
+                {userRole === 'volunteer' && (
+                    <TouchableOpacity style={styles.iconsContainer}>
+                        <Ionicons name="bookmark-outline" size={24} color="black" />
+                    </TouchableOpacity>
+                )}
+                {userRole === 'organization' && (
                     <View style={styles.iconsContainer}>
                         <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
                             <Ionicons name="pencil-outline" size={30} color="black" />
@@ -116,10 +122,10 @@ const EventDetail = ({ route, navigation }) => {
                 <Text style={styles.detailHeading}>Description</Text>
                 <Text style={styles.description}>{event.description || 'No description available'}</Text>
             </View>
-            {userRole === 'Volunteer' && (
+            {userRole === 'volunteer' && (
                 <View style={styles.buttonContainer}>{renderButtons()}</View>
             )}
-            {userRole === 'Organization' && (
+            {userRole === 'organization' && (
                 <View style={styles.orgButtonContainer}>
                     <TouchableOpacity
                         style={styles.button}
@@ -194,7 +200,7 @@ const styles = StyleSheet.create({
     categoriesSection: {
         padding: 10,
         paddingBottom: 20,
-        shadowColor: 'grey',   
+        shadowColor: 'grey',
         borderRadius: 10,
         backgroundColor: '#ffffff',
         marginBottom: 15,
@@ -219,7 +225,7 @@ const styles = StyleSheet.create({
         padding: 10,
         paddingBottom: 20,
         borderRadius: 10,
-        shadowColor: 'grey',   
+        shadowColor: 'grey',
         backgroundColor: '#ffffff',
         elevation: 2,
     },
@@ -248,7 +254,6 @@ const styles = StyleSheet.create({
     },
     buttonShort: {
         flex: 0.5,
-
         borderColor: 'darkGrey',
         paddingVertical: 10,
         borderRadius: 8,
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
     },
     buttonCancel: {
         flex: 1,
-        backgroundColor: '#b83027', 
+        backgroundColor: '#b83027',
         paddingVertical: 15,
         borderRadius: 8,
         marginRight: 10,
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
     },
     buttonCheckIn: {
         flex: 1,
-        backgroundColor: '#6a8a6d', 
+        backgroundColor: '#6a8a6d',
         paddingVertical: 15,
         borderRadius: 8,
         marginRight: 10,

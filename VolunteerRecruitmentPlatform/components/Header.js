@@ -4,43 +4,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from 'react-native/Libraries/NewAppScreen';
-import { useUserContext } from '../UserContext';
-import { doc, getDoc } from "firebase/firestore";
-import { firestore } from "../firebaseConfig"; // Ensure this is correctly initialized
 
 
-function Header() {
+function Header({ user }) {
     const { top: safeTop } = useSafeAreaInsets();
-    const [userData, setUserData] = useState(null); // Store user data here
-    const { user, setUser } = useUserContext();
 
     const navigation = useNavigation();
 
-    const fetchUserData = async () => {
-        try {
-          const userDoc = await getDoc(doc(firestore, "User", user.userId));
-    
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          } else {
-            Alert.alert("Error", "User data not found");
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          Alert.alert("Error", "Failed to fetch user data");
-        }
-      };
-      useEffect(() => {
-        fetchUserData();
-      }, []);
 
     return (
         <View style={styles.container} >
             <View style={styles.userInfo}>
-                <Image source={require('../assets/img/prof.png')} style={styles.userImg} />
+                <Image source={{ uri: user.image }} style={styles.userImg} />
                 <View style={{ gap: 3 }}>
                     <Text style={styles.welcomeText}>Welcome</Text>
-                    <Text style={styles.userName}>Jx</Text>
+                    <Text style={styles.userName}>{user.name}</Text>
                 </View>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Notification')}>

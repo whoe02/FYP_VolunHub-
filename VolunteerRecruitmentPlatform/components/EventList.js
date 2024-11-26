@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, 
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
-const EventList = ({ activeTab , navigation  }) => {
+const EventList = ({ activeTab , navigation, user  }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -107,7 +107,7 @@ const EventList = ({ activeTab , navigation  }) => {
 
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
-      onPress={() => navigation.navigate('EventDetail', { event: item })}>
+      onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
 
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
