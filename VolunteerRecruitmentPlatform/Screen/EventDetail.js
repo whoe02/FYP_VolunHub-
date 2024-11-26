@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { doc, collection, query, where, getDocs, setDoc, getDoc } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
 const EventDetail = ({ route, navigation }) => {
@@ -11,11 +11,11 @@ const EventDetail = ({ route, navigation }) => {
     const userRole = user?.role;
     const images = event?.image || [];
     const [loading, setLoading] = useState(false);
-    const [isWatchlisted, setIsWatchlisted] = useState(false); // Button state
+    const [isWatchlisted, setIsWatchlisted] = useState(false);
     const [approvedParticipantsCount, setApprovedParticipantsCount] = useState(0);
     const [userApplicationStatus, setUserApplicationStatus] = useState('');
+    const [cooldownUntil, setCooldownUntil] = useState(new Date(0)); // Initialize cooldown state
 
-    // Check if event is already in the watchlist when the component mounts
     useEffect(() => {
         const checkWatchlistStatus = async () => {
             if (!user?.userId || !event?.eventId) return;
@@ -40,17 +40,17 @@ const EventDetail = ({ route, navigation }) => {
     useEffect(() => {
         const fetchEventParticipantData = async () => {
             try {
-                // Get the number of approved participants
                 const participantsRef = collection(firestore, 'Event', event.eventId, 'EventParticipant');
                 const approvedParticipantsQuery = query(participantsRef, where('status', '==', 'approved'));
                 const querySnapshot = await getDocs(approvedParticipantsQuery);
-                setApprovedParticipantsCount(querySnapshot.size); // Set count of approved participants
+                setApprovedParticipantsCount(querySnapshot.size);
 
-                // Check user's application status
                 const userEventRef = doc(firestore, 'User', user.userId, 'UserEvent', event.eventId);
                 const userEventSnapshot = await getDoc(userEventRef);
                 if (userEventSnapshot.exists()) {
-                    setUserApplicationStatus(userEventSnapshot.data().applicationStatus); // Set user's application status
+                    const data = userEventSnapshot.data();
+                    setUserApplicationStatus(data.applicationStatus);
+                    setCooldownUntil(data.cooldownUntil ? new Date(data.cooldownUntil.toDate()) : new Date(0)); // Convert Firestore Timestamp to Date
                 }
             } catch (error) {
                 console.error('Error fetching participant data:', error);
@@ -59,6 +59,7 @@ const EventDetail = ({ route, navigation }) => {
 
         fetchEventParticipantData();
     }, [event.eventId, user.userId]);
+
 
     const handleWatchlist = async () => {
         try {
@@ -157,8 +158,43 @@ const EventDetail = ({ route, navigation }) => {
         }
     };
 
-    const handleCancelApplication = () => {
-
+    const handleCancelApplication = async () => {
+        try {
+            if (!user?.userId || !event?.eventId) {
+                throw new Error('User ID or Event ID is missing.');
+            }
+    
+            setLoading(true);
+    
+            // References to Firestore paths
+            const userEventRef = doc(firestore, 'User', user.userId, 'UserEvent', event.eventId);
+            const eventParticipantRef = doc(firestore, 'Event', event.eventId, 'EventParticipant', user.userId);
+    
+            // Update UserEvent with applicationStatus and cooldown timestamp
+            await setDoc(
+                userEventRef,
+                {
+                    applicationStatus: 'canceled',
+                    cooldownUntil: new Date(Date.now() + 60 * 60 * 1000), // 1-hour cooldown
+                    lastUpdated: new Date(),
+                },
+                { merge: true }
+            );
+    
+            // Delete the user from the EventParticipant subcollection
+            await deleteDoc(eventParticipantRef); // Use deleteDoc here
+    
+            // Update local state
+            setUserApplicationStatus('canceled');
+            setCooldownUntil(Date.now() + 60 * 60 * 1000);
+    
+            Alert.alert('Application Canceled', 'You have successfully canceled your application.');
+        } catch (error) {
+            console.error('Error canceling application:', error);
+            Alert.alert('Error', 'Something went wrong while canceling your application.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderWatchlistButton = () => {
@@ -179,17 +215,39 @@ const EventDetail = ({ route, navigation }) => {
 
     // Update renderButtons to reflect the new application status
     const renderButtons = () => {
-        // Determine the appropriate button rendering logic
+        const now = new Date();
+        const isCooldownActive = now < cooldownUntil;
+
         switch (event.status) {
             case 'upcoming':
-                if (userApplicationStatus !== 'pending' && userApplicationStatus !== 'approved' && approvedParticipantsCount < event.capacity) {
+                if (
+                    userApplicationStatus !== 'pending' &&
+                    userApplicationStatus !== 'approved' &&
+                    approvedParticipantsCount < event.capacity
+                ) {
                     return (
                         <>
                             <TouchableOpacity style={styles.button}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonApply} onPress={handleApplyNow}>
-                                <Text style={styles.buttonTextApply}>Apply Now</Text>
+                            <TouchableOpacity
+                                style={[
+                                    styles.buttonApply,
+                                    isCooldownActive && { backgroundColor: '#D3D3D3' },
+                                ]}
+                                onPress={!isCooldownActive ? handleApplyNow : null}
+                                disabled={isCooldownActive}
+                            >
+                                <Text
+                                    style={[
+                                        styles.buttonTextApply,
+                                        isCooldownActive && styles.buttonTextExpired,
+                                    ]}
+                                >
+                                    {isCooldownActive
+                                        ? `Apply Cooldown (${Math.ceil((cooldownUntil - now) / 1000 / 60)} min)`
+                                        : 'Apply Now'}
+                                </Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonShort}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
@@ -216,8 +274,8 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.button}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonCheckIn} disabled>
-                                <Text style={styles.buttonText}>Check In</Text>
+                            <TouchableOpacity style={styles.buttonExpired} disabled>
+                                <Text style={styles.buttonTextExpired}>Check In</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonShort}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
@@ -227,7 +285,7 @@ const EventDetail = ({ route, navigation }) => {
                 } else if (approvedParticipantsCount >= event.capacity) {
                     return (
                         <>
-                            <TouchableOpacity style={[styles.buttonExpired, { backgroundColor: '#D3D3D3' }]} >
+                            <TouchableOpacity style={styles.buttonExpired} >
                                 <Text style={styles.buttonTextExpired}>Event Not Available</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonShort}>
@@ -237,7 +295,54 @@ const EventDetail = ({ route, navigation }) => {
 
                     );
                 }
+            case 'inProgress':
+                if (userApplicationStatus === 'approved') {
+                    // Case 4: Event is in progress and user is approved, can check in
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.button}>
+                                <Text style={styles.buttonText}>Enquiry Now</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonCheckIn}>
+                                <Text style={styles.buttonText}>Check In</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+                    );
+                }
+                else {
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.buttonExpired}>
+                                <Text style={styles.buttonTextExpired}>Event In Progress</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+                    );
+                }
                 break;
+
+            case 'completed':
+            case 'canceled':
+                    // Case 5: Event is complete or canceled, and capacity is full
+                    return (
+                        <>
+                            <TouchableOpacity style={styles.buttonExpired}>
+                                <Text style={styles.buttonTextExpired}>Event Expired</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonShort}>
+                                <Ionicons name="chatbubble-outline" size={24} color="black" />
+                            </TouchableOpacity>
+                        </>
+
+                    );
+
+                break;
+
             default:
                 return null;
         }
@@ -467,10 +572,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonExpired: {
-        flex: 4,
+        flex: 2,
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: 'center',
+        backgroundColor: '#D3D3D3'
     },
     buttonTextExpired: {
         color: '#888',
