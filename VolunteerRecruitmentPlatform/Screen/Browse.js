@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
@@ -7,6 +7,7 @@ import HomeTab from '../components/HomeTab';
 import MyEventTab from '../components/OrganizationEventTab';
 import EventList from '../components/EventList';
 import { useUserContext } from '../UserContext';
+import { Ionicons } from '@expo/vector-icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
@@ -88,13 +89,34 @@ const Home = ({ navigation }) => {
       )}
 
       <EventList activeTab={activeTab} navigation={navigation} user={user} />
+      {user.role === 'organization' && (
+                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddEvent')} activeOpacity={0.7}>
+                    <Ionicons name="add" size={30} color="#fff" />
+                </TouchableOpacity>
+            )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9f9f9' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }, // Center loading message
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }, 
+  addButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#6a8a6d',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3.84,
+  },
 });
 
 export default Home;
