@@ -457,20 +457,34 @@ const EventDetail = ({ route, navigation }) => {
             )}
             {userRole === 'organization' && (
                 <View style={styles.orgButtonContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => navigation.navigate('EventParticipant', { event })}
-                    >
-                        <Text style={styles.buttonText}>Participant List</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => navigation.navigate('Reviews', { event })}
-                    >
-                        <Text style={styles.buttonText}>Review</Text>
-                    </TouchableOpacity>
+                    {/* Row with Participant List and Review buttons */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('EventParticipant', { event })}
+                        >
+                            <Text style={styles.buttonText}>Participant List</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('Reviews', { event })}
+                        >
+                            <Text style={styles.buttonText}>Review</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* New row for Attendance button */}
+                    <View >
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('EventAttendance', { event })}
+                        >
+                            <Text style={styles.buttonText}>Attendance</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
+
         </ScrollView>
     );
 };
@@ -633,8 +647,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     orgButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         marginTop: 10,
     },
     iconsContainer: {
