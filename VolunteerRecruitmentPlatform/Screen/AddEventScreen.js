@@ -1,23 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, Alert, Image, StyleSheet } from 'react-native';
+import React, { useState, useEffect,useMemo } from 'react';
+import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, Alert, Image, StyleSheet,ActivityIndicator } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { firestore } from '../firebaseConfig';
+import { collection, getDocs, addDoc, Timestamp,query, orderBy, limit,setDoc,doc } from 'firebase/firestore';
+import { useUserContext } from '../UserContext';
+import axios from 'axios';
 
-const AddEventScreen = ({ navigation }) => {
+const AddEventScreen = ({route, navigation }) => {
   // Initial states
+  const { user } = route.params;
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState('');
   const [address, setAddress] = useState('');
   const [capacity, setCapacity] = useState('');
   const [description, setDescription] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dobLabel, setDobLabel] = useState('Select Date');
-  const [photo, setPhoto] = useState(null);
   const [eventImages, setEventImages] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [preferences, setPreferences] = useState([]);
+  const [location, setLocation] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState([]); // Selected skills
+  const [selectedPreferences, setSelectedPreferences] = useState([]); // Selected preferences
+
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
+  
+  const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
+  const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
+  const formatTime = (time) => (time instanceof Date ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time');
+  const [isButtonPressed, setIsButtonPressed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePickerChange = (event, selectedValue) => {
+    setShowPicker({ ...showPicker, visible: false });
+    if (selectedValue) {
+      const newValue = new Date(selectedValue); // Ensure it's a Date object
+      if (showPicker.pickerType === 'startDate') setStartDate(newValue);
+      if (showPicker.pickerType === 'endDate') setEndDate(newValue);
+      if (showPicker.pickerType === 'startTime') setStartTime(newValue);
+      if (showPicker.pickerType === 'endTime') setEndTime(newValue);
+    }
+  };
+  
+
+const handlePress = () => {
+    if (!isButtonPressed) {
+      setIsButtonPressed(true);
+      openPicker('startDate', 'date'); // your open picker function
+      setTimeout(() => setIsButtonPressed(false), 500); // Allow button press every 500ms
+    }
+  };
+
+  const pickerValue = useMemo(() => {
+    if (showPicker.pickerType === 'startDate') return startDate || new Date();
+    if (showPicker.pickerType === 'endDate') return endDate || new Date();
+    if (showPicker.pickerType === 'startTime') return startTime || new Date();
+    if (showPicker.pickerType === 'endTime') return endTime || new Date();
+    return new Date(); // Default to current date/time
+  }, [showPicker.pickerType, startDate, endDate, startTime, endTime]);
+  
+  
+  const openPicker = (type, mode) => {
+    setShowPicker({ visible: true, mode, pickerType: type });
+  };
 
   // Request permissions for accessing media
   const requestPermission = async () => {
@@ -29,14 +78,73 @@ const AddEventScreen = ({ navigation }) => {
 
   useEffect(() => {
     requestPermission();
-  }, []);
+    fetchCategories();
+    if (showPicker.visible) {
+      // Only run if the picker is visible
+      console.log('Date Picker is open');
+    }
+  }, [showPicker.visible]);
 
-  // Date picker function
-  const onDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(false);
-    setDate(currentDate);
-    setDobLabel(currentDate.toLocaleDateString());
+  // Fetch skills and preferences from Firestore (Category collection)
+  const fetchCategories = async () => {
+    try {
+      const categorySnapshot = await getDocs(collection(firestore, 'Category'));
+      const categoryData = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Separate into skills and preferences based on the categoryType
+      const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
+      const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
+
+      setSkills(fetchedSkills);
+      setPreferences(fetchedPreferences);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+  
+  const generateEventId = async () => {
+    const eventsRef = collection(firestore, 'Event');
+    const eventsSnapshot = await getDocs(eventsRef);
+  
+    return `EV${(eventsSnapshot.size + 1).toString().padStart(5, '0')}`;
+  };
+
+  const uploadToCloudinary = async (uris) => {
+    try {
+      const uploadedUrls = [];
+  
+      for (let uri of uris) {
+        console.log('Uploading image:', uri);
+  
+        const formData = new FormData();
+        formData.append('file', {
+          uri: uri.startsWith('file://') ? uri : `file://${uri}`,
+          type: 'image/jpeg',
+          name: `event_${Date.now()}.jpg`,
+        });
+        formData.append('upload_preset', 'eventPhoto');
+        formData.append('cloud_name', 'dnj0n4m7k');
+        formData.append('folder', 'eventPic');
+  
+        const response = await axios.post(
+          'https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload',
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+  
+        if (response.data.secure_url) {
+          console.log('Image uploaded:', response.data.secure_url);
+          uploadedUrls.push(response.data.secure_url);
+        } else {
+          throw new Error('Secure URL not found in Cloudinary response');
+        }
+      }
+  
+      return uploadedUrls;
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      throw error;
+    }
   };
 
   // Photo picker function
@@ -47,30 +155,102 @@ const AddEventScreen = ({ navigation }) => {
       aspect: [4, 3],
       quality: 1,
     });
-
-    if (!result.canceled) {
-      setPhoto(result.uri);
+  
+    if (!result.canceled && result.assets?.length > 0) {
+      const { uri } = result.assets[0];
+      setEventImages([...eventImages, uri]);
     }
   };
-
+  
   // Remove image function
   const handleRemoveImage = (index) => {
-    const updatedImages = [...eventImages];
-    updatedImages.splice(index, 1);
+    // Create a new array with the item removed
+    const updatedImages = eventImages.filter((_, i) => i !== index);
     setEventImages(updatedImages);
   };
 
-  // Validation and save function
-  const validateAndSave = () => {
-    if (!title || !time || !address || !capacity || !description) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+  // Toggle skill selection
+  const toggleSkill = (skillId) => {
+    if (selectedSkills.includes(skillId)) {
+      setSelectedSkills(selectedSkills.filter((id) => id !== skillId));
+    } else if (selectedSkills.length < 2) {
+      setSelectedSkills([...selectedSkills, skillId]);
+    } else {
+      Alert.alert('Limit Reached', 'You can select up to 2 skills only.');
     }
-    // Save event logic here
-    Alert.alert('Success', 'New event added');
-    navigation.goBack();
   };
 
+  // Toggle preference selection
+  const togglePreference = (prefId) => {
+    if (selectedPreferences.includes(prefId)) {
+      setSelectedPreferences(selectedPreferences.filter((id) => id !== prefId));
+    } else if (selectedPreferences.length < 5) {
+      setSelectedPreferences([...selectedPreferences, prefId]);
+    } else {
+      Alert.alert('Limit Reached', 'You can select up to 5 preferences only.');
+    }
+  };
+
+  // Validation and save function
+  const validateAndSave = async () => {
+    setIsLoading(true);
+        // Validate if fields are filled (you can uncomment this validation logic as needed)
+    // if (
+    //   !title ||
+    //   !startDate ||
+    //   !startTime ||
+    //   !endDate ||
+    //   !endTime ||
+    //   !address ||
+    //   !capacity ||
+    //   !description ||
+    //   eventImages.length === 0
+    // ) {
+    //   Alert.alert('Error', 'Please fill in all fields');
+    //   return;
+    // }
+    // Ensure you call the image upload before saving the event
+    const uploadedImageUrls = await uploadToCloudinary(eventImages);
+    
+    const eventId = await generateEventId();
+    const newEvent = {
+      title: title || '',
+      description: description || '',
+      address: address || '',
+      capacity: parseInt(capacity) || 0,
+      rating: 0,
+      startDate: Timestamp.fromDate(startDate) || '',
+      startTime: startTime || '',
+      endDate: Timestamp.fromDate(endDate),
+      endTime: endTime || '',
+      status: 'upcoming',
+      location: location || '',
+      eventId: eventId,
+      skills: selectedSkills || [],
+      preferences: selectedPreferences || [],
+      createdAt: Timestamp.now(),
+      image: uploadedImageUrls || [], // Use the uploaded URLs instead of local URIs
+      userId: user?.userId || null,
+      categoryIds: [
+        location, 
+        ...selectedSkills, 
+        ...selectedPreferences, 
+      ].filter((item) => item != null), 
+    };
+  
+    try {
+      const eventRef = doc(firestore, 'Event', eventId);
+      await setDoc(eventRef, newEvent);
+      Alert.alert('Success', 'New event added');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error adding event:', error);
+      Alert.alert('Error', 'Failed to add event');
+    }finally {
+      setIsLoading(false); // Hide loading indicator
+    }
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
@@ -94,8 +274,7 @@ const AddEventScreen = ({ navigation }) => {
           )}
         </ScrollView>
 
-        {/* Selected Photo */}
-        {photo && <Image source={{ uri: photo }} style={styles.photo} />}
+        {/* Upload Event Photo */}
         <TouchableOpacity onPress={handlePickImage} style={styles.photoButton}>
           <Text style={styles.photoButtonText}>Upload Event Photo</Text>
         </TouchableOpacity>
@@ -108,28 +287,71 @@ const AddEventScreen = ({ navigation }) => {
           icon={<Ionicons name="create-outline" size={20} color="#666" style={styles.icon} />}
         />
 
-        {/* Date Picker */}
-        <View style={styles.datePickerContainer}>
-          <Ionicons name="calendar-outline" size={20} color="#666" style={styles.icon} />
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.datePickerText}>{dobLabel}</Text>
-          </TouchableOpacity>
-        </View>
-        {showDatePicker && <DateTimePicker value={date} mode="date" display="default" onChange={onDateChange} />}
+        {/* date and time */}
+                {/* Start Date Picker */}
+                <TouchableOpacity
+          style={styles.datePickerContainer}
+          onPress={() => openPicker('startDate', 'date')}
+        >
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+          <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+        </TouchableOpacity>
 
-        {/* Other Fields */}
-        <InputField
-          label="Time"
-          value={time}
-          onChangeText={setTime}
-          icon={<Ionicons name="time-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        {/* End Date Picker */}
+        <TouchableOpacity
+          style={styles.datePickerContainer}
+          onPress={() => openPicker('endDate', 'date')}
+        >
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+          <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
+        </TouchableOpacity>
+
+        {/* Start Time Picker */}
+        <TouchableOpacity
+          style={styles.datePickerContainer}
+          onPress={() => openPicker('startTime', 'time')}
+        >
+          <Ionicons name="time-outline" size={20} color="#666" />
+          <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
+        </TouchableOpacity>
+
+        {/* End Time Picker */}
+        <TouchableOpacity
+          style={styles.datePickerContainer}
+          onPress={() => openPicker('endTime', 'time')}
+        >
+          <Ionicons name="time-outline" size={20} color="#666" />
+          <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
+        </TouchableOpacity>
+
+        {/* Conditional Picker */}
+        {showPicker.visible && (
+          <DateTimePicker
+            value={pickerValue}
+            mode={showPicker.mode}
+            display="default"
+            onChange={handlePickerChange}
+          />
+        )}
+
+        
+        {/* Address */}
         <InputField
           label="Address"
           value={address}
           onChangeText={setAddress}
           icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
         />
+
+        {/* Location */}
+        <InputField
+          label="Location"
+          value={location}
+          onChangeText={setLocation}
+          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
+        />
+
+        {/* Capacity */}
         <InputField
           label="Capacity"
           value={capacity}
@@ -137,6 +359,8 @@ const AddEventScreen = ({ navigation }) => {
           icon={<Ionicons name="people-outline" size={20} color="#666" style={styles.icon} />}
           keyboardType="numeric"
         />
+
+        {/* Description */}
         <InputField
           label="Description"
           value={description}
@@ -146,21 +370,58 @@ const AddEventScreen = ({ navigation }) => {
           numberOfLines={4}
         />
 
-        <CustomButton label="Add Event" onPress={validateAndSave} />
+        {/* Skills Selection */}
+        <View style={styles.selectionContainer}>
+          <Text style={styles.label}>Skills</Text>
+          {skills.map((skill) => (
+            <TouchableOpacity
+              key={skill.id}
+              style={[
+                styles.selectionButton,
+                selectedSkills.includes(skill.id) && styles.selectedButton,
+              ]}
+              onPress={() => toggleSkill(skill.id)}
+            >
+              <Text style={styles.selectionText}>{skill.categoryName}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Preferences Selection */}
+        <View style={styles.selectionContainer}>
+          <Text style={styles.label}>Preferences</Text>
+          {preferences.map((preference) => (
+            <TouchableOpacity
+              key={preference.id}
+              style={[
+                styles.selectionButton,
+                selectedPreferences.includes(preference.id) && styles.selectedButton,
+              ]}
+              onPress={() => togglePreference(preference.id)}
+            >
+              <Text style={styles.selectionText}>{preference.categoryName}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Save Event Button */}
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#6a8a6d" style={styles.loading} />
+        ) : (
+          <CustomButton label="Add Event" onPress={validateAndSave} />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center' },
-  scrollView: { paddingHorizontal: 25 },
-  headerText: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 30,
-    textAlign: 'center',
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  scrollView: {
+    paddingHorizontal: 25,
   },
   imageScroll: {
     marginBottom: 20,
@@ -185,12 +446,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: 20,
   },
-  photo: {
-    width: '100%',
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
   photoButton: {
     backgroundColor: '#6a8a6d',
     padding: 10,
@@ -202,7 +457,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  icon: { marginRight: 5 },
+  icon: {
+    marginRight: 5,
+  },
   datePickerContainer: {
     flexDirection: 'row',
     borderBottomColor: '#ccc',
@@ -215,6 +472,32 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     marginTop: 5,
   },
+  selectionContainer: {
+    marginBottom: 20,
+    
+  },
+  label: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 10,
+  },
+  selectionButton: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 15,
+  },
+  selectedButton: {
+    backgroundColor: '#6a8a6d',
+  },
+  selectionText: {
+    color: '#000',
+    fontSize: 16,
+  },
+  
 });
 
 export default AddEventScreen;

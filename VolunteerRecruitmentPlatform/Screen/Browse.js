@@ -90,7 +90,7 @@ const Home = ({ navigation }) => {
 
       <EventList activeTab={activeTab} navigation={navigation} user={user} />
       {user.role === 'organization' && (
-                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddEvent')} activeOpacity={0.7}>
+                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddEvent',{ user: user })} activeOpacity={0.7}>
                     <Ionicons name="add" size={30} color="#fff" />
                 </TouchableOpacity>
             )}

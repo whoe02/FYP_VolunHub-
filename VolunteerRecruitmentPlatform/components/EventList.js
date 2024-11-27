@@ -34,7 +34,7 @@ const EventList = ({ activeTab, navigation, user }) => {
   };
 
   const fetchCategoryNames = async (categoryIds) => {
-    if (categoryIds.length === 0) {
+    if (!categoryIds || categoryIds.length === 0) {
       return {}; // Return empty object if no categoryIds
     }
 
@@ -75,36 +75,58 @@ const EventList = ({ activeTab, navigation, user }) => {
       } else if (activeTab === 'canceled') {
         eventQuery = query(eventCollection, where('status', '==', 'canceled'));
       } else if (activeTab === 'all') {
-        // For volunteers, fetch all events
         eventQuery = query(eventCollection);
       } else if (activeTab === 'latest') {
-        // For volunteers, fetch latest events
         eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
       }
   
       const querySnapshot = await getDocs(eventQuery);
+      console.log('Fetched event documents:', querySnapshot.docs); // Log the raw documents
+  
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
+        console.log('Event data:', data);
+  
+        // Convert Firestore Timestamp fields to Date if necessary
+        const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
+        const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
+        const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
+        const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
+  
         return {
           id: doc.id,
           ...data,
-          categoryIds: [data.location, ...data.preference, ...data.skills].filter(item => item != null),
-          userId: data.userId, 
+          startDate,
+          endDate,
+          startTime,
+          endTime,
         };
       });
-  
-      // Fetch additional data like categories and organization names
-      const allCategoryIds = [...new Set(fetchedEvents.flatMap((event) => event.categoryIds))];
+
+      // Check if categoryIds is defined and non-empty before processing
+      const allCategoryIds = [
+        ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
+      ];
+      console.log('All category IDs:', allCategoryIds);
+
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
+      console.log('All user IDs:', allUserIds);
   
+      // Fetch categories and organizations
       const categoryMap = await fetchCategoryNames(allCategoryIds);
-      const organizationMap = await fetchOrganizationNames(allUserIds);
+      console.log('Category Map:', categoryMap);
   
+      const organizationMap = await fetchOrganizationNames(allUserIds);
+      console.log('Organization Map:', organizationMap);
+  
+      // Update event data with category names
       const eventsWithDetails = fetchedEvents.map((event) => ({
         ...event,
-        categories: event.categoryIds.map((id) => categoryMap[id] || 'Unknown'),
-        organizationName: organizationMap[event.userId] || 'Unknown Organization',
+        categories: event.categoryIds?.map((id) => categoryMap[id] || 'Unknown').filter((name) => name !== 'Unknown1') || [],
+        organizationName: organizationMap[event.userId] || 'Unknown Organization', 
       }));
+  
+      console.log('Events with categories and organizations:', eventsWithDetails);
   
       setEvents(eventsWithDetails);
     } catch (error) {
@@ -113,12 +135,34 @@ const EventList = ({ activeTab, navigation, user }) => {
       setLoading(false);
     }
   };
-  
 
   useEffect(() => {
     fetchEvents(); // Fetch events based on the current user role and active tab
   }, [activeTab]);
 
+  const formatDate = (date) => {
+    // Check if date is a valid Date object or Firestore Timestamp
+    const validDate = date instanceof Date && !isNaN(date);
+    
+    // If it's a Firestore Timestamp, convert to Date
+    const formattedDate = validDate ? date : date?.seconds ? new Date(date.seconds * 1000) : null;
+    
+    // Format the date or return 'N/A' if invalid
+    return formattedDate ? formattedDate.toLocaleDateString() : 'N/A';
+  };
+  
+  const formatTime = (time) => {
+    // Check if time is a valid Date object
+    const validTime = time instanceof Date && !isNaN(time);
+    
+    // If it's a valid Date object, format it, otherwise return 'N/A'
+    if (validTime) {
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return 'N/A';
+    }
+  };
+  
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
       onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
@@ -128,10 +172,11 @@ const EventList = ({ activeTab, navigation, user }) => {
           <Text style={styles.organizationName}>{item.organizationName}</Text>
         </View>
         <Text style={styles.eventDate}>
-          {item.startDate} - {item.endDate} | {item.startTime} - {item.endTime}
+          {formatDate(item.startDate)} - {formatDate(item.endDate)} | 
+          {formatTime(item.startTime)} - {formatTime(item.endTime)}
         </Text>
         <View style={styles.categoryWrapper}>
-          {item.categories.map((category, index) => (
+          {(item.categories || []).map((category, index) => (
             <Text key={index} style={styles.categoryText}>
               {category}
             </Text>
