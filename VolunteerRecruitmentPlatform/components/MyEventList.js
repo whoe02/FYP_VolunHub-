@@ -7,10 +7,58 @@ const MyEventList = ({ activeTab, navigation, user }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const fetchOrganizationNames = async (userIds) => {
+    if (!userIds || userIds.length === 0) return {};
+  
+    try {
+      const userQuery = query(
+        collection(firestore, 'User'),
+        where('__name__', 'in', userIds)
+      );
+  
+      const userSnapshot = await getDocs(userQuery);
+  
+      const organizationMap = {};
+      userSnapshot.docs.forEach((doc) => {
+        const { name } = doc.data(); // Assuming organization name is stored in `name`
+        organizationMap[doc.id] = name || 'Unknown Organization';
+      });
+  
+      return organizationMap;
+    } catch (error) {
+      console.error('Error fetching organization names:', error);
+      return {};
+    }
+  };
+  
+  const fetchCategoryNames = async (categoryIds) => {
+    if (!categoryIds || categoryIds.length === 0) return {};
+  
+    try {
+      const categoryQuery = query(
+        collection(firestore, 'Category'),
+        where('__name__', 'in', categoryIds)
+      );
+      const categorySnapshot = await getDocs(categoryQuery);
+  
+      const categoryMap = {};
+      categorySnapshot.docs.forEach((doc) => {
+        const { categoryName } = doc.data();
+        categoryMap[doc.id] = categoryName || 'Unknown Category';
+      });
+      console.log('Category Map:', categoryMap);
+      return categoryMap;
+    } catch (error) {
+      console.error('Error fetching category names:', error);
+      return {};
+    }
+  };
+  
+  
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      // Step 1: Query UserEvent subcollection for the current user
+      // Fetch events based on the user's status and activeTab
       const userEventQuery = query(
         collection(firestore, `User/${user.userId}/UserEvent`),
         where(
@@ -25,62 +73,76 @@ const MyEventList = ({ activeTab, navigation, user }) => {
             : 'approved'
         )
       );
-
+  
       const userEventSnapshot = await getDocs(userEventQuery);
       const userEventData = userEventSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-
-      // Step 2: If Upcoming or Active, filter based on Event status
-      let filteredEvents = userEventData;
-      if (activeTab === 'upcoming' || activeTab === 'active') {
-        const eventIds = userEventData.map((ue) => ue.eventId);
-      
-        if (eventIds.length > 0) {
-          const eventQuery = query(
-            collection(firestore, 'Event'),
-            where('__name__', 'in', eventIds),
-            where(
-              'status',
-              '==',
-              activeTab === 'upcoming' ? 'upcoming' : 'inProgress'
-            )
-          );
-      
-          const eventSnapshot = await getDocs(eventQuery);
-          const eventData = eventSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-      
-          filteredEvents = userEventData.filter((ue) =>
-            eventData.some((e) => e.id === ue.eventId)
-          );
-        } else {
-          filteredEvents = []; // No matching events if no event IDs
-        }
+  
+      // Stop further processing if no events are found
+      if (userEventData.length === 0) {
+        setEvents([]);
+        setLoading(false);
+        return;
       }
-
-      // Step 3: Fetch and merge Event details
+  
+      // Extract eventIds from UserEvent data to query Event collection
+      const eventIds = userEventData.map((userEvent) => userEvent.eventId);
+  
+      // Fetch events data from the Event collection
+      const eventQuery = query(
+        collection(firestore, 'Event'),
+        where('__name__', 'in', eventIds)
+      );
+      const eventSnapshot = await getDocs(eventQuery);
+  
+      // Extract data from events and build the map of categories and userIds
+      const eventsData = eventSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+  
+      // Extract unique user IDs and category IDs from events
+      const userIds = [...new Set(eventsData.map((event) => event.userId))];
+      const categoryIds = [...new Set(eventsData.flatMap((event) => event.categoryIds || []))];
+      console.log('User IDs:', userIds);
+      console.log('User IDs:', categoryIds);
+      // Fetch organization and category names in parallel
+      const [organizationMap, categoryMap] = await Promise.all([
+        fetchOrganizationNames(userIds),
+        fetchCategoryNames(categoryIds),
+      ]);
+      const startDate = eventsData.startDate ? new Date(eventsData.startDate.seconds * 1000) : null;
+      const endDate = eventsData.endDate ? new Date(eventsData.endDate.seconds * 1000) : null;
+      const startTime = eventsData.startTime ? new Date(eventsData.startTime.seconds * 1000) : null;
+      const endTime = eventsData.endTime ? new Date(eventsData.endTime.seconds * 1000) : null;
       const combinedEvents = await Promise.all(
-        filteredEvents.map(async (userEvent) => {
-          const eventDoc = await getDocs(
-            query(
-              collection(firestore, 'Event'),
-              where('__name__', '==', userEvent.eventId)
-            )
+        userEventData.map(async (userEvent) => {
+          // Find the event data by matching eventId
+          const eventData = eventsData.find(
+            (event) => event.id === userEvent.eventId
           );
-
-          const eventData = eventDoc.docs[0]?.data();
+      
+      
+          if (!eventData) {
+            console.warn(`Event with ID ${userEvent.eventId} not found`);
+            return { ...userEvent, organizationName: 'Unknown Organization', categories: [] };
+          }
+      
           return {
             ...userEvent,
             ...eventData,
-            categories: eventData?.categories || [],
+            organizationName: organizationMap[eventData.userId] || 'Unknown Organization',
+            categories: (eventData.categoryIds || []).map((id) => categoryMap[id] || 'Unknown Category'),
+            startDate: eventData?.startDate?.toDate().toLocaleDateString() || '',
+            endDate: eventData?.endDate?.toDate().toLocaleDateString() || '',
+            startTime: eventData?.startTime?.toDate().toLocaleTimeString() || '',
+            endTime: eventData?.endTime?.toDate().toLocaleTimeString() || '',
           };
         })
       );
-
+  
       setEvents(combinedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -88,12 +150,18 @@ const MyEventList = ({ activeTab, navigation, user }) => {
       setLoading(false);
     }
   };
+  
+  
+  
+  
+  
 
   useEffect(() => {
     fetchEvents();
   }, [activeTab]);
 
   const renderEventItem = ({ item }) => (
+    
     <TouchableOpacity style={styles.eventItem}
       onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
 
