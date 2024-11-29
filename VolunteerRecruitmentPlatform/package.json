@@ -10,6 +10,7 @@
   "dependencies": {
     "@cloudinary/react": "^1.13.1",
     "@cloudinary/url-gen": "^1.21.0",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-native-firebase/app": "^21.4.0",
     "@react-native-firebase/firestore": "^21.4.0",

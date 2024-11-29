@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUserContext } from '../UserContext';
 import { doc, getDoc } from "firebase/firestore";
 import { firestore } from "../firebaseConfig"; // Ensure this is correctly initialized
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = ({ navigation }) => {
   const { top: safeTop } = useSafeAreaInsets();
@@ -107,12 +108,29 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.buttonSection} 
+          <TouchableOpacity
+            style={styles.buttonSection}
             activeOpacity={0.9}
-            onPress={() => {
-              setUser(null);  
-              navigation.navigate('Login'); 
+            onPress={async () => {
+              try {
+                // Clear AsyncStorage (if applicable)
+                await AsyncStorage.clear();
+
+                // Clear user state and reset navigation
+                setUser(null);
+
+                // Reset the navigation stack and navigate to the Login screen
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Login' }],
+                });
+              } catch (error) {
+                // Ensure error message rendering is safe inside Text
+                console.error('Error during logout:', error);
+
+                // You can also show the error using an Alert
+                Alert.alert('Error', `Error during logout: ${error.message}`);
+              }
             }}
           >
             <View style={styles.buttonArea}>
