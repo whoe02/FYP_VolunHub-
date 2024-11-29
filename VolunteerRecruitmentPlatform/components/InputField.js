@@ -7,6 +7,7 @@ export default function InputField({
   inputType,
   keyboardType,
   fieldButtonLabel,
+  secureTextEntry,
   fieldButtonFunction,
   onChangeText,
   value,
@@ -27,7 +28,7 @@ export default function InputField({
           placeholder={label}
           keyboardType={keyboardType}
           style={{ flex: 1, paddingVertical: 0, marginLeft: 10, fontSize: 16 }}
-          secureTextEntry={true}
+          secureTextEntry={secureTextEntry}
           value={value}
           onChangeText={onChangeText}
           editable={editable} // Pass editable here
