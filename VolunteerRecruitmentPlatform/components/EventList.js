@@ -81,11 +81,9 @@ const EventList = ({ activeTab, navigation, user }) => {
       }
   
       const querySnapshot = await getDocs(eventQuery);
-      console.log('Fetched event documents:', querySnapshot.docs); // Log the raw documents
   
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
-        console.log('Event data:', data);
   
         // Convert Firestore Timestamp fields to Date if necessary
         const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
