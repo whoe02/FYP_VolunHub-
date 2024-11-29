@@ -12,7 +12,6 @@ import axios from 'axios';
 const EditEventScreen = ({route, navigation }) => {
   // Initial states
   const { event,user } = route.params;
-  // console.log(event);
   const [title, setTitle] = useState(event.title);
   const [address, setAddress] = useState(event.address);
   const [capacity, setCapacity] = useState(event.capacity);
@@ -32,7 +31,6 @@ const EditEventScreen = ({route, navigation }) => {
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
   const formatTime = (time) => (time instanceof Date ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time');
-  const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePickerChange = (event, selectedValue) => {
@@ -46,15 +44,6 @@ const EditEventScreen = ({route, navigation }) => {
     }
   };
   
-
-const handlePress = () => {
-    if (!isButtonPressed) {
-      setIsButtonPressed(true);
-      openPicker('startDate', 'date'); // your open picker function
-      setTimeout(() => setIsButtonPressed(false), 500); // Allow button press every 500ms
-    }
-  };
-
   const pickerValue = useMemo(() => {
     if (showPicker.pickerType === 'startDate') return startDate || new Date();
     if (showPicker.pickerType === 'endDate') return endDate || new Date();
@@ -192,37 +181,27 @@ const handlePress = () => {
   };
 
   const validateAndSave = async () => {
-    setIsLoading(true); // Set loading to true while processing the request
-  
+    setIsLoading(true); // Show loading indicator
+    
     // Validate form fields
-    if (
-      !title || 
-      !startDate || 
-      !startTime || 
-      !endDate || 
-      !endTime || 
-      !address || 
-      !capacity || 
-      !description
-    ) {
-      Alert.alert('Error', 'Please fill in all fields');
-      setIsLoading(false); // Set loading to false on failure
+    if (!title || !startDate || !endDate || !address || !capacity || !description) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      setIsLoading(false);
       return;
     }
   
     try {
-      // Upload images to Cloudinary if any images were selected
-      const uploadedImageUrls = eventImages.length > 0 ? await uploadToCloudinary(eventImages) : [];
+      // Separate new (local) images from existing (remote) ones
+      const newImageUris = eventImages.filter((uri) => !uri.startsWith('http')); // New images
+      const existingImageUrls = eventImages.filter((uri) => uri.startsWith('http')); // Already uploaded
   
-      // Determine if it's an update or a new creation
-      const eventId = event.eventId || await generateEventId();
-      const eventRef = doc(firestore, 'Event', eventId);
+      // Upload new images if any
+      const uploadedImageUrls = newImageUris.length > 0 ? await uploadToCloudinary(newImageUris) : [];
   
-      // Check if the document already exists
-      const existingEventDoc = await getDoc(eventRef);
-      const isUpdate = existingEventDoc.exists();
+      // Combine new and existing URLs
+      const finalImageUrls = [...existingImageUrls, ...uploadedImageUrls];
   
-      // Prepare the event data
+      // Prepare event data
       const eventData = {
         title: title || '',
         description: description || '',
@@ -232,20 +211,23 @@ const handlePress = () => {
         startTime: startTime || '',
         endDate: Timestamp.fromDate(endDate),
         endTime: endTime || '',
-        status: 'upcoming', // Default to 'upcoming'
+        status: 'upcoming',
         location: location || '',
         skills: selectedSkills || [],
         preferences: selectedPreferences || [],
-        image: uploadedImageUrls || [],
-        categoryIds: [location, ...selectedSkills, ...selectedPreferences].filter(item => item != null),
+        image: finalImageUrls, // Save combined URLs
+        categoryIds: [location, ...selectedSkills, ...selectedPreferences].filter((item) => item != null),
       };
   
-      // If updating, use `updateDoc` to update existing fields
-      if (isUpdate) {
-        await updateDoc(eventRef, eventData);
+      // Check if it's an update or new event
+      const eventId = event.eventId || await generateEventId();
+      const eventRef = doc(firestore, 'Event', eventId);
+      const existingEventDoc = await getDoc(eventRef);
+  
+      if (existingEventDoc.exists()) {
+        await updateDoc(eventRef, eventData); // Update existing event
         Alert.alert('Success', 'Event updated successfully');
       } else {
-        // If creating new, use `setDoc` to create a new event document
         await setDoc(eventRef, {
           ...eventData,
           eventId,
@@ -255,14 +237,15 @@ const handlePress = () => {
         Alert.alert('Success', 'New event added');
       }
   
-      navigation.goBack(); // Go back to the previous screen
+      navigation.goBack(); // Navigate back to the previous screen
     } catch (error) {
       console.error('Error saving event:', error);
       Alert.alert('Error', 'Failed to save event');
     } finally {
-      setIsLoading(false); // Set loading to false after completion
+      setIsLoading(false); // Hide loading indicator
     }
   };
+  
   
   
   return (
@@ -387,7 +370,7 @@ const handlePress = () => {
           <Text style={styles.label}>Skills</Text>
           {skills.map((skill) => (
             <TouchableOpacity
-              key={skill.id}
+              key={skill.id || skill.categoryName}
               style={[
                 styles.selectionButton,
                 selectedSkills.includes(skill.id) && styles.selectedButton,
@@ -404,7 +387,7 @@ const handlePress = () => {
           <Text style={styles.label}>Preferences</Text>
           {preferences.map((preference) => (
             <TouchableOpacity
-              key={preference.id}
+              key={preference.id || preference.categoryName}
               style={[
                 styles.selectionButton,
                 selectedPreferences.includes(preference.id) && styles.selectedButton,
