@@ -107,17 +107,13 @@ const EventList = ({ activeTab, navigation, user }) => {
       const allCategoryIds = [
         ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
       ];
-      console.log('All category IDs:', allCategoryIds);
 
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-      console.log('All user IDs:', allUserIds);
   
       // Fetch categories and organizations
       const categoryMap = await fetchCategoryNames(allCategoryIds);
-      console.log('Category Map:', categoryMap);
   
       const organizationMap = await fetchOrganizationNames(allUserIds);
-      console.log('Organization Map:', organizationMap);
   
       // Update event data with category names
       const eventsWithDetails = fetchedEvents.map((event) => ({
@@ -126,7 +122,6 @@ const EventList = ({ activeTab, navigation, user }) => {
         organizationName: organizationMap[event.userId] || 'Unknown Organization', 
       }));
   
-      console.log('Events with categories and organizations:', eventsWithDetails);
   
       setEvents(eventsWithDetails);
     } catch (error) {

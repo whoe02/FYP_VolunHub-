@@ -5,18 +5,18 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Alert,
   Modal,
 } from 'react-native';
 import { firestore } from '../firebaseConfig'; // Ensure your Firebase config is imported
-import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDocs,where } from 'firebase/firestore';
 
 const ParticipantListScreen = ({ route }) => {
     const { event } = route.params;
     const eventId = event.eventId;
   
-    const [tab, setTab] = useState('waiting'); // Default tab
-    const [waitingApproval, setWaitingApproval] = useState([]);
+    const [tab, setTab] = useState('approved'); // Default tab
     const [approvedParticipants, setApprovedParticipants] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]); // For attendance record
     const [selectedParticipant, setSelectedParticipant] = useState(null);
@@ -28,67 +28,107 @@ const ParticipantListScreen = ({ route }) => {
         return;
       }
   
-      const fetchParticipants = () => {
-        const eventRef = doc(firestore, 'Event', eventId);
-        const participantsRef = collection(eventRef, 'EventParticipant');
-  
-        const q = query(participantsRef);
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-          const waiting = [];
-          const approved = [];
-  
-          const fetchUserDetails = async (userId) => {
-            const userRef = doc(firestore, 'User', userId);
-            const userSnap = await getDoc(userRef);
-            return userSnap.exists() ? { id: userId, ...userSnap.data() } : null;
-          };
-  
-          const participantPromises = snapshot.docs.map(async (docSnap) => {
-            const userId = docSnap.id; // Document ID is the userId
-            const { status } = docSnap.data();
-  
-            const userDetails = await fetchUserDetails(userId);
-            if (userDetails) {
-              const participantData = { id: userId, status, ...userDetails };
-  
-              if (status === 'pending') {
-                waiting.push(participantData);
-              } else if (status === 'approved') {
-                approved.push(participantData);
-              }
-            }
-          });
-  
-          await Promise.all(participantPromises);
-  
-          setWaitingApproval(waiting);
-          setApprovedParticipants(approved);
-        });
-  
-        return unsubscribe;
-      };
-  
-      const fetchAttendanceRecords = () => {
-        const attendanceRef = collection(firestore, 'Event', eventId, 'Attendance');
-        const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
-          const records = snapshot.docs.map((docSnap) => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-          }));
-          setAttendanceRecords(records);
-        });
-  
-        return unsubscribe;
-      };
-  
       const unsubscribeParticipants = fetchParticipants();
-      const unsubscribeAttendance = fetchAttendanceRecords();
+      fetchAttendanceRecords();
   
       return () => {
         unsubscribeParticipants();
-        unsubscribeAttendance();
       };
     }, [eventId]);
+  
+    // Fetch Approved Participants
+    const fetchParticipants = () => {
+      const eventRef = doc(firestore, 'Event', eventId);
+      const participantsRef = collection(eventRef, 'EventParticipant');
+    
+      // Query to fetch all participants
+      const q = query(participantsRef);
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const approved = [];
+        const participantsData = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return { id: docSnap.id, ...data }; 
+        });
+    
+        const approvedUserIds = participantsData
+          .filter(docSnap => docSnap.status === 'approved') 
+          .map(docSnap => docSnap.id);
+    
+        if (approvedUserIds.length > 0) {
+          const usersQuery = query(collection(firestore, 'User'), where('userId', 'in', approvedUserIds));
+          const usersSnapshot = await getDocs(usersQuery);
+  
+          const usersData = usersSnapshot.docs.reduce((acc, docSnap) => {
+            acc[docSnap.id] = docSnap.data(); 
+            return acc;
+          }, {});
+    
+          participantsData.forEach((docSnap) => {
+            const userId = docSnap.id;
+            const { status } = docSnap;
+    
+            if (status === 'approved' && usersData[userId]) {
+              const userDetails = usersData[userId];
+              const participantData = { id: userId, status, ...userDetails };
+              approved.push(participantData); 
+            }
+          });
+    
+          setApprovedParticipants(approved);
+        }
+      });
+    
+      return unsubscribe;
+    };
+    
+    // Fetch Attendance Records
+    const fetchAttendanceRecords = async () => {
+      try {
+        const eventRef = doc(firestore, 'Event', eventId);
+        const participantsRef = collection(eventRef, 'EventParticipant');
+
+        const q = query(participantsRef);
+        const participantsSnapshot = await getDocs(q);
+
+        const attendancePromises = participantsSnapshot.docs.map(async (participantDoc) => {
+          const participantId = participantDoc.id;
+          const attendanceRef = collection(participantDoc.ref, 'Attendance');
+
+          const attendanceSnapshot = await getDocs(attendanceRef);
+
+          return attendanceSnapshot.docs.map((docSnap) => ({
+            id: docSnap.id,
+            participantId, // Link this record to the participant
+            ...docSnap.data(),
+          }));
+        });
+
+        const resolvedAttendance = await Promise.all(attendancePromises);
+        const flattenedRecords = resolvedAttendance.flat();
+
+        // Console log the fetched attendance data
+
+        setAttendanceRecords(flattenedRecords);
+      } catch (error) {
+        console.error('Error fetching attendance records:', error);
+      }
+    };
+
+    const formatDateTime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+    const viewDetails = (participant) => {
+      setSelectedParticipant(participant);
+      setShowDetailsModal(true);
+    };
   
     const renderTabContent = () => {
 
@@ -107,16 +147,29 @@ const ParticipantListScreen = ({ route }) => {
         return (
           <FlatList
             data={attendanceRecords}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Text style={styles.name}>Name: {item.name}</Text>
-                <Text style={styles.status}>Status: {item.attendanceStatus}</Text>
-                <Text style={styles.email}>Email: {item.email}</Text>
-                <Text>Date: {item.date || 'N/A'}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const formattedDate =
+                item.timestamp && item.timestamp.toDate
+                  ? formatDateTime(item.timestamp.toDate())
+                  : 'N/A';
+      
+              return (
+                <View style={styles.card}>
+                  <View style={{flexDirection: 'row',justifyContent: 'space-between', alignItems: 'center'}}>
+                    <Text style={styles.name}>{item.userName || 'N/A'}</Text>
+                    <Text style={{fontWeight:'bold'}}>{item.status || 'N/A'}</Text>
+                  </View>
+                  <Text style={styles.date}>
+                    <Text style={{ fontWeight: 'bold' }}>Timestamp: </Text>
+                    {formattedDate}
+                  </Text>
+                </View>
+              );
+            }}
             keyExtractor={(item) => item.id}
-            ListEmptyComponent={<Text style={styles.emptyText}>No attendance records found.</Text>}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No attendance records found.</Text>
+            }
           />
         );
       }
@@ -126,7 +179,7 @@ const ParticipantListScreen = ({ route }) => {
       <View style={styles.card}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.email}>{item.email}</Text>
-        <Text style={styles.status}>Status: {item.status}</Text>
+        <Text style={styles.email}>Phone: {item.phoneNum}</Text>
         <View style={styles.actionButtons}>
           {type === 'approved' && (
             <>
@@ -166,6 +219,39 @@ const ParticipantListScreen = ({ route }) => {
   
         {/* Tab Content */}
         {renderTabContent()}
+
+        {/* Modal to show participant details */}
+        <Modal
+          visible={showDetailsModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowDetailsModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Attendance Record - {selectedParticipant?.name}</Text>
+              <ScrollView>
+                {attendanceRecords
+                  .filter((record) => record.participantId === selectedParticipant?.id)
+                  .map((record) => {
+                    const formattedDate = formatDateTime(record.timestamp?.toDate());
+                    return (
+                      <View key={record.id} style={styles.card}>
+                        <Text style={styles.date}>Status: {record.status}</Text>
+                        <Text style={styles.date}>Timestamp: {formattedDate}</Text>
+                      </View>
+                    );
+                  })}
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowDetailsModal(false)}
+              >
+                <Text style={styles.buttonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   };
@@ -223,12 +309,11 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#616161',
-    marginBottom: 15,
+    marginBottom: 5,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 10,
   },
   detailsButton: {
     backgroundColor: '#4f7ec4',
@@ -248,7 +333,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 20,
   },
-  
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+  },
+  closeButton: {
+    backgroundColor: '#4f7ec4',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  date: {
+    fontSize: 14,
+    color: '#616161',
+    marginBottom: 5,
+  },
 });
 
 export default ParticipantListScreen;
