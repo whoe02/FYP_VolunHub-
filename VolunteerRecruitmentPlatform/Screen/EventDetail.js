@@ -213,6 +213,39 @@ const EventDetail = ({ route, navigation }) => {
         );
     };
 
+    const handleDeleteEvent = (event) => {
+        Alert.alert(
+            'Confirm Delete',
+            'Are you sure you want to delete this event?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    onPress: () => deleteEvent(event.eventId), // Call delete function if confirmed
+                },
+            ],
+            { cancelable: false }
+        );
+    };
+
+    const deleteEvent = async (eventId) => {
+        try {
+            setLoading(true);
+            const eventRef = doc(firestore, 'Event', eventId);
+            await deleteDoc(eventRef); // Delete the event from Firestore
+            Alert.alert('Success', 'Event deleted successfully');
+            navigation.goBack(); // Go back to the previous screen
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            Alert.alert('Error', 'Failed to delete event');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
     // Update renderButtons to reflect the new application status
     const renderButtons = () => {
         const now = new Date();
@@ -362,17 +395,17 @@ const EventDetail = ({ route, navigation }) => {
             <View style={styles.titleRow}>
                 <Text style={styles.title}>{event.title}</Text>
                 {userRole === 'volunteer' && renderWatchlistButton()}
+                {userRole === 'organization' && (
+                    <View style={styles.iconsContainer}>
+                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event,user })}>
+                            <Ionicons name="pencil-outline" size={30} color="black" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteEvent(event)}>
+                            <Ionicons name="trash-outline" size={30} color="black" />
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
-            {userRole === 'organization' && (
-                <View style={styles.iconsContainer}>
-                    <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event })}>
-                        <Ionicons name="pencil-outline" size={30} color="black" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('DeleteEvent', { event })}>
-                        <Ionicons name="trash-outline" size={30} color="black" />
-                    </TouchableOpacity>
-                </View>
-            )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                 {images.length > 0 ? (
                     images.map((img, index) => (
@@ -384,8 +417,19 @@ const EventDetail = ({ route, navigation }) => {
             </ScrollView>
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
-                <Text style={styles.detailText}>Date: {event.startDate || 'N/A'} - {event.endDate || 'N/A'}</Text>
-                <Text style={styles.detailText}>Time: {event.startTime || 'N/A'} - {event.endTime || 'N/A'}</Text>
+                <Text style={styles.detailText}>
+                    Date: 
+                    {event.startDate instanceof Date
+                        ? event.startDate.toLocaleDateString()
+                        : event.startDate
+                        ? new Date(event.startDate).toLocaleDateString()
+                        : 'N/A'} - 
+                    {event.endDate instanceof Date
+                        ? event.endDate.toLocaleDateString()
+                        : event.endDate
+                        ? new Date(event.endDate).toLocaleDateString()
+                        : 'N/A'}
+                </Text>
                 <Text style={styles.detailText}>Address: {event.address || 'N/A'}</Text>
                 <Text style={styles.detailText}>Capacity: {event.capacity || 'N/A'}</Text>
                 <Text style={styles.detailText}>Status: {event.status || 'N/A'}</Text>
@@ -413,20 +457,34 @@ const EventDetail = ({ route, navigation }) => {
             )}
             {userRole === 'organization' && (
                 <View style={styles.orgButtonContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => navigation.navigate('EventParticipant', { event })}
-                    >
-                        <Text style={styles.buttonText}>Participant List</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => navigation.navigate('Reviews', { event })}
-                    >
-                        <Text style={styles.buttonText}>Review</Text>
-                    </TouchableOpacity>
+                    {/* Row with Participant List and Review buttons */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('EventParticipant', { event })}
+                        >
+                            <Text style={styles.buttonText}>Participant List</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('Reviews', { event })}
+                        >
+                            <Text style={styles.buttonText}>Review</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* New row for Attendance button */}
+                    <View >
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => navigation.navigate('EventAttendance', { event })}
+                        >
+                            <Text style={styles.buttonText}>Attendance</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
+
         </ScrollView>
     );
 };
@@ -589,8 +647,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     orgButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         marginTop: 10,
     },
     iconsContainer: {

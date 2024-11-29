@@ -12,7 +12,8 @@ import { firestore } from '../firebaseConfig'; // Ensure your Firebase config is
 import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 const ParticipantListScreen = ({ route }) => {
-  const eventId = 'gFeeTUGB9Kt9ugi9eoC1'; // Use dynamic ID if needed
+  const { event } = route.params;
+  const eventId = event.eventId; 
 
   const [tab, setTab] = useState('waiting');
   const [waitingApproval, setWaitingApproval] = useState([]);
@@ -32,6 +33,7 @@ const ParticipantListScreen = ({ route }) => {
     
       const q = query(participantsRef);
       const unsubscribe = onSnapshot(q, async (snapshot) => {
+        console.log('Snapshot received:', snapshot.docs.map(doc => doc.data()));
         const waiting = [];
         const approved = [];
     
