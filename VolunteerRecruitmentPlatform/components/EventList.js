@@ -15,8 +15,9 @@ const EventList = ({ activeTab, navigation, user }) => {
     try {
       const userQuery = query(
         collection(firestore, 'User'),
-        where('userId', 'in', userIds) // Query by document ID
+        where('__name__', 'in', userIds) // Use `__name__` for document IDs
       );
+      
 
       const querySnapshot = await getDocs(userQuery);
 
@@ -112,13 +113,24 @@ const EventList = ({ activeTab, navigation, user }) => {
       const categoryMap = await fetchCategoryNames(allCategoryIds);
   
       const organizationMap = await fetchOrganizationNames(allUserIds);
-  
+
       // Update event data with category names
-      const eventsWithDetails = fetchedEvents.map((event) => ({
-        ...event,
-        categories: event.categoryIds?.map((id) => categoryMap[id] || 'Unknown').filter((name) => name !== 'Unknown1') || [],
-        organizationName: organizationMap[event.userId] || 'Unknown Organization', 
-      }));
+      const eventsWithDetails = fetchedEvents.map((event) => {
+        // Map categories and organization name
+        const mappedCategories = event.categoryIds
+          ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
+          : [];
+        
+        const organizationName = organizationMap[event.userId] || 'Unknown Organization';
+      
+      
+        return {
+          ...event,
+          categories: mappedCategories,
+          organizationName,
+        };
+      });
+      
   
   
       setEvents(eventsWithDetails);

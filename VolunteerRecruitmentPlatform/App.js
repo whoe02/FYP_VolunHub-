@@ -35,7 +35,8 @@ import EventParticipant from './Screen/EventParticipant';
 import RewardManagement from './Screen/RewardManagement';
 import EditRewardScreen from './Screen/EditRewardScreen';
 import AddRewardScreen from './Screen/AddRewardScreen';
-import EventAttendance from './Screen/EventAttendance'
+import EventAttendance from './Screen/EventAttendance';
+import SearchResult from './Screen/SearchResult'
 
 
 const Stack = createNativeStackNavigator();
@@ -93,6 +94,8 @@ const App = () => {
           <Stack.Screen name="EditRewardScreen" component={EditRewardScreen} />
           <Stack.Screen name="AddRewardScreen" component={AddRewardScreen} />
           <Stack.Screen name="EventAttendance" component={EventAttendance} />
+          <Stack.Screen name="SearchResult" component={SearchResult} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
