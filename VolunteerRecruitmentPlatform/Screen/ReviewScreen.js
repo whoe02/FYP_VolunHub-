@@ -30,6 +30,8 @@ const ReviewScreen = ({ route }) => {
   //reply
   const [replies, setReplies] = useState({});  
   const [isReplyVisible, setIsReplyVisible] = useState(null);  
+  const isEventEligibleForReview = event.status === 'inprogress' || event.status === 'complete';
+
 
   //star
   const calculateAverageRating = () => {
@@ -207,7 +209,6 @@ const ReviewScreen = ({ route }) => {
     // Generate new review ID based on the number of reviews in the collection
     const newReviewId = `RV${(reviewsSnapshot.size + 1).toString().padStart(5, '0')}`;
     
-    console.log('Generated Review ID:', newReviewId);
     return newReviewId;
   };
   //add and update
@@ -422,7 +423,7 @@ const ReviewScreen = ({ route }) => {
       <Text style={styles.reviewDescription}>{item.description}</Text>
       {renderReplies(item)}
   
-      {!item.replies?.length && (
+      {!item.replies?.length && user.role === 'organization' && (
         <TouchableOpacity
           onPress={() => toggleReplyVisibility(item.id)}
           style={styles.replyButton}
@@ -536,7 +537,7 @@ const ReviewScreen = ({ route }) => {
       </KeyboardAvoidingView>
   
       {/* Fixed Add Review Section */}
-      {user.role === 'volunteer' && (
+      {user.role === 'volunteer' && (event.status === 'inprogress' || event.status === 'completed') &&  (
         <View style={styles.addReviewSection}>
           <Text style={styles.addReviewTitle}>Review</Text>
           <View style={styles.starsContainer}>
