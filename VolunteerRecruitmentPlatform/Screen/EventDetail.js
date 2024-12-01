@@ -282,7 +282,7 @@ const EventDetail = ({ route, navigation }) => {
                                         : 'Apply Now'}
                                 </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -296,7 +296,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonCancel} onPress={handleCancelApplication}>
                                 <Text style={styles.buttonText}>Cancel Application</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -310,7 +310,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonExpired} disabled>
                                 <Text style={styles.buttonTextExpired}>Check In</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -321,14 +321,14 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonExpired} >
                                 <Text style={styles.buttonTextExpired}>Event Not Available</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
 
                     );
                 }
-            case 'inProgress':
+            case 'inprogress':
                 if (userApplicationStatus === 'approved') {
                     // Case 4: Event is in progress and user is approved, can check in
                     return (
@@ -339,7 +339,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonCheckIn}>
                                 <Text style={styles.buttonText}>Check In</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -351,7 +351,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonExpired}>
                                 <Text style={styles.buttonTextExpired}>Event In Progress</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -367,7 +367,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.buttonExpired}>
                                 <Text style={styles.buttonTextExpired}>Event Expired</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
