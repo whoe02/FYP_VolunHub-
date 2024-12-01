@@ -27,22 +27,29 @@ const Chat = ({ route }) => {
     const flatListRef = useRef();
 
     useEffect(() => {
+        if (!chat || !chat.id) {
+            return;
+        }
+
         const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
         const q = query(messagesRef, orderBy('timestamp', 'asc'));
-
+    
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const groupedMessages = [];
             let lastDate = null;
-
+    
             snapshot.docs.forEach((doc) => {
                 const messageData = {
                     id: doc.id,
                     ...doc.data(),
                     timestamp: doc.data().timestamp.toDate(),
                 };
+    
+                // Filter out placeholder messages
+                if (messageData.isPlaceholder) return;
 
                 const messageDate = messageData.timestamp.toDateString();
-
+    
                 if (messageDate !== lastDate) {
                     // Add a date separator
                     groupedMessages.push({
@@ -52,13 +59,13 @@ const Chat = ({ route }) => {
                     });
                     lastDate = messageDate;
                 }
-
+    
                 groupedMessages.push(messageData);
             });
-
+    
             setMessages(groupedMessages);
         });
-
+    
         return () => unsubscribe();
     }, [chat.id]);
 

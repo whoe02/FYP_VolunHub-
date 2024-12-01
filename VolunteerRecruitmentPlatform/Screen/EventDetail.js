@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { doc, collection, query, where, getDocs, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, setDoc, getDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
 const EventDetail = ({ route, navigation }) => {
@@ -60,6 +60,78 @@ const EventDetail = ({ route, navigation }) => {
         fetchEventParticipantData();
     }, [event.eventId, user.userId]);
 
+    const handleEnquiryNow = async () => {
+        if (!user?.userId || !event?.eventId) return;
+
+        setLoading(true);
+
+        try {
+            // Define chat participants
+            const participants = [user.userId, event.userId]; // `event.createdBy` should represent the organization's userId
+
+            // Query Firestore for an existing chat with these participants
+            const chatRef = collection(firestore, 'Chat');
+            const chatQuery = query(chatRef, where('participants', 'array-contains', user.userId));
+            const querySnapshot = await getDocs(chatQuery);
+
+            let chatItem = null;
+
+            // Check if a chat exists between the organization and the volunteer
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.participants.includes(event.userId)) {
+                    chatItem = { id: doc.id, ...data }; // Include chat ID
+                }
+            });
+
+            // If no chat exists, create a new one
+            if (!chatItem) {
+                const newChatRef = doc(chatRef); // Generate a new document reference
+                chatItem = {
+                    chatId: newChatRef.id,
+                    participants: participants,
+                    lastMessage: null,
+                    timestamp: new Date(),
+                };
+
+                await setDoc(newChatRef, chatItem);
+                // Create a `Message` subcollection with a placeholder document
+                chatItem = {
+                    ...chatItem,
+                    id: newChatRef.id,
+                }
+                const messageRef = collection(newChatRef, 'Message');
+                await addDoc(messageRef, {
+                    isPlaceholder: true, // Placeholder flag
+                    timestamp: new Date(),
+                });
+
+
+
+            }
+
+            // Get the other participant's details
+            const otherParticipantId = chatItem.participants.find((id) => id !== user.userId);
+            const otherParticipantDoc = await getDoc(doc(firestore, 'User', otherParticipantId));
+            const otherParticipant = otherParticipantDoc.data();
+
+            // Attach other participant's name and avatar to the chat item
+            chatItem = {
+                ...chatItem,
+                name: otherParticipant.name,
+                avatar: otherParticipant.image,
+            };
+            // Navigate to the Chat screen, passing the full chat item
+            console.log(chatItem);
+            navigation.navigate('Chat', { chat: chatItem });
+
+        } catch (error) {
+            console.error('Error handling enquiry:', error);
+            Alert.alert('Error', 'Unable to start a chat.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleWatchlist = async () => {
         try {
@@ -163,13 +235,13 @@ const EventDetail = ({ route, navigation }) => {
             if (!user?.userId || !event?.eventId) {
                 throw new Error('User ID or Event ID is missing.');
             }
-    
+
             setLoading(true);
-    
+
             // References to Firestore paths
             const userEventRef = doc(firestore, 'User', user.userId, 'UserEvent', event.eventId);
             const eventParticipantRef = doc(firestore, 'Event', event.eventId, 'EventParticipant', user.userId);
-    
+
             // Update UserEvent with applicationStatus and cooldown timestamp
             await setDoc(
                 userEventRef,
@@ -180,14 +252,14 @@ const EventDetail = ({ route, navigation }) => {
                 },
                 { merge: true }
             );
-    
+
             // Delete the user from the EventParticipant subcollection
             await deleteDoc(eventParticipantRef); // Use deleteDoc here
-    
+
             // Update local state
             setUserApplicationStatus('canceled');
             setCooldownUntil(Date.now() + 60 * 60 * 1000);
-    
+
             Alert.alert('Application Canceled', 'You have successfully canceled your application.');
         } catch (error) {
             console.error('Error canceling application:', error);
@@ -245,7 +317,7 @@ const EventDetail = ({ route, navigation }) => {
             setLoading(false);
         }
     };
-    
+
     // Update renderButtons to reflect the new application status
     const renderButtons = () => {
         const now = new Date();
@@ -260,8 +332,8 @@ const EventDetail = ({ route, navigation }) => {
                 ) {
                     return (
                         <>
-                    
-                            <TouchableOpacity style={styles.button}>
+
+                            <TouchableOpacity style={styles.button} onPress={handleEnquiryNow}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -283,7 +355,7 @@ const EventDetail = ({ route, navigation }) => {
                                         : 'Apply Now'}
                                 </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
+                            <TouchableOpacity style={styles.buttonShort}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
@@ -291,7 +363,7 @@ const EventDetail = ({ route, navigation }) => {
                 } else if (userApplicationStatus === 'pending' && approvedParticipantsCount < event.capacity) {
                     return (
                         <>
-                            <TouchableOpacity style={styles.button}>
+                            <TouchableOpacity style={styles.button} onPress={handleEnquiryNow}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonCancel} onPress={handleCancelApplication}>
@@ -305,7 +377,7 @@ const EventDetail = ({ route, navigation }) => {
                 } else if (userApplicationStatus === 'approved') {
                     return (
                         <>
-                            <TouchableOpacity style={styles.button}>
+                            <TouchableOpacity style={styles.button} onPress={handleEnquiryNow}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonExpired} disabled>
@@ -334,7 +406,7 @@ const EventDetail = ({ route, navigation }) => {
                     // Case 4: Event is in progress and user is approved, can check in
                     return (
                         <>
-                            <TouchableOpacity style={styles.button}>
+                            <TouchableOpacity style={styles.button} onPress={handleEnquiryNow}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonCheckIn} onPress={() => navigation.navigate('VolunteerAttendance', { event })}>
@@ -362,18 +434,18 @@ const EventDetail = ({ route, navigation }) => {
 
             case 'completed':
             case 'canceled':
-                    // Case 5: Event is complete or canceled, and capacity is full
-                    return (
-                        <>
-                            <TouchableOpacity style={styles.buttonExpired}>
-                                <Text style={styles.buttonTextExpired}>Event Expired</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
-                                <Ionicons name="chatbubble-outline" size={24} color="black" />
-                            </TouchableOpacity>
-                        </>
+                // Case 5: Event is complete or canceled, and capacity is full
+                return (
+                    <>
+                        <TouchableOpacity style={styles.buttonExpired}>
+                            <Text style={styles.buttonTextExpired}>Event Expired</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
+                            <Ionicons name="chatbubble-outline" size={24} color="black" />
+                        </TouchableOpacity>
+                    </>
 
-                    );
+                );
 
                 break;
 
@@ -398,7 +470,7 @@ const EventDetail = ({ route, navigation }) => {
                 {userRole === 'volunteer' && renderWatchlistButton()}
                 {userRole === 'organization' && (
                     <View style={styles.iconsContainer}>
-                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event,user })}>
+                        <TouchableOpacity onPress={() => navigation.navigate('EditEvent', { event, user })}>
                             <Ionicons name="pencil-outline" size={30} color="black" />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDeleteEvent(event)}>
@@ -419,17 +491,17 @@ const EventDetail = ({ route, navigation }) => {
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
                 <Text style={styles.detailText}>
-                    Date: 
+                    Date:
                     {event.startDate instanceof Date
                         ? event.startDate.toLocaleDateString()
                         : event.startDate
-                        ? new Date(event.startDate).toLocaleDateString()
-                        : 'N/A'} - 
+                            ? new Date(event.startDate).toLocaleDateString()
+                            : 'N/A'} -
                     {event.endDate instanceof Date
                         ? event.endDate.toLocaleDateString()
                         : event.endDate
-                        ? new Date(event.endDate).toLocaleDateString()
-                        : 'N/A'}
+                            ? new Date(event.endDate).toLocaleDateString()
+                            : 'N/A'}
                 </Text>
                 <Text style={styles.detailText}>Address: {event.address || 'N/A'}</Text>
                 <Text style={styles.detailText}>Capacity: {event.capacity || 'N/A'}</Text>
