@@ -36,10 +36,10 @@ const MyEventPage = ({ navigation }) => {
         <View style={[{ flex: 1 }, { paddingTop: safeTop }, {    backgroundColor: '#f9f9f9',
 }]}>
 
-            {user.role === 'organization' && (
+            {user?.role === 'organization' && (
                 <OrganizationEventTab onTabChanged={setActiveTab} />
             )}
-            {user.role === 'volunteer' && (
+            {user?.role === 'volunteer' && (
                 <MyEventTab onTabChanged={setActiveTab} />
             )}
             <MyEventList activeTab={activeTab} navigation={navigation} user={user} />
