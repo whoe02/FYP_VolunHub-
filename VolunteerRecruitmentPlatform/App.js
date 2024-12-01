@@ -36,6 +36,7 @@ import RewardManagement from './Screen/RewardManagement';
 import EditRewardScreen from './Screen/EditRewardScreen';
 import AddRewardScreen from './Screen/AddRewardScreen';
 import EventAttendance from './Screen/EventAttendance';
+import VolunteerAttendance from './Screen/AttendanceVolunteer';
 import SearchResult from './Screen/SearchResult'
 
 
@@ -94,6 +95,7 @@ const App = () => {
           <Stack.Screen name="EditRewardScreen" component={EditRewardScreen} />
           <Stack.Screen name="AddRewardScreen" component={AddRewardScreen} />
           <Stack.Screen name="EventAttendance" component={EventAttendance} />
+          <Stack.Screen name="VolunteerAttendance" component={VolunteerAttendance} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
 
         </Stack.Navigator>
@@ -135,6 +137,7 @@ const TabNavigator = () => {
       <Tab.Screen name="My Event" component={MyEvent} />
       {/* <Tab.Screen name="Rewards" component={EventParticipant} />  */}
       <Tab.Screen name="Rewards" component={RewardScreen} /> 
+      {/* <Tab.Screen name="Rewards" component={VolunteerAttendance} />  */}
       {/* <Tab.Screen name="Rewards" component={RewardManagement} />  */}
       <Tab.Screen name="Live Chat" component={LiveChat} />
       <Tab.Screen name="Profile" component={Profile} />
