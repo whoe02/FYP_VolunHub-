@@ -260,6 +260,7 @@ const EventDetail = ({ route, navigation }) => {
                 ) {
                     return (
                         <>
+                    
                             <TouchableOpacity style={styles.button}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
@@ -336,7 +337,7 @@ const EventDetail = ({ route, navigation }) => {
                             <TouchableOpacity style={styles.button}>
                                 <Text style={styles.buttonText}>Enquiry Now</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonCheckIn}>
+                            <TouchableOpacity style={styles.buttonCheckIn} onPress={() => navigation.navigate('VolunteerAttendance', { event })}>
                                 <Text style={styles.buttonText}>Check In</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
