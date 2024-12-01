@@ -50,7 +50,7 @@ const Home = ({ navigation }) => {
   };
 
   const handleSearchBarPress = () => {
-    navigation.navigate('SearchPage'); // Navigate to the search page
+    navigation.navigate('SearchPage', {user: user}); // Navigate to the search page
   };
 
   // Ensure user data is loaded before rendering other components

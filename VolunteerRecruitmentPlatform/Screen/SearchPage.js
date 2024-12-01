@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { useNavigation } from '@react-navigation/native'; // Ensure navigation is set up in your project
-import { firestore } from '../firebaseConfig'; // Replace with your Firebase setup path
+import { useNavigation } from '@react-navigation/native';
+import { firestore } from '../firebaseConfig';
 
-const SearchPage = () => {
+const SearchPage = ({route}) => {
   const { top: safeTop } = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { user } = route.params;
 
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -17,13 +18,23 @@ const SearchPage = () => {
   const [selectedPreferences, setSelectedPreferences] = useState([]);
   const [selectedSkills, setSelectedSkills] = useState([]);
 
+  // Derived state to disable search
+  const isSearchDisabled =
+    !searchTerm.trim() &&
+    selectedLocations.length === 0 &&
+    selectedPreferences.length === 0 &&
+    selectedSkills.length === 0;
+
   useEffect(() => {
     fetchCategories();
   }, []);
-
+console.log(user?.userId);
   const fetchCategories = async () => {
     try {
-      const categoryQuery = query(collection(firestore, 'Category'), where('categoryType', 'in', ['location', 'preference', 'skills']));
+      const categoryQuery = query(
+        collection(firestore, 'Category'),
+        where('categoryType', 'in', ['location', 'preference', 'skills'])
+      );
       const categorySnapshot = await getDocs(categoryQuery);
 
       const fetchedCategories = categorySnapshot.docs.map((doc) => ({
@@ -31,7 +42,6 @@ const SearchPage = () => {
         ...doc.data(),
       }));
 
-      // Filter categories based on `categoryType`
       setCategories(fetchedCategories.filter((item) => item.categoryType === 'preference'));
       setLocations(fetchedCategories.filter((item) => item.categoryType === 'location'));
       setSkills(fetchedCategories.filter((item) => item.categoryType === 'skills'));
@@ -52,44 +62,56 @@ const SearchPage = () => {
     try {
       const eventQuery = query(collection(firestore, 'Event'));
       const eventSnapshot = await getDocs(eventQuery);
-  
+
       const filteredEvents = [];
       for (const eventDoc of eventSnapshot.docs) {
         const eventData = eventDoc.data();
-  
-        // Check if title exists and matches the search term
-        const matchesTitle = eventData.title 
+
+        const matchesTitle = eventData.title
           ? eventData.title.toLowerCase().includes(searchTerm.toLowerCase())
           : false;
-  
-        // Fetch the organization name using userId from the event
+
         let matchesOrganization = false;
         if (eventData.userId) {
           const userDoc = await getDoc(doc(firestore, 'User', eventData.userId));
-          const organizationName = userDoc.exists() && userDoc.data().organizationName 
-            ? userDoc.data().organizationName 
-            : '';
-          matchesOrganization = organizationName.toLowerCase().includes(searchTerm.toLowerCase());
+          if (userDoc.exists()) {
+            const organizationName = userDoc.data().organizationName || userDoc.data().name || '';
+            matchesOrganization = organizationName
+              .trim()
+              .toLowerCase()
+              .includes(searchTerm.trim().toLowerCase());
+          }
         }
-  
-        // Check if category IDs match selected categories
-        const matchesCategory = eventData.categoryIds && eventData.categoryIds.some((categoryId) =>
-          [...selectedPreferences, ...selectedSkills, ...selectedLocations].includes(categoryId)
-        );
-  
-        // Add event if any condition matches
-        if (matchesTitle || matchesOrganization || matchesCategory) {
-          filteredEvents.push({ id: eventDoc.id, ...eventData });
+
+        const selectedCategories = [
+          ...selectedPreferences.map((cat) => `preference_${cat}`),
+          ...selectedSkills.map((cat) => `skills_${cat}`),
+          ...selectedLocations.map((cat) => `location_${cat}`),
+        ];
+
+        const matchesCategory =
+          selectedCategories.length > 0 &&
+          eventData.categoryIds &&
+          eventData.categoryIds.some((categoryId) => selectedCategories.includes(categoryId));
+
+        if(searchTerm.trim()){
+          if (matchesTitle || matchesOrganization || matchesCategory) {
+            filteredEvents.push({ id: eventDoc.id, ...eventData });
+          }
         }
+        else{
+          if (matchesCategory) {
+            filteredEvents.push({ id: eventDoc.id, ...eventData });
+          }
+        }
+
       }
-  
-      // Navigate to SearchResult.js with filtered events
-      navigation.navigate('SearchResult', { events: filteredEvents });
+
+      navigation.navigate('SearchResult', { events: filteredEvents, user: user });
     } catch (error) {
       console.error('Error fetching events:', error);
     }
   };
-  
 
   return (
     <ScrollView style={[styles.container, { paddingTop: safeTop }]}>
@@ -106,7 +128,9 @@ const SearchPage = () => {
         {categories.map((category) => (
           <TouchableOpacity
             key={category.id}
-            onPress={() => toggleSelection(selectedPreferences, setSelectedPreferences, category.categoryName)}
+            onPress={() =>
+              toggleSelection(selectedPreferences, setSelectedPreferences, category.categoryName)
+            }
             style={[
               styles.item,
               selectedPreferences.includes(category.categoryName) && styles.itemActive,
@@ -154,7 +178,9 @@ const SearchPage = () => {
         {locations.map((location) => (
           <TouchableOpacity
             key={location.id}
-            onPress={() => toggleSelection(selectedLocations, setSelectedLocations, location.categoryName)}
+            onPress={() =>
+              toggleSelection(selectedLocations, setSelectedLocations, location.categoryName)
+            }
             style={[
               styles.item,
               selectedLocations.includes(location.categoryName) && styles.itemActive,
@@ -172,7 +198,11 @@ const SearchPage = () => {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.searchButton} onPress={fetchEvents}>
+      <TouchableOpacity
+        style={[styles.searchButton, isSearchDisabled && styles.searchButtonDisabled]}
+        onPress={fetchEvents}
+        disabled={isSearchDisabled}
+      >
         <Text style={styles.searchButtonText}>Search</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -231,6 +261,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 80,
+  },
+  searchButtonDisabled: {
+    backgroundColor: '#a0a0a0',
   },
   searchButtonText: {
     color: '#fff',

@@ -68,9 +68,9 @@ const MyEventList = ({ activeTab, navigation, user }) => {
             ? 'watchlist'
             : activeTab === 'pending'
             ? 'pending'
-            : activeTab === 'completed'
+            : activeTab === 'completed' || activeTab === 'active'
             ? 'completed'
-            : 'approved'
+            : 'approved'  
         )
       );
   
