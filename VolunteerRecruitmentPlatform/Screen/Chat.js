@@ -4,80 +4,211 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUserContext } from '../UserContext';
 import { firestore } from '../firebaseConfig';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc, where, getDocs, getDoc } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Video } from 'expo-av';
 
-const Chat = ({ route }) => {
+const Chat = ({ route, navigation }) => {
     const { chat } = route.params;
     const { user } = useUserContext();
-    const { top: safeTop } = useSafeAreaInsets();
 
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [eventToSend, setEventToSend] = useState(route.params?.event || null);
+    const [isUploading, setIsUploading] = useState(false);
     const [previewModalVisible, setPreviewModalVisible] = useState(false);
     const [fullscreenMedia, setFullscreenMedia] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
     const [dynamicHeight, setDynamicHeight] = useState(40); // Start with minimum height
-
 
     const flatListRef = useRef();
 
-    useEffect(() => {
-        if (!chat || !chat.id) {
-            return;
+    const fetchCategoryNames = async (categoryIds) => {
+        if (!categoryIds || categoryIds.length === 0) {
+            return {}; // Return empty object if no categoryIds
         }
-
-        const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
-        const q = query(messagesRef, orderBy('timestamp', 'asc'));
     
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const groupedMessages = [];
-            let lastDate = null;
+        try {
+            const categoryQuery = query(
+                collection(firestore, 'Category'),
+                where('__name__', 'in', categoryIds) // Use `__name__` to query by document ID
+            );
     
-            snapshot.docs.forEach((doc) => {
-                const messageData = {
-                    id: doc.id,
-                    ...doc.data(),
-                    timestamp: doc.data().timestamp.toDate(),
-                };
+            const querySnapshot = await getDocs(categoryQuery);
     
-                // Filter out placeholder messages
-                if (messageData.isPlaceholder) return;
-
-                const messageDate = messageData.timestamp.toDateString();
-    
-                if (messageDate !== lastDate) {
-                    // Add a date separator
-                    groupedMessages.push({
-                        id: `date-${messageDate}`,
-                        dateHeader: true,
-                        date: messageDate,
-                    });
-                    lastDate = messageDate;
-                }
-    
-                groupedMessages.push(messageData);
+            const categoryMap = {};
+            querySnapshot.docs.forEach((doc) => {
+                const { categoryName } = doc.data(); // Get `categoryName` field
+                categoryMap[doc.id] = categoryName; // Map document ID to category name
             });
     
-            setMessages(groupedMessages);
-        });
+            return categoryMap;
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            return {};
+        }
+    };
     
-        return () => unsubscribe();
-    }, [chat.id]);
-
-        // Check the size of the file before uploading
-        const checkFileSize = async (uri) => {
-            const fileInfo = await FileSystem.getInfoAsync(uri);
-            if (fileInfo.size > 16 * 1024 * 1024) { // 16 MB limit
-                Alert.alert('File too large', 'The selected file exceeds the 16 MB size limit.');
-                return false;
-            }
-            return true;
+    const fetchOrganizationNames = async (userIds) => {
+        if (userIds.length === 0) {
+            return {}; // Return empty object if no userIds
+        }
+    
+        try {
+            const userQuery = query(
+                collection(firestore, 'User'),
+                where('__name__', 'in', userIds) // Use `__name__` for document IDs
+            );
+    
+            const querySnapshot = await getDocs(userQuery);
+    
+            const organizationMap = {};
+            querySnapshot.docs.forEach((doc) => {
+                const { name } = doc.data(); // Assuming the field is `organizationName`
+                organizationMap[doc.id] = name || 'Unknown Organization'; // Map userId to organization name
+            });
+    
+            return organizationMap;
+        } catch (error) {
+            console.error('Error fetching organization names:', error);
+            return {};
+        }
+    };
+    
+    const fetchEvents = async (eventIds) => {
+        try {
+            const eventQuery = query(
+                collection(firestore, 'Event'),
+                where('__name__', 'in', eventIds)
+            );
+            const querySnapshot = await getDocs(eventQuery);
+    
+            const fetchedEvents = querySnapshot.docs.map((doc) => {
+                const data = doc.data();
+    
+                // Convert Firestore Timestamp fields to Date if necessary
+                const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
+                const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
+                const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
+                const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
+    
+                return {
+                    id: doc.id,
+                    ...data,
+                    startDate,
+                    endDate,
+                    startTime,
+                    endTime,
+                };
+            });
+    
+            const allCategoryIds = [
+                ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
+            ];
+    
+            const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
+    
+            // Fetch categories and organizations
+            const categoryMap = await fetchCategoryNames(allCategoryIds);
+            const organizationMap = await fetchOrganizationNames(allUserIds);
+    
+            // Update event data with category names
+            const eventsWithDetails = fetchedEvents.map((event) => {
+                // Map categories and organization name
+                const mappedCategories = event.categoryIds
+                    ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
+                    : [];
+    
+                const organizationName = organizationMap[event.userId] || 'Unknown Organization';
+    
+                return {
+                    ...event,
+                    categories: mappedCategories,
+                    organizationName,
+                };
+            });
+    
+            setEvents(eventsWithDetails);
+        } catch (error) {
+            console.error('Error fetching events:', error);
+        }
+    };
+    
+    useEffect(() => {
+        if (eventToSend) {
+            setInputMessage('I am interested in this event!');
+        }
+    
+        const loadChatMessages = async () => {
+            if (!chat || !chat.id) return;
+    
+            const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
+            const q = query(messagesRef, orderBy('timestamp', 'asc'));
+    
+            const unsubscribe = onSnapshot(q, async (snapshot) => {
+                const groupedMessages = [];
+                let lastDate = null;
+    
+                // Fetch and process messages
+                const rawMessages = snapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        timestamp: data.timestamp?.toDate(),
+                    };
+                });
+    
+                // Filter out placeholder messages
+                const filteredMessages = rawMessages.filter((msg) => !msg.isPlaceholder);
+    
+                // Add date headers and group messages
+                filteredMessages.forEach((message) => {
+                    const messageDate = message.timestamp.toDateString();
+    
+                    if (messageDate !== lastDate) {
+                        groupedMessages.push({
+                            id: `date-${messageDate}`,
+                            dateHeader: true,
+                            date: messageDate,
+                        });
+                        lastDate = messageDate;
+                    }
+    
+                    groupedMessages.push(message);
+                });
+    
+                setMessages(groupedMessages);
+    
+                // Fetch events related to eventId in messages
+                const eventIds = [
+                    ...new Set(filteredMessages.filter((msg) => msg.eventId).map((msg) => msg.eventId)),
+                ];
+    
+                if (eventIds.length > 0) {
+                    await fetchEvents(eventIds);
+                }
+            });
+    
+            return () => unsubscribe();
         };
+    
+        loadChatMessages();
+    }, [chat.id, eventToSend]);
+
+
+    // Check the size of the file before uploading
+    const checkFileSize = async (uri) => {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (fileInfo.size > 16 * 1024 * 1024) { // 16 MB limit
+            Alert.alert('File too large', 'The selected file exceeds the 16 MB size limit.');
+            return false;
+        }
+        return true;
+    };
 
 
     const uploadToCloudinary = async (uri, type) => {
@@ -108,16 +239,14 @@ const Chat = ({ route }) => {
         }
     };
 
-    const sendMessage = async () => {
+    const sendMessage = async ({ eventId }) => {
 
         if (inputMessage.trim().length === 0 && !selectedImage) {
-            console.warn('Message or media required to send.');
             return;
         }
 
         try {
             let mediaUrl = null;
-
             if (selectedImage) {
                 const type = selectedImage.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg';
                 mediaUrl = await uploadToCloudinary(selectedImage, type);
@@ -127,6 +256,7 @@ const Chat = ({ route }) => {
             const newMessage = {
                 text: inputMessage || '',
                 media: mediaUrl || null,
+                eventId: eventId || null,
                 senderId: user.userId,
                 timestamp: new Date(),
             };
@@ -134,23 +264,86 @@ const Chat = ({ route }) => {
             const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
             await addDoc(messagesRef, newMessage);
 
-            // Update the chat's last message
             const chatRef = doc(firestore, 'Chat', chat.id);
             await updateDoc(chatRef, {
                 lastMessage: {
-                    text: inputMessage || (mediaUrl ? '[Media]' : ''),
+                    text: inputMessage || (mediaUrl ? '[Media]' : '') || (eventId ? '[Event]' : ''),
                     senderId: user.userId,
                     timestamp: new Date(),
                 },
             });
-
-
             setInputMessage('');
             setSelectedImage(null);
             setPreviewModalVisible(false);
+            if (eventId) {
+                triggerAutoReply(eventId);
+            }
         } catch (error) {
             console.error('Error sending message:', error);
         }
+    };
+
+    const triggerAutoReply = (eventId) => {
+        setTimeout(async () => {
+            if (!chat || !chat.id) return;
+    
+            try {
+                // Fetch the event document
+                const eventRef = doc(firestore, 'Event', eventId);
+                const eventDoc = await getDoc(eventRef);
+    
+                if (eventDoc.exists()) {
+                    const eventData = eventDoc.data();
+                    const { userId } = eventData;
+    
+                    if (!userId) {
+                        console.warn('Event does not have a userId for auto-reply.');
+                        return;
+                    }
+    
+                    // Fetch the user document to get the autoReplyMsg
+                    const userRef = doc(firestore, 'User', userId);
+                    const userDoc = await getDoc(userRef);
+    
+                    let autoReplyMsg = `Thank you for your message regarding the event: ${eventData.title}. We will follow up soon!`; // Default message
+    
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        autoReplyMsg = userData.autoReplyMsg || autoReplyMsg; // Use autoReplyMsg if it exists
+                    } else {
+                        console.warn('User document not found for auto-reply.');
+                    }
+    
+                    // Prepare the auto-reply message
+                    const autoReplyMessage = {
+                        text: autoReplyMsg,
+                        media: null,
+                        eventId: null,
+                        senderId: userId,
+                        timestamp: new Date(),
+                    };
+
+                    const lastMessage = {
+                        lastMessage: {
+                            text: autoReplyMsg,
+                            senderId: userId,
+                            timestamp: new Date(),
+                        },
+                    }
+    
+                    // Save the auto-reply in the Firestore
+                    const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
+                    await addDoc(messagesRef, autoReplyMessage);
+
+                    const chatRef = doc(firestore, 'Chat', chat.id);
+                    await updateDoc(chatRef, lastMessage);
+                } else {
+                    console.warn('Event not found for auto-reply.');
+                }
+            } catch (error) {
+                console.error('Error sending auto-reply:', error);
+            }
+        }, 2000); // 2-second delay
     };
 
     const pickMedia = async () => {
@@ -190,6 +383,7 @@ const Chat = ({ route }) => {
 
 
     const renderMessage = ({ item }) => {
+        // Render date headers
         if (item.dateHeader) {
             return (
                 <View style={styles.dateHeader}>
@@ -199,9 +393,10 @@ const Chat = ({ route }) => {
         }
 
         const isCurrentUser = item.senderId === user.userId;
-
+        const linkedEvent = item.eventId ? events.find((event) => event.id === item.eventId) : null;
         return (
             <View style={[styles.messageContainer, isCurrentUser ? styles.myMessage : styles.otherMessage]}>
+                {/* Render media content */}
                 {item.media && (
                     <TouchableOpacity onPress={() => setFullscreenMedia(item.media)}>
                         {item.media.endsWith('.mp4') ? (
@@ -218,7 +413,27 @@ const Chat = ({ route }) => {
                         )}
                     </TouchableOpacity>
                 )}
-                {item.text ? <Text style={isCurrentUser ? styles.messageText : styles.otherMessageText}>{item.text}</Text> : null}
+
+                {/* Render linked event */}
+                {linkedEvent && (
+                    <TouchableOpacity
+                        style={isCurrentUser ? styles.eventMessage: styles.oEventMessage}
+                        onPress={() => navigation.navigate('EventDetail', { event: linkedEvent, user: user })}
+                    >
+                        <Text style={isCurrentUser ? styles.eventMessageText: styles.oEventMessageText}>{linkedEvent.title}</Text>
+                        <Text style={isCurrentUser ? styles.orgText : styles.oOrgText}>{linkedEvent.organizationName}</Text>
+                    </TouchableOpacity>
+
+                )}
+
+                {/* Render text message */}
+                {item.text && (
+                    <Text style={isCurrentUser ? styles.messageText : styles.otherMessageText}>
+                        {item.text}
+                    </Text>
+                )}
+
+                {/* Render timestamp */}
                 <Text style={isCurrentUser ? styles.myTimestamp : styles.timestamp}>
                     {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
@@ -269,6 +484,20 @@ const Chat = ({ route }) => {
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
             />
             {/* Message Input */}
+            {eventToSend && (
+                <View style={styles.eventContainer}>
+                    <Text style={styles.eventTitle}>You are interested with : {eventToSend.title}</Text>
+                    <View style={styles.eventActions}>
+
+                        <TouchableOpacity
+                            style={styles.cancelEventButton}
+                            onPress={() => {setEventToSend(null); setInputMessage('');}}
+                        >
+                                <Ionicons name="close" size={24} color="#000" />
+                                </TouchableOpacity>
+                    </View>
+                </View>
+            )}
             <View style={styles.inputContainer}>
                 <TouchableOpacity onPress={pickMedia}>
                     <Ionicons name="image" size={30} color="#6a8a6d" />
@@ -283,7 +512,10 @@ const Chat = ({ route }) => {
                     onChangeText={setInputMessage}
                     multiline
                 />
-                <TouchableOpacity onPress={sendMessage} disabled={isUploading}>
+                <TouchableOpacity onPress={() => {
+                    sendMessage({ eventId: eventToSend?.id });
+                    setEventToSend(null);
+                }} disabled={isUploading}>
                     {isUploading ? (
                         <ActivityIndicator size="small" color="#6a8a6d" />
                     ) : (
@@ -332,7 +564,10 @@ const Chat = ({ route }) => {
                                 />
                                 <TouchableOpacity
                                     style={styles.sendButton}
-                                    onPress={sendMessage}
+                                    onPress={() => {
+                                        sendMessage({ eventId: eventToSend?.id });
+                                        setEventToSend(null);
+                                    }}
                                     disabled={isUploading}
                                 >
                                     {isUploading ? (
@@ -357,7 +592,7 @@ export default Chat;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal:5,
+        paddingHorizontal: 5,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -552,6 +787,73 @@ const styles = StyleSheet.create({
         top: 10,
         right: 10,
         zIndex: 10,
+    },
+
+    eventContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+        borderTopWidth: 0.5,
+        borderColor: '#ddd',
+        backgroundColor: 'white',
+        justifyContent: 'space-between',
+    },
+    eventTitle: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#333',
+    },
+    eventActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 5,
+    },
+    sendEventButton: {
+        backgroundColor: '#6a8a6d',
+        padding: 10,
+        borderRadius: 5,
+    },
+    sendButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    cancelButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    eventMessage: {
+        backgroundColor: '#e8e3df',
+        minWidth: '50%',
+        padding: 5,
+        borderRadius: 10,
+    },
+    eventMessageText: {
+        color: '#333',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    orgText: {
+        color: '#333',
+        fontWeight: '500',
+        fontSize: 13,
+    },
+
+    oEventMessage: {
+        backgroundColor: '#6a8a6d',
+        minWidth: '50%',
+        padding: 5,
+        borderRadius: 10,
+    },
+    oEventMessageText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    oOrgText: {
+        color: 'white',
+        fontWeight: '500',
+        fontSize: 13,
     },
 
 });

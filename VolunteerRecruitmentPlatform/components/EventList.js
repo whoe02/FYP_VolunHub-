@@ -65,7 +65,6 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
-
       // Filter based on selected tab
       if (isSearchResult) {
         // Extract event IDs if coming from search results

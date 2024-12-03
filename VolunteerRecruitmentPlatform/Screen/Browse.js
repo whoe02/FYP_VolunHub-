@@ -38,8 +38,6 @@ const Home = ({ navigation }) => {
     if (user?.role) {
       if (user.role === 'organization') {
         setActiveTab('upcoming');
-      } else if (user.role === 'volunteer') {
-        setActiveTab('all');
       }
     }
     fetchUserData();
