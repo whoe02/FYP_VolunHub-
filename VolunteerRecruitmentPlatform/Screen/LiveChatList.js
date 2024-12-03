@@ -14,52 +14,62 @@ const LiveChatList = ({ navigation }) => {
 
     useEffect(() => {
         // Real-time listener to fetch chats for the user
-        const chatQuery = query(collection(firestore, "Chat"), where("participants", "array-contains", user.userId));
+        const chatQuery = query(
+            collection(firestore, "Chat"),
+            where("participants", "array-contains", user.userId)
+        );
+    
         const unsubscribe = onSnapshot(chatQuery, async (chatSnapshots) => {
             try {
                 const chats = await Promise.all(
                     chatSnapshots.docs.map(async (chatDoc) => {
                         const chat = chatDoc.data();
-
+    
                         // Get other participant
                         const otherParticipantId = chat.participants.find((id) => id !== user.userId);
                         const otherParticipantDoc = await getDoc(doc(firestore, "User", otherParticipantId));
                         const otherParticipant = otherParticipantDoc.data();
-
+    
+                        // Truncate lastMessage to 50 characters (or your preferred limit)
+                        const lastMessageText = chat.lastMessage?.text || "[No message available]";
+                        const truncatedLastMessage =
+                            lastMessageText.length > 50
+                                ? `${lastMessageText.substring(0, 30)}...`
+                                : lastMessageText;
+    
                         return {
                             id: chat.chatId,
                             name: otherParticipant.name,
                             avatar: otherParticipant.image,
-                            lastMessage: chat.lastMessage.text,
-                            rawTimestamp: chat.lastMessage.timestamp.seconds * 1000, // Use raw timestamp for sorting
+                            lastMessage: truncatedLastMessage,
+                            rawTimestamp: chat.lastMessage?.timestamp?.seconds * 1000 || Date.now(), // Use raw timestamp for sorting
                         };
                     })
                 );
-
+    
                 // Sort chats by descending timestamp
                 chats.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
-
+    
                 // Format the timestamp after sorting
-                const formattedChats = chats.map(chat => ({
+                const formattedChats = chats.map((chat) => ({
                     ...chat,
-                    timestamp: new Date(chat.rawTimestamp).toLocaleString('en-UK', {
-                        year: 'numeric',
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                    timestamp: new Date(chat.rawTimestamp).toLocaleString("en-UK", {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                     }),
                 }));
-
+    
                 setChatData(formattedChats);
             } catch (error) {
                 console.error("Error fetching chats:", error);
             }
         });
-
+    
         // Cleanup function to unsubscribe from the listener when the component unmounts
         return () => unsubscribe();
-
     }, []);
 
     const renderChatItem = ({ item }) => (

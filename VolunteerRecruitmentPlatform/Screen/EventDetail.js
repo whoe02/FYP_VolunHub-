@@ -90,8 +90,14 @@ const EventDetail = ({ route, navigation }) => {
                 chatItem = {
                     chatId: newChatRef.id,
                     participants: participants,
-                    lastMessage: null,
+                    lastMessage: {
+                        text: "",
+                        senderId: "",
+                        timestamp: "",
+                    },
                     timestamp: new Date(),
+                    text: "",
+                    senderId: "",
                 };
 
                 await setDoc(newChatRef, chatItem);
@@ -123,7 +129,7 @@ const EventDetail = ({ route, navigation }) => {
             };
             // Navigate to the Chat screen, passing the full chat item
             console.log(chatItem);
-            navigation.navigate('Chat', { chat: chatItem });
+            navigation.navigate('Chat', { chat: chatItem, event: event });
 
         } catch (error) {
             console.error('Error handling enquiry:', error);
