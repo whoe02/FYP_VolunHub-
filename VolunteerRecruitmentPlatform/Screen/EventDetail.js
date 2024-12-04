@@ -130,6 +130,8 @@ const EventDetail = ({ route, navigation }) => {
             // Navigate to the Chat screen, passing the full chat item
             console.log(chatItem);
             navigation.navigate('Chat', { chat: chatItem, event: event });
+            logInteraction(user.userId, event.id, 'enquiry');
+
 
         } catch (error) {
             console.error('Error handling enquiry:', error);
@@ -161,7 +163,9 @@ const EventDetail = ({ route, navigation }) => {
             await setDoc(eventRef, eventData, { merge: true });
 
             setIsWatchlisted(!isWatchlisted); // Toggle watchlist state
-
+            if(!isWatchlisted){
+                logInteraction(user.userId, event.id, 'watchlisted');
+            }
             // Show alert based on action
             const alertMessage = isWatchlisted
                 ? 'Removed from Watchlist'
@@ -226,6 +230,7 @@ const EventDetail = ({ route, navigation }) => {
 
             // Step 4: Update local state to reflect the application status
             setUserApplicationStatus('pending');  // Update state immediately after applying
+            logInteraction(user.userId, event.id, 'apply');
 
             Alert.alert('Application Submitted', 'Your application is now pending.');
         } catch (error) {
@@ -323,6 +328,20 @@ const EventDetail = ({ route, navigation }) => {
             setLoading(false);
         }
     };
+
+    const logInteraction = async (userId, eventId, interactionType) => {
+        try {
+          await addDoc(collection(firestore, 'Interactions'), {
+            userId: userId,
+            eventId: eventId,
+            type: interactionType, // e.g., "view", "apply", "watchlist"
+            timestamp: new Date(),
+          });
+          console.log('Interaction logged successfully');
+        } catch (error) {
+          console.error('Error logging interaction:', error);
+        }
+      };
 
     // Update renderButtons to reflect the new application status
     const renderButtons = () => {

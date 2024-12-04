@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, where, addDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
 const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
@@ -175,9 +175,23 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     }
   };
 
+  const logInteraction = async (userId, eventId, interactionType) => {
+    try {
+      await addDoc(collection(firestore, 'Interactions'), {
+        userId: userId,
+        eventId: eventId,
+        type: interactionType, // e.g., "view", "apply", "watchlist"
+        timestamp: new Date(),
+      });
+      console.log('Interaction logged successfully');
+    } catch (error) {
+      console.error('Error logging interaction:', error);
+    }
+  };
+
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
-      onPress={() => navigation.navigate('EventDetail', { event: item, user: user })}>
+      onPress={() => {  logInteraction(user.userId, item.id, 'view'); navigation.navigate('EventDetail', { event: item, user: user })}}>
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <View style={styles.organizationWrapper}>
