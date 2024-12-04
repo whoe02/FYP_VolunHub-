@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, Image } from 'react-native';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
 const MyEventList = ({ activeTab, navigation, user }) => {
@@ -75,10 +75,24 @@ const MyEventList = ({ activeTab, navigation, user }) => {
       );
   
       const userEventSnapshot = await getDocs(userEventQuery);
-      const userEventData = userEventSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const userEventData = userEventSnapshot.docs.map((doc) => {
+        const data = doc.data();
+
+        // Convert Firestore Timestamp fields to Date if necessary
+        const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
+        const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
+        const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
+        const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
+
+        return {
+          id: doc.id,
+          ...data,
+          startDate,
+          endDate,
+          startTime,
+          endTime,
+        };
+      });
   
       // Stop further processing if no events are found
       if (userEventData.length === 0) {
@@ -113,10 +127,6 @@ const MyEventList = ({ activeTab, navigation, user }) => {
         fetchOrganizationNames(userIds),
         fetchCategoryNames(categoryIds),
       ]);
-      const startDate = eventsData.startDate ? new Date(eventsData.startDate.seconds * 1000) : null;
-      const endDate = eventsData.endDate ? new Date(eventsData.endDate.seconds * 1000) : null;
-      const startTime = eventsData.startTime ? new Date(eventsData.startTime.seconds * 1000) : null;
-      const endTime = eventsData.endTime ? new Date(eventsData.endTime.seconds * 1000) : null;
       const combinedEvents = await Promise.all(
         userEventData.map(async (userEvent) => {
           // Find the event data by matching eventId
@@ -135,10 +145,6 @@ const MyEventList = ({ activeTab, navigation, user }) => {
             ...eventData,
             organizationName: organizationMap[eventData.userId] || 'Unknown Organization',
             categories: (eventData.categoryIds || []).map((id) => categoryMap[id] || 'Unknown Category'),
-            startDate: eventData?.startDate?.toDate().toLocaleDateString() || '',
-            endDate: eventData?.endDate?.toDate().toLocaleDateString() || '',
-            startTime: eventData?.startTime?.toDate().toLocaleTimeString() || '',
-            endTime: eventData?.endTime?.toDate().toLocaleTimeString() || '',
           };
         })
       );
@@ -151,7 +157,28 @@ const MyEventList = ({ activeTab, navigation, user }) => {
     }
   };
   
-  
+  const formatDate = (date) => {
+    // Check if date is a valid Date object or Firestore Timestamp
+    const validDate = date instanceof Date && !isNaN(date);
+
+    // If it's a Firestore Timestamp, convert to Date
+    const formattedDate = validDate ? date : date?.seconds ? new Date(date.seconds * 1000) : null;
+
+    // Format the date or return 'N/A' if invalid
+    return formattedDate ? formattedDate.toLocaleDateString() : 'N/A';
+  };
+
+  const formatTime = (time) => {
+    // Check if time is a valid Date object
+    const validTime = time instanceof Date && !isNaN(time);
+
+    // If it's a valid Date object, format it, otherwise return 'N/A'
+    if (validTime) {
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return 'N/A';
+    }
+  };
   
   
   
@@ -160,10 +187,25 @@ const MyEventList = ({ activeTab, navigation, user }) => {
     fetchEvents();
   }, [activeTab]);
 
+
+  const logInteraction = async (userId, eventId, interactionType) => {
+    try {
+      await addDoc(collection(firestore, 'Interactions'), {
+        userId: userId,
+        eventId: eventId,
+        type: interactionType, // e.g., "view", "apply", "watchlist"
+        timestamp: new Date(),
+      });
+      console.log('Interaction logged successfully');
+    } catch (error) {
+      console.error('Error logging interaction:', error);
+    }
+  };
+
   const renderEventItem = ({ item }) => (
     
     <TouchableOpacity style={styles.eventItem}
-      onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
+      onPress={() => {  logInteraction(user.userId, item.id, 'view'); navigation.navigate('EventDetail', { event: item, user: user })}}>
 
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
@@ -171,7 +213,8 @@ const MyEventList = ({ activeTab, navigation, user }) => {
           <Text style={styles.organizationName}>{item.organizationName}</Text>
         </View>
         <Text style={styles.eventDate}>
-          {item.startDate} - {item.endDate} | {item.startTime} - {item.endTime}
+        {formatDate(item.startDate)} - {formatDate(item.endDate)} |
+        {formatTime(item.startTime)} - {formatTime(item.endTime)}
         </Text>
         <View style={styles.categoryWrapper}>
           {item.categories.map((category, index) => (
