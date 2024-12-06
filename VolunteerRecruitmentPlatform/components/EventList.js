@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, where, addDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 
-const EventList = ({ activeTab, navigation, user }) => {
+const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +17,7 @@ const EventList = ({ activeTab, navigation, user }) => {
         collection(firestore, 'User'),
         where('__name__', 'in', userIds) // Use `__name__` for document IDs
       );
-      
+
 
       const querySnapshot = await getDocs(userQuery);
 
@@ -65,33 +65,40 @@ const EventList = ({ activeTab, navigation, user }) => {
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
-  
       // Filter based on selected tab
-      if (activeTab === 'upcoming') {
-        eventQuery = query(eventCollection, where('status', '==', 'upcoming'));
-      } else if (activeTab === 'inprogress') {
-        eventQuery = query(eventCollection, where('status', '==', 'inprogress'));
-      } else if (activeTab === 'completed') {
-        eventQuery = query(eventCollection, where('status', '==', 'completed'));
-      } else if (activeTab === 'canceled') {
-        eventQuery = query(eventCollection, where('status', '==', 'canceled'));
-      } else if (activeTab === 'all') {
-        eventQuery = query(eventCollection);
-      } else if (activeTab === 'latest') {
-        eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
+      if (isSearchResult) {
+        // Extract event IDs if coming from search results
+        const eventIds = event.map(Event => Event.id); // Use the correct field for the ID
+          eventQuery = query(
+          collection(firestore, 'Event'),
+          where('__name__', 'in', eventIds)
+        );
+      } else {
+        if (activeTab === 'upcoming') {
+          eventQuery = query(eventCollection, where('status', '==', 'upcoming'));
+        } else if (activeTab === 'inprogress') {
+          eventQuery = query(eventCollection, where('status', '==', 'inprogress'));
+        } else if (activeTab === 'completed') {
+          eventQuery = query(eventCollection, where('status', '==', 'completed'));
+        } else if (activeTab === 'canceled') {
+          eventQuery = query(eventCollection, where('status', '==', 'canceled'));
+        } else if (activeTab === 'all') {
+          eventQuery = query(eventCollection);
+        } else if (activeTab === 'latest') {
+          eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
+        }
       }
-  
       const querySnapshot = await getDocs(eventQuery);
-  
+
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
-  
+
         // Convert Firestore Timestamp fields to Date if necessary
         const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
         const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
         const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
         const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
-  
+
         return {
           id: doc.id,
           ...data,
@@ -108,10 +115,10 @@ const EventList = ({ activeTab, navigation, user }) => {
       ];
 
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-  
+
       // Fetch categories and organizations
       const categoryMap = await fetchCategoryNames(allCategoryIds);
-  
+
       const organizationMap = await fetchOrganizationNames(allUserIds);
 
       // Update event data with category names
@@ -120,19 +127,19 @@ const EventList = ({ activeTab, navigation, user }) => {
         const mappedCategories = event.categoryIds
           ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
           : [];
-        
+
         const organizationName = organizationMap[event.userId] || 'Unknown Organization';
-      
-      
+
+
         return {
           ...event,
           categories: mappedCategories,
           organizationName,
         };
       });
-      
-  
-  
+
+
+
       setEvents(eventsWithDetails);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -148,18 +155,18 @@ const EventList = ({ activeTab, navigation, user }) => {
   const formatDate = (date) => {
     // Check if date is a valid Date object or Firestore Timestamp
     const validDate = date instanceof Date && !isNaN(date);
-    
+
     // If it's a Firestore Timestamp, convert to Date
     const formattedDate = validDate ? date : date?.seconds ? new Date(date.seconds * 1000) : null;
-    
+
     // Format the date or return 'N/A' if invalid
     return formattedDate ? formattedDate.toLocaleDateString() : 'N/A';
   };
-  
+
   const formatTime = (time) => {
     // Check if time is a valid Date object
     const validTime = time instanceof Date && !isNaN(time);
-    
+
     // If it's a valid Date object, format it, otherwise return 'N/A'
     if (validTime) {
       return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -167,17 +174,31 @@ const EventList = ({ activeTab, navigation, user }) => {
       return 'N/A';
     }
   };
-  
+
+  const logInteraction = async (userId, eventId, interactionType) => {
+    try {
+      await addDoc(collection(firestore, 'Interactions'), {
+        userId: userId,
+        eventId: eventId,
+        type: interactionType, // e.g., "view", "apply", "watchlist"
+        timestamp: new Date(),
+      });
+      console.log('Interaction logged successfully');
+    } catch (error) {
+      console.error('Error logging interaction:', error);
+    }
+  };
+
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
-      onPress={() => navigation.navigate('EventDetail', { event: item , user: user})}>
+      onPress={() => {  logInteraction(user.userId, item.id, 'view'); navigation.navigate('EventDetail', { event: item, user: user })}}>
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <View style={styles.organizationWrapper}>
           <Text style={styles.organizationName}>{item.organizationName}</Text>
         </View>
         <Text style={styles.eventDate}>
-          {formatDate(item.startDate)} - {formatDate(item.endDate)} | 
+          {formatDate(item.startDate)} - {formatDate(item.endDate)} |
           {formatTime(item.startTime)} - {formatTime(item.endTime)}
         </Text>
         <View style={styles.categoryWrapper}>
