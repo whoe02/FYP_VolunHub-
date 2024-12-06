@@ -37,6 +37,7 @@ import EditRewardScreen from './Screen/EditRewardScreen';
 import AddRewardScreen from './Screen/AddRewardScreen';
 import EventAttendance from './Screen/EventAttendance';
 import VolunteerAttendance from './Screen/AttendanceVolunteer';
+import FaceTestingScreen from './Screen/FaceTestingScreen';
 import SearchResult from './Screen/SearchResult'
 
 
@@ -96,7 +97,9 @@ const App = () => {
           <Stack.Screen name="AddRewardScreen" component={AddRewardScreen} />
           <Stack.Screen name="EventAttendance" component={EventAttendance} />
           <Stack.Screen name="VolunteerAttendance" component={VolunteerAttendance} />
+          <Stack.Screen name="FaceTestingScreen" component={FaceTestingScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
+
 
         </Stack.Navigator>
       </NavigationContainer>
