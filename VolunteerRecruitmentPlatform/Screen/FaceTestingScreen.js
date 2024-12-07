@@ -52,18 +52,28 @@ const FaceTestingScreen = () => {
       } else {
         clearInterval(captureInterval); // Stop the interval when 3 pictures are taken
         setIsCapturing(false);
-        uploadCapturedImages(); // Upload the captured images
+        uploadCapturedImages("hoe1"); // Upload the captured images
       }
-    }, 3000); // Capture a picture every 3 seconds
+    }, 1000); // Capture a picture every 3 seconds
   };
 
   // Function to upload captured images
-  const uploadCapturedImages = async () => {
-    if (capturedImages.length === 0) return;
-
+  const uploadCapturedImages = async (name) => {
+    if (capturedImages.length === 0) {
+      Alert.alert('Error', 'No images to upload.');
+      return;
+    }
+  
+    if (!name) {
+      Alert.alert('Error', 'Please provide a name.');
+      return;
+    }
+  
     setIsUploading(true);
-
+  
     const formData = new FormData();
+    formData.append('name', name); // Add the name to the form data
+  
     capturedImages.forEach((image, index) => {
       formData.append(`image${index}`, {
         uri: `data:image/jpeg;base64,${image}`,
@@ -71,14 +81,14 @@ const FaceTestingScreen = () => {
         type: 'image/jpeg',
       });
     });
-
+  
     try {
-      const response = await fetch('http://192.168.0.9:5000/start_capture', {
+      const response = await fetch('http://192.168.0.11:5000/start_capture', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
       });
-
+  
       const result = await response.json();
       if (result.success) {
         Alert.alert('Success', result.message + ` (${result.count} faces detected)`);
@@ -92,6 +102,7 @@ const FaceTestingScreen = () => {
       setIsUploading(false);
     }
   };
+  
 
   return (
     <View style={styles.container}>
