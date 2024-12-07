@@ -316,6 +316,23 @@ const RegisterScreen = ({ route, navigation }) => {
           onChangeText={setSecretAnswer}
         />
 
+        <View style={{ marginTop: 20 }}>
+          <CustomButton
+            label="Add Face Data"
+            onPress={() => {
+              // Email validation
+              if (!email) {
+                Alert.alert('Validation Error', 'Please provide an email address.');
+                return; // Don't navigate if email is missing
+              }
+              
+              // Navigate to FaceTestingScreen with email
+              navigation.navigate('FaceTestingScreen', { email: email });
+            }} 
+          />
+        </View>
+        
+
         <CustomButton label="Register" onPress={handleRegister} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
           <Text>Already have an account?</Text>
