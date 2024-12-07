@@ -37,6 +37,9 @@ const RegisterScreen = ({ route, navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userId, setUserId] = useState('');
 
+  const [secretQuestion, setSecretQuestion] = useState('');
+  const [secretAnswer, setSecretAnswer] = useState('');
+
   useEffect(() => {
     const fetchLatestUserId = async () => {
       let prefix = '';
@@ -125,6 +128,8 @@ const RegisterScreen = ({ route, navigation }) => {
         password,
         role,
         status: 'active',
+        secretQuestion,
+        secretAnswer, 
         image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg',
       };
   
@@ -235,7 +240,7 @@ const RegisterScreen = ({ route, navigation }) => {
             marginTop: -20,
           }}
         >
-          <Ionicons name="male-female-outline" size={20} color="#666" style={{ marginRight: 10 }} />
+          <Ionicons name="male-female-outline" size={20} color="#666" />
           <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666' }}>
             <Picker.Item label="Select Gender" value="" color="#aaa" />
             <Picker.Item label="Male" value="Male" />
@@ -279,6 +284,7 @@ const RegisterScreen = ({ route, navigation }) => {
           onChangeText={setPostalCode}
           icon={<Ionicons name="mail-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
         />
+
         <InputField
           label={'Password'}
           value={password}
@@ -292,6 +298,22 @@ const RegisterScreen = ({ route, navigation }) => {
           onChangeText={setConfirmPassword}
           icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
           secureTextEntry={true}
+        />
+
+        {/* Secret Question and Answer */}
+        <Text style={{ marginBottom: 10 }}>Choose a secret question</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc',marginBottom:20 }}>
+          <Ionicons name="help-circle-outline" size={20} color="#666" />
+          <Picker selectedValue={secretQuestion} onValueChange={(itemValue) => setSecretQuestion(itemValue)} style={{ flex: 1, color: secretQuestion ? '#333' : '#666' }}>
+            <Picker.Item label="What is your favorite movie?" value={0}  />
+            <Picker.Item label="What was the name of your first pet?" value={1}  />
+            <Picker.Item label="What is your mother's maiden name?" value={2}  />
+          </Picker>
+        </View>
+        <InputField
+          label="Answer"
+          value={secretAnswer}
+          onChangeText={setSecretAnswer}
         />
 
         <CustomButton label="Register" onPress={handleRegister} />
