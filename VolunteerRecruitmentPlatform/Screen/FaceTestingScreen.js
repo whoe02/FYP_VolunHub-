@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef,useEffect  } from 'react';
 import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { ProgressBar } from 'react-native-paper'; // Importing ProgressBar
@@ -16,50 +16,76 @@ const FaceTestingScreen = () => {
   // Function to take a single picture silently
   const takePicture = async () => {
     if (!cameraRef.current || !isCameraReady) {
-      console.log('Camera is not ready or ref not set.');
-      return;
+      // console.log('Camera is not ready or ref not set.');
+      return null;
     }
-
+  
     try {
       console.log(`Taking picture ${picturesTakenRef.current + 1}...`);
       const picture = await cameraRef.current.takePictureAsync({
         base64: true,
-        skipProcessing: true, // Skip post-processing for faster, silent capture
+        skipProcessing: true,
       });
-      setCapturedImages((prev) => [...prev, picture.base64]);
-      setPicturesTaken((prev) => prev + 1);
-      picturesTakenRef.current += 1;
+  
+      if (picture.base64) {
+        setPicturesTaken((prev) => prev + 1);
+        picturesTakenRef.current += 1;
+        // console.log(`Picture ${picturesTakenRef.current} captured.`);
+        return picture; // Return the captured picture
+      } else {
+        console.error('Failed to capture image.');
+      }
     } catch (err) {
       console.error('Error while taking a picture:', err);
     }
+    return null;
   };
-
+  
   // Function to start auto-capture
   const startCapture = async () => {
     if (!isCameraReady) {
       Alert.alert('Camera is not ready yet.');
       return;
     }
-
+  
     setIsCapturing(true);
-    setCapturedImages([]);
+    const tempCapturedImages = []; // Local array for synchronous tracking
+    setCapturedImages([]); // Reset state for a new capture session
     setPicturesTaken(0);
     picturesTakenRef.current = 0;
-
+  
     const captureInterval = setInterval(async () => {
       if (picturesTakenRef.current < 3) {
-        await takePicture();
+        const picture = await takePicture();
+  
+        if (picture) {
+          tempCapturedImages.push(picture.base64); // Store in local array
+          // console.log(`Stored image in local array. Count: ${tempCapturedImages.length}`);
+        }
       } else {
-        clearInterval(captureInterval); // Stop the interval when 3 pictures are taken
+        clearInterval(captureInterval);
         setIsCapturing(false);
-        uploadCapturedImages("hoe1"); // Upload the captured images
+  
+        // Update state for UI purposes
+        setCapturedImages(tempCapturedImages);
+  
+        // Directly pass the local array to the upload function
+        if (tempCapturedImages.length === 3) {
+          uploadCapturedImages("hoe12", tempCapturedImages);
+        } else {
+          console.error(
+            'Captured images count mismatch or no images found:',
+            tempCapturedImages.length
+          );
+          Alert.alert('Error', 'Failed to capture the required number of images.');
+        }
       }
-    }, 1000); // Capture a picture every 3 seconds
+    }, 1000); // Capture a picture every second
   };
 
   // Function to upload captured images
-  const uploadCapturedImages = async (name) => {
-    if (capturedImages.length === 0) {
+  const uploadCapturedImages = async (name, images) => {
+    if (!images || images.length === 0) {
       Alert.alert('Error', 'No images to upload.');
       return;
     }
@@ -74,7 +100,7 @@ const FaceTestingScreen = () => {
     const formData = new FormData();
     formData.append('name', name); // Add the name to the form data
   
-    capturedImages.forEach((image, index) => {
+    images.forEach((image, index) => {
       formData.append(`image${index}`, {
         uri: `data:image/jpeg;base64,${image}`,
         name: `image${index}.jpg`,
@@ -102,7 +128,6 @@ const FaceTestingScreen = () => {
       setIsUploading(false);
     }
   };
-  
 
   return (
     <View style={styles.container}>
@@ -112,7 +137,7 @@ const FaceTestingScreen = () => {
           ref={cameraRef}
           facing="front" // Use front camera for selfies
           onCameraReady={() => {
-            console.log('Camera ready');
+            // console.log('Camera ready');
             setIsCameraReady(true);
           }}
         />
