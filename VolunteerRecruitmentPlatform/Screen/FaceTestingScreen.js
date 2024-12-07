@@ -4,7 +4,7 @@ import { CameraView } from 'expo-camera';
 import { ProgressBar } from 'react-native-paper'; // Importing ProgressBar
 import Button from '../components/Button';
 
-const FaceTestingScreen = () => {
+const FaceTestingScreen = ({ route,navigation  }) => {
   const [capturedImages, setCapturedImages] = useState([]);
   const [picturesTaken, setPicturesTaken] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -12,6 +12,7 @@ const FaceTestingScreen = () => {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const cameraRef = useRef(null);
   const picturesTakenRef = useRef(0);
+  const { email, onComplete } = route.params;
 
   // Function to take a single picture silently
   const takePicture = async () => {
@@ -71,7 +72,7 @@ const FaceTestingScreen = () => {
   
         // Directly pass the local array to the upload function
         if (tempCapturedImages.length === 3) {
-          uploadCapturedImages("hoe12", tempCapturedImages);
+          uploadCapturedImages(email, tempCapturedImages);
         } else {
           console.error(
             'Captured images count mismatch or no images found:',
@@ -84,21 +85,16 @@ const FaceTestingScreen = () => {
   };
 
   // Function to upload captured images
-  const uploadCapturedImages = async (name, images) => {
+  const uploadCapturedImages = async (email,images) => {
     if (!images || images.length === 0) {
       Alert.alert('Error', 'No images to upload.');
-      return;
-    }
-  
-    if (!name) {
-      Alert.alert('Error', 'Please provide a name.');
       return;
     }
   
     setIsUploading(true);
   
     const formData = new FormData();
-    formData.append('name', name); // Add the name to the form data
+    formData.append('email', email); // add email to form data
   
     images.forEach((image, index) => {
       formData.append(`image${index}`, {
@@ -117,13 +113,17 @@ const FaceTestingScreen = () => {
   
       const result = await response.json();
       if (result.success) {
+        onComplete(true);
         Alert.alert('Success', result.message + ` (${result.count} faces detected)`);
+        navigation.goBack();
       } else {
         Alert.alert('Error', result.message);
+        onComplete(false);
       }
     } catch (error) {
       console.error('Error uploading images:', error);
       Alert.alert('Error', 'Failed to upload images.');
+      onComplete(false);
     } finally {
       setIsUploading(false);
     }

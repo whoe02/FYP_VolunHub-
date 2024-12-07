@@ -37,8 +37,10 @@ const RegisterScreen = ({ route, navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userId, setUserId] = useState('');
 
-  const [secretQuestion, setSecretQuestion] = useState('');
+  const [secretQuestion, setSecretQuestion] = useState(0);
   const [secretAnswer, setSecretAnswer] = useState('');
+
+  const [isFaceDataAdded, setIsFaceDataAdded] = useState(false);
 
   useEffect(() => {
     const fetchLatestUserId = async () => {
@@ -84,6 +86,25 @@ const RegisterScreen = ({ route, navigation }) => {
     setDobLabel(currentDate.toLocaleDateString());
   };
 
+  const handleAddFaceData = () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email first.');
+      return;
+    }
+
+    navigation.navigate('FaceTestingScreen', {
+      email,
+      onComplete: (status) => {
+        setIsFaceDataAdded(status); // Update state based on face data status
+        if (status) {
+          Alert.alert('Success', 'Face data added successfully!');
+        } else {
+          Alert.alert('Error', 'Failed to add face data. Try again.');
+        }
+      },
+    });
+  };
+
   const validateRegistration = () => {
     if (!fullName || !email || !phoneNumber || !street || !city || !postalCode || !password || !confirmPassword || !gender) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -113,6 +134,10 @@ const RegisterScreen = ({ route, navigation }) => {
       const emailUnique = await isEmailUnique(email);
       if (!emailUnique) {
         Alert.alert('Error', 'Email already exists');
+        return;
+      }
+      if (!isFaceDataAdded) {
+        Alert.alert('Error', 'Please add your face data before registering.');
         return;
       }
   
@@ -318,22 +343,14 @@ const RegisterScreen = ({ route, navigation }) => {
 
         <View style={{ marginTop: 20 }}>
           <CustomButton
-            label="Add Face Data"
-            onPress={() => {
-              // Email validation
-              if (!email) {
-                Alert.alert('Validation Error', 'Please provide an email address.');
-                return; // Don't navigate if email is missing
-              }
-              
-              // Navigate to FaceTestingScreen with email
-              navigation.navigate('FaceTestingScreen', { email: email });
-            }} 
+          label="Add Face Data"
+          title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
+          onPress={handleAddFaceData}
           />
         </View>
         
 
-        <CustomButton label="Register" onPress={handleRegister} />
+        <CustomButton label="Register" onPress={handleRegister} disabled={!isFaceDataAdded}/>
         <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
           <Text>Already have an account?</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>

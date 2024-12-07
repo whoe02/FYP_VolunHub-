@@ -16,7 +16,7 @@ def start_capture():
         if 'image0' not in request.files:
             return jsonify({'success': False, 'message': 'No images uploaded'}), 400
 
-        name = request.form.get('name')  # Retrieve the name
+        name = request.form.get('email')  # Retrieve the name
         files = [file for key, file in request.files.items()]
         faces_data = []
         names_data = []
@@ -27,7 +27,7 @@ def start_capture():
             with open(names_file_path, 'rb') as f:
                 existing_names = pickle.load(f)
             if name in existing_names:
-                return jsonify({'success': False, 'message': f"The name '{name}' already exists. Please use a different name."}), 400
+                return jsonify({'success': False, 'message': f"The email - '{name}' already exists. Please use a different email."}), 400
 
         for file in files:
             file_bytes = np.frombuffer(file.read(), np.uint8)
@@ -72,7 +72,7 @@ def start_capture():
         # Save face data and names
         save_face_data(np.array(faces_data), names_data)
 
-        return jsonify({'success': True, 'message': 'Faces detected and stored successfully', 'count': len(faces_data)})
+        return jsonify({'success': True, 'message': 'Faces data stored successfully', 'count': len(faces_data)})
 
     except Exception as e:
         print(f"Error: {e}")
