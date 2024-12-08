@@ -102,6 +102,76 @@ def register():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/mark_attendance', methods=['POST'])
+def mark_attendance():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'message': 'No image uploaded'}), 400
+
+        email = request.form.get('email')  # Email passed from the client
+        file = request.files['image']
+        file_bytes = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+        if img is None:
+            return jsonify({'success': False, 'message': 'Invalid image file'}), 400
+
+        # Check if the email exists in names_data.pkl
+        names_file_path = 'data/names_data.pkl'
+        if not os.path.exists(names_file_path):
+            return jsonify({'success': False, 'message': 'No registered users found'}), 400
+
+        with open(names_file_path, 'rb') as f:
+            registered_names = pickle.load(f)
+
+        print("Registered Emails:", registered_names)
+        print("email email:", email)
+        if email not in registered_names:
+            return jsonify({'success': False, 'message': 'Email not found in registered users'}), 404
+
+        # Extract faces from the image
+        try:
+            faces = DeepFace.extract_faces(img, enforce_detection=False)
+
+            if len(faces) != 1:
+                return jsonify({'success': False, 'message': 'Invalid number of faces detected. Please provide a clear image with one face.'}), 400
+
+            face_image = faces[0]['face']
+            if face_image.dtype == np.float64:
+                face_image = (face_image * 255).astype(np.uint8)
+
+            # Resize and preprocess the face image
+            resized_img = cv2.resize(face_image, (50, 50))
+            grayscale_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
+            flattened_face = grayscale_img.flatten()
+
+        except Exception as e:
+            print(f"Error during face detection: {e}")
+            return jsonify({'success': False, 'message': 'Error during face detection'}), 500
+
+        # Load stored face data
+        faces_file_path = 'data/faces_data.pkl'
+        with open(faces_file_path, 'rb') as f:
+            registered_faces = pickle.load(f)
+
+        # Get the index of the email in names_data
+        email_index = registered_names.index(email)
+        stored_face = registered_faces[email_index]
+
+        # Compare the captured face with the stored face
+        similarity = np.linalg.norm(stored_face - flattened_face)
+        threshold = 60  # Adjust this threshold as needed
+        print("smiliarty",similarity)
+        print("threshold",threshold)
+        if similarity < threshold:
+            return jsonify({'success': True, 'message': 'Attendance marked successfully!'})
+        else:
+            return jsonify({'success': False, 'message': 'Face verification failed. Try again.'}), 400
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 def save_face_data(faces_data, names_data):
     faces_file_path = 'data/faces_data.pkl'
     names_file_path = 'data/names_data.pkl'

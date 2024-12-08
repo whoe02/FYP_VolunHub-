@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   StyleSheet,
+  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,11 +12,12 @@ import { firestore } from '../firebaseConfig';
 import { collection, doc, getDocs } from 'firebase/firestore';
 import { useUserContext } from '../UserContext';
 
-const VolunteerAttendanceScreen = ({ route }) => {
+const VolunteerAttendanceScreen = ({ route,navigation }) => {
   const { user } = useUserContext();
   const { event } = route.params;
   const eventId = event.eventId;
   const userId = user.userId;
+  const email = user.email;
 
   const [attendanceRecords, setAttendanceRecords] = useState([]);
 
@@ -79,9 +81,24 @@ const VolunteerAttendanceScreen = ({ route }) => {
         keyExtractor={(item) => item.id}
         ListEmptyComponent={<Text style={styles.emptyText}>No attendance records found.</Text>}
       />
-        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate()} activeOpacity={0.7}>
-            <Ionicons name="add" size={30} color="#fff" />
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() =>
+          navigation.navigate('VolunteerRecognitionScreen', {
+            email,
+            onComplete: (status) => {
+              if (status) {
+                Alert.alert('Success', 'Face recognition completed successfully!');
+              } else {
+                Alert.alert('Error', 'Face recognition failed1.');
+              }
+            },
+          })
+        }
+        activeOpacity={0.7}
+      >
+        <Ionicons name="add" size={30} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 };

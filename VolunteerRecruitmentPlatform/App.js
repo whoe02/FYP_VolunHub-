@@ -38,7 +38,8 @@ import AddRewardScreen from './Screen/AddRewardScreen';
 import EventAttendance from './Screen/EventAttendance';
 import VolunteerAttendance from './Screen/AttendanceVolunteer';
 import FaceTestingScreen from './Screen/FaceTestingScreen';
-import SearchResult from './Screen/SearchResult'
+import VolunteerRecognitionScreen from './Screen/VolunteerRecognitionScreen';
+import SearchResult from './Screen/SearchResult';
 
 
 const Stack = createNativeStackNavigator();
@@ -98,6 +99,7 @@ const App = () => {
           <Stack.Screen name="EventAttendance" component={EventAttendance} />
           <Stack.Screen name="VolunteerAttendance" component={VolunteerAttendance} />
           <Stack.Screen name="FaceTestingScreen" component={FaceTestingScreen} />
+          <Stack.Screen name="VolunteerRecognitionScreen" component={VolunteerRecognitionScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
 
 
