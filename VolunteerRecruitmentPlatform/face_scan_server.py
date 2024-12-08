@@ -10,14 +10,22 @@ app = Flask(__name__)
 # Ensure 'data' directory exists
 os.makedirs('data', exist_ok=True)
 
+# Global variables for storing face data and names
+faces_data = []
+names_data = []
+
 @app.route('/start_capture', methods=['POST'])
 def start_capture():
+    global faces_data, names_data
+
     try:
         if 'image0' not in request.files:
             return jsonify({'success': False, 'message': 'No images uploaded'}), 400
 
         name = request.form.get('email')  # Retrieve the name
         files = [file for key, file in request.files.items()]
+
+        # Clear the previous faces_data and names_data
         faces_data = []
         names_data = []
 
@@ -69,14 +77,30 @@ def start_capture():
         if not faces_data:
             return jsonify({'success': False, 'message': 'No valid faces detected'}), 400
 
-        # Save face data and names
-        save_face_data(np.array(faces_data), names_data)
-
-        return jsonify({'success': True, 'message': 'Faces data stored successfully', 'count': len(faces_data)})
+        return jsonify({'success': True, 'message': 'Faces data captured successfully', 'count': len(faces_data)})
 
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/register', methods=['POST'])
+def register():
+    global faces_data, names_data
+
+    try:
+        # Check if faces_data and names_data are not empty
+        if not faces_data or not names_data:
+            return jsonify({'success': False, 'message': 'No valid face data captured'}), 400
+
+        # Save face data and names
+        save_face_data(np.array(faces_data), names_data)
+
+        return jsonify({'success': True, 'message': 'Registered successfully'})
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 def save_face_data(faces_data, names_data):
     faces_file_path = 'data/faces_data.pkl'
@@ -104,6 +128,7 @@ def save_face_data(faces_data, names_data):
         pickle.dump(existing_names, f)
 
     print("✅ Face data and names stored successfully.")
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

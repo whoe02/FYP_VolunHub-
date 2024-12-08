@@ -171,6 +171,21 @@ const RegisterScreen = ({ route, navigation }) => {
       }
   
       try {
+
+        const response = await fetch('http://192.168.0.11:5000/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          Alert.alert('Error', errorData.message || 'Registration failed. Please add face data.');
+          return;
+        }
+
         // Create the user document
         const userDocRef = doc(firestore, 'User', userData.userId);
         await setDoc(userDocRef, userData);
