@@ -3,7 +3,8 @@ import pickle
 import numpy as np
 import os
 from flask import Flask, request, jsonify
-from deepface import DeepFace  # Import DeepFace
+from deepface import DeepFace
+from sklearn.neighbors import KNeighborsClassifier
 
 app = Flask(__name__)
 
@@ -13,6 +14,15 @@ os.makedirs('data', exist_ok=True)
 # Global variables for storing face data and names
 faces_data = []
 names_data = []
+
+# Initialize the KNN model
+knn = None
+
+# Function to extract face embeddings using DeepFace
+def extract_face_embedding(image):
+    # Extract face embeddings using DeepFace (can use other models too like VGG, Facenet)
+    embedding = DeepFace.represent(image, model_name="VGG-Face", enforce_detection=False)
+    return embedding[0]['embedding']
 
 @app.route('/start_capture', methods=['POST'])
 def start_capture():
@@ -47,31 +57,20 @@ def start_capture():
             try:
                 faces = DeepFace.extract_faces(img, enforce_detection=False)
 
-                print(f"Found {len(faces)} faces in the current image using DeepFace.")
-
                 if len(faces) > 1:
                     return jsonify({'success': False, 'message': 'Multiple faces detected. Please provide one face per image.'}), 400
 
                 for face in faces:
                     face_image = face['face']
-
-                    print(f"Processing face with shape: {face_image.shape} and dtype: {face_image.dtype}")
-
                     if face_image.dtype == np.float64:
                         face_image = (face_image * 255).astype(np.uint8)
 
-                    resized_img = cv2.resize(face_image, (50, 50))
-                    grayscale_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
-                    flattened_face = grayscale_img.flatten()
-
-                    if flattened_face.size == 2500:  # Ensure consistent dimensions
-                        faces_data.append(flattened_face)
-                        names_data.append(name)  # Store the name corresponding to the face
-                    else:
-                        print(f"Skipping face with inconsistent dimensions: {flattened_face.size}")
+                    # Extract the face embedding and store it
+                    face_embedding = extract_face_embedding(face_image)
+                    faces_data.append(face_embedding)
+                    names_data.append(name)  # Store the name corresponding to the face
 
             except Exception as e:
-                print(f"Error during face detection: {e}")
                 return jsonify({'success': False, 'message': 'Error during face detection'}), 500
 
         if not faces_data:
@@ -80,35 +79,39 @@ def start_capture():
         return jsonify({'success': True, 'message': 'Faces data captured successfully', 'count': len(faces_data)})
 
     except Exception as e:
-        print(f"Error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/register', methods=['POST'])
 def register():
     global faces_data, names_data
 
     try:
-        # Check if faces_data and names_data are not empty
         if not faces_data or not names_data:
             return jsonify({'success': False, 'message': 'No valid face data captured'}), 400
 
         # Save face data and names
         save_face_data(np.array(faces_data), names_data)
 
-        return jsonify({'success': True, 'message': 'Registered successfully'})
+        # Train and save the updated KNN model
+        train_knn_model()
+
+        return jsonify({'success': True, 'message': 'Registered successfully and model updated!'})
 
     except Exception as e:
-        print(f"Error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
-
 
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
+    global knn
+
+    if knn is None:
+        return jsonify({'success': False, 'message': 'KNN model is not available. Please register users first.'}), 500
+
     try:
         if 'image' not in request.files:
             return jsonify({'success': False, 'message': 'No image uploaded'}), 400
 
-        email = request.form.get('email')  # Email passed from the client
         file = request.files['image']
         file_bytes = np.frombuffer(file.read(), np.uint8)
         img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
@@ -116,20 +119,7 @@ def mark_attendance():
         if img is None:
             return jsonify({'success': False, 'message': 'Invalid image file'}), 400
 
-        # Check if the email exists in names_data.pkl
-        names_file_path = 'data/names_data.pkl'
-        if not os.path.exists(names_file_path):
-            return jsonify({'success': False, 'message': 'No registered users found'}), 400
-
-        with open(names_file_path, 'rb') as f:
-            registered_names = pickle.load(f)
-
-        print("Registered Emails:", registered_names)
-        print("email email:", email)
-        if email not in registered_names:
-            return jsonify({'success': False, 'message': 'Email not found in registered users'}), 404
-
-        # Extract faces from the image
+        # Extract and preprocess the face
         try:
             faces = DeepFace.extract_faces(img, enforce_detection=False)
 
@@ -140,36 +130,35 @@ def mark_attendance():
             if face_image.dtype == np.float64:
                 face_image = (face_image * 255).astype(np.uint8)
 
-            # Resize and preprocess the face image
-            resized_img = cv2.resize(face_image, (50, 50))
-            grayscale_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
-            flattened_face = grayscale_img.flatten()
+            # Extract the face embedding
+            face_embedding = extract_face_embedding(face_image)
 
         except Exception as e:
-            print(f"Error during face detection: {e}")
             return jsonify({'success': False, 'message': 'Error during face detection'}), 500
 
-        # Load stored face data
-        faces_file_path = 'data/faces_data.pkl'
-        with open(faces_file_path, 'rb') as f:
-            registered_faces = pickle.load(f)
+        # Use the trained KNN model to predict
+        predicted_label = knn.predict([face_embedding])
 
-        # Get the index of the email in names_data
-        email_index = registered_names.index(email)
-        stored_face = registered_faces[email_index]
+        # Calculate the Euclidean distance between the input face embedding and the registered embeddings
+        distances, indices = knn.kneighbors([face_embedding])
+        min_distance = distances[0][0]
 
-        # Compare the captured face with the stored face
-        similarity = np.linalg.norm(stored_face - flattened_face)
-        threshold = 60  # Adjust this threshold as needed
-        print("smiliarty",similarity)
-        print("threshold",threshold)
-        if similarity < threshold:
-            return jsonify({'success': True, 'message': 'Attendance marked successfully!'})
+        # Set a threshold for the distance to confirm the match
+        threshold = 0.6  # You can adjust this threshold value
+
+        if min_distance < threshold:
+            predicted_name = predicted_label[0]
+            with open('data/names_data.pkl', 'rb') as f:
+                registered_names = pickle.load(f)
+
+            if predicted_name in registered_names:
+                return jsonify({'success': True, 'message': f"Attendance marked successfully for {predicted_name}!"})
+            else:
+                return jsonify({'success': False, 'message': 'Face verification failed. Try again.'}), 400
         else:
-            return jsonify({'success': False, 'message': 'Face verification failed. Try again.'}), 400
+            return jsonify({'success': False, 'message': 'Face not recognized. The distance is too large.'}), 400
 
     except Exception as e:
-        print(f"Error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 def save_face_data(faces_data, names_data):
@@ -177,27 +166,53 @@ def save_face_data(faces_data, names_data):
     names_file_path = 'data/names_data.pkl'
 
     if os.path.exists(faces_file_path) and os.path.exists(names_file_path):
-        # Load existing data
         with open(faces_file_path, 'rb') as f:
             existing_faces = pickle.load(f)
         with open(names_file_path, 'rb') as f:
             existing_names = pickle.load(f)
 
-        # Append new data
         existing_faces = np.concatenate((existing_faces, faces_data), axis=0)
         existing_names.extend(names_data)
     else:
-        # Initialize new data
         existing_faces = faces_data
         existing_names = names_data
 
-    # Save updated data
     with open(faces_file_path, 'wb') as f:
         pickle.dump(existing_faces, f)
     with open(names_file_path, 'wb') as f:
         pickle.dump(existing_names, f)
 
     print("✅ Face data and names stored successfully.")
+
+
+def train_knn_model():
+    global knn
+
+    try:
+        with open('data/faces_data.pkl', 'rb') as f:
+            faces = pickle.load(f)
+        with open('data/names_data.pkl', 'rb') as f:
+            labels = pickle.load(f)
+
+        knn = KNeighborsClassifier(n_neighbors=5)
+        knn.fit(faces, labels)
+
+        with open('data/faces_knn.pkl', 'wb') as f:
+            pickle.dump(knn, f)
+
+        print("✅ KNN model trained and saved successfully.")
+
+    except Exception as e:
+        print(f"Error during KNN training: {e}")
+
+
+# Load the KNN model at startup
+try:
+    with open('data/faces_knn.pkl', 'rb') as f:
+        knn = pickle.load(f)
+    print("✅ KNN model loaded successfully.")
+except FileNotFoundError:
+    print("⚠️ No KNN model found. Train the model first by registering users.")
 
 
 if __name__ == '__main__':

@@ -46,13 +46,13 @@ const RegisterScreen = ({ route, navigation }) => {
     const fetchLatestUserId = async () => {
       let prefix = '';
       switch (role) {
-        case 'Volunteer':
+        case 'volunteer':
           prefix = 'VL';
           break;
-        case 'Organization':
+        case 'organization':
           prefix = 'OG';
           break;
-        case 'Admin':
+        case 'admin':
           prefix = 'AD';
           break;
       }

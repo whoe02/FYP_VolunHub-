@@ -56,7 +56,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     picturesTakenRef.current = 0;
   
     const captureInterval = setInterval(async () => {
-      if (picturesTakenRef.current < 3) {
+      if (picturesTakenRef.current < 15) {
         const picture = await takePicture();
   
         if (picture) {
@@ -71,7 +71,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
         setCapturedImages(tempCapturedImages);
   
         // Directly pass the local array to the upload function
-        if (tempCapturedImages.length === 3) {
+        if (tempCapturedImages.length === 15) {
           uploadCapturedImages(email, tempCapturedImages);
         } else {
           console.error(
@@ -146,12 +146,12 @@ const FaceTestingScreen = ({ route,navigation  }) => {
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <ProgressBar
-          progress={picturesTaken / 3 } // Progress is a value between 0 and 1
+          progress={picturesTaken / 15 } // Progress is a value between 0 and 1
           color="#4CAF50" // Green color for progress bar
           style={styles.progressBar}
         />
         <Text style={styles.pictureCountText}>
-          {picturesTaken} / 3 Pictures Taken
+          {picturesTaken} / 15 Pictures Taken
         </Text>
       </View>
 
