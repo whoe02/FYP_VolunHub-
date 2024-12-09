@@ -110,7 +110,7 @@ const RegisterScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
-    if (role === 'Volunteer' || role === 'Admin') {
+    if (role === 'volunteer' || role === 'admin') {
       if (!icNumber) {
         Alert.alert('Error', 'IC Number is required for this role');
         return false;
@@ -158,15 +158,15 @@ const RegisterScreen = ({ route, navigation }) => {
         image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg',
       };
   
-      if (role === 'Volunteer') {
+      if (role === 'volunteer') {
         userData.icNumber = icNumber;
         userData.rewardPoint = 0;
         userData.location = [];
         userData.preference = [];
         userData.skills = [];
-      } else if (role === 'Organization') {
+      } else if (role === 'organization') {
         userData.businessType = '';
-      } else if (role === 'Admin') {
+      } else if (role === 'admin') {
         userData.icNumber = icNumber;
       }
   
@@ -191,7 +191,7 @@ const RegisterScreen = ({ route, navigation }) => {
         await setDoc(userDocRef, userData);
   
         // If role is Volunteer, initialize the usersReward subcollection
-        if (role === 'Volunteer') {
+        if (role === 'volunteer') {
           const usersRewardRef = collection(userDocRef, 'usersReward');
           await setDoc(doc(usersRewardRef, 'usersReward'), {
             userRewardId: '',            
@@ -262,7 +262,7 @@ const RegisterScreen = ({ route, navigation }) => {
           icon={<Ionicons name="call-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
           keyboardType="phone-pad"
         />
-        {role !== 'Organization' && (
+        {role !== 'organization' && (
           <InputField
             label={'IC Number'}
             value={icNumber}
