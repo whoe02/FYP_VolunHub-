@@ -6,6 +6,34 @@ import { firestore } from '../firebaseConfig';
 const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [recommendedEventsWithScores, setRecommendedEventsWithScores] = useState([]); // State to store eventId with score
+
+
+  const fetchRecommendedEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const recommendedEvents = await response.json();  // Parse the response as JSON
+      setRecommendedEventsWithScores(recommendedEvents.map(event => ({
+        eventId: event.eventId,
+        score: event.Score || 0, // Default to 0 if no score exists
+      })));
+      console.log(recommendedEventsWithScores)
+      return recommendedEvents;  // Ensure the function returns the actual data
+    } catch (error) {
+      console.error('Error fetching recommended events:', error);
+      return [];  // Return an empty array if there's an error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchOrganizationNames = async (userIds) => {
     if (userIds.length === 0) {
@@ -69,7 +97,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       if (isSearchResult) {
         // Extract event IDs if coming from search results
         const eventIds = event.map(Event => Event.id); // Use the correct field for the ID
-          eventQuery = query(
+        eventQuery = query(
           collection(firestore, 'Event'),
           where('__name__', 'in', eventIds)
         );
@@ -86,7 +114,14 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
           eventQuery = query(eventCollection);
         } else if (activeTab === 'latest') {
           eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
+        } else if (activeTab === 'foryou') {
+          await fetchRecommendedEvents();
+          const recommendedIds = recommendedEventsWithScores.map(event => event.eventId); // Use state for recommended events
+          eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
+
         }
+
+
       }
       const querySnapshot = await getDocs(eventQuery);
 
@@ -139,8 +174,28 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       });
 
 
+      if (activeTab === 'foryou') {
+        // Merge the recommended events with the events fetched from Firestore
+        const eventsWithScore = eventsWithDetails.map((event) => {
+          // Find the matching recommended event and attach the score to the event
+          const recommendedEvent = recommendedEventsWithScores.find(
+            (recommended) => recommended.eventId === event.id
+          );
 
-      setEvents(eventsWithDetails);
+          // Return the event with the score attached, or default to 0 if no score
+          return {
+            ...event,
+            score: recommendedEvent ? recommendedEvent.score : 0,
+          };
+        });
+
+        // Sort events by score in descending order
+        const sortedEvents = eventsWithScore.sort((a, b) => b.score - a.score);
+
+        setEvents(sortedEvents);  // Set sorted events
+      } else {
+        setEvents(eventsWithDetails);  // For other tabs, set normally
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -191,7 +246,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
 
   const renderEventItem = ({ item }) => (
     <TouchableOpacity style={styles.eventItem}
-      onPress={() => {  logInteraction(user.userId, item.id, 'view'); navigation.navigate('EventDetail', { event: item, user: user })}}>
+      onPress={() => { logInteraction(user.userId, item.id, 'view'); navigation.navigate('EventDetail', { event: item, user: user }) }}>
       <View style={styles.eventDetails}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <View style={styles.organizationWrapper}>
