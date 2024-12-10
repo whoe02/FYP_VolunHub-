@@ -37,17 +37,22 @@ const RegisterScreen = ({ route, navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userId, setUserId] = useState('');
 
+  const [secretQuestion, setSecretQuestion] = useState(0);
+  const [secretAnswer, setSecretAnswer] = useState('');
+
+  const [isFaceDataAdded, setIsFaceDataAdded] = useState(false);
+
   useEffect(() => {
     const fetchLatestUserId = async () => {
       let prefix = '';
       switch (role) {
-        case 'Volunteer':
+        case 'volunteer':
           prefix = 'VL';
           break;
-        case 'Organization':
+        case 'organization':
           prefix = 'OG';
           break;
-        case 'Admin':
+        case 'admin':
           prefix = 'AD';
           break;
       }
@@ -81,12 +86,31 @@ const RegisterScreen = ({ route, navigation }) => {
     setDobLabel(currentDate.toLocaleDateString());
   };
 
+  const handleAddFaceData = () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email first.');
+      return;
+    }
+
+    navigation.navigate('FaceTestingScreen', {
+      email,
+      onComplete: (status) => {
+        setIsFaceDataAdded(status); // Update state based on face data status
+        if (status) {
+          Alert.alert('Success', 'Face data added successfully!');
+        } else {
+          Alert.alert('Error', 'Failed to add face data. Try again.');
+        }
+      },
+    });
+  };
+
   const validateRegistration = () => {
     if (!fullName || !email || !phoneNumber || !street || !city || !postalCode || !password || !confirmPassword || !gender) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
-    if (role === 'Volunteer' || role === 'Admin') {
+    if (role === 'volunteer' || role === 'admin') {
       if (!icNumber) {
         Alert.alert('Error', 'IC Number is required for this role');
         return false;
@@ -112,6 +136,10 @@ const RegisterScreen = ({ route, navigation }) => {
         Alert.alert('Error', 'Email already exists');
         return;
       }
+      if (!isFaceDataAdded) {
+        Alert.alert('Error', 'Please add your face data before registering.');
+        return;
+      }
   
       const fullAddress = `${street}, ${city}, ${postalCode}`;
       const userData = {
@@ -125,28 +153,45 @@ const RegisterScreen = ({ route, navigation }) => {
         password,
         role,
         status: 'active',
+        secretQuestion,
+        secretAnswer, 
         image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg',
       };
   
-      if (role === 'Volunteer') {
+      if (role === 'volunteer') {
         userData.icNumber = icNumber;
         userData.rewardPoint = 0;
         userData.location = [];
         userData.preference = [];
         userData.skills = [];
-      } else if (role === 'Organization') {
+      } else if (role === 'organization') {
         userData.businessType = '';
-      } else if (role === 'Admin') {
+      } else if (role === 'admin') {
         userData.icNumber = icNumber;
       }
   
       try {
+
+        const response = await fetch('http://192.168.0.11:5000/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          Alert.alert('Error', errorData.message || 'Registration failed. Please add face data.');
+          return;
+        }
+
         // Create the user document
         const userDocRef = doc(firestore, 'User', userData.userId);
         await setDoc(userDocRef, userData);
   
         // If role is Volunteer, initialize the usersReward subcollection
-        if (role === 'Volunteer') {
+        if (role === 'volunteer') {
           const usersRewardRef = collection(userDocRef, 'usersReward');
           await setDoc(doc(usersRewardRef, 'usersReward'), {
             userRewardId: '',            
@@ -217,7 +262,7 @@ const RegisterScreen = ({ route, navigation }) => {
           icon={<Ionicons name="call-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
           keyboardType="phone-pad"
         />
-        {role !== 'Organization' && (
+        {role !== 'organization' && (
           <InputField
             label={'IC Number'}
             value={icNumber}
@@ -235,7 +280,7 @@ const RegisterScreen = ({ route, navigation }) => {
             marginTop: -20,
           }}
         >
-          <Ionicons name="male-female-outline" size={20} color="#666" style={{ marginRight: 10 }} />
+          <Ionicons name="male-female-outline" size={20} color="#666" />
           <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666' }}>
             <Picker.Item label="Select Gender" value="" color="#aaa" />
             <Picker.Item label="Male" value="Male" />
@@ -279,6 +324,7 @@ const RegisterScreen = ({ route, navigation }) => {
           onChangeText={setPostalCode}
           icon={<Ionicons name="mail-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
         />
+
         <InputField
           label={'Password'}
           value={password}
@@ -294,7 +340,32 @@ const RegisterScreen = ({ route, navigation }) => {
           secureTextEntry={true}
         />
 
-        <CustomButton label="Register" onPress={handleRegister} />
+        {/* Secret Question and Answer */}
+        <Text style={{ marginBottom: 10 }}>Choose a secret question</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc',marginBottom:20 }}>
+          <Ionicons name="help-circle-outline" size={20} color="#666" />
+          <Picker selectedValue={secretQuestion} onValueChange={(itemValue) => setSecretQuestion(itemValue)} style={{ flex: 1, color: secretQuestion ? '#333' : '#666' }}>
+            <Picker.Item label="What is your favorite movie?" value={0}  />
+            <Picker.Item label="What was the name of your first pet?" value={1}  />
+            <Picker.Item label="What is your mother's maiden name?" value={2}  />
+          </Picker>
+        </View>
+        <InputField
+          label="Answer"
+          value={secretAnswer}
+          onChangeText={setSecretAnswer}
+        />
+
+        <View style={{ marginTop: 20 }}>
+          <CustomButton
+          label="Add Face Data"
+          title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
+          onPress={handleAddFaceData}
+          />
+        </View>
+        
+
+        <CustomButton label="Register" onPress={handleRegister} disabled={!isFaceDataAdded}/>
         <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
           <Text>Already have an account?</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>

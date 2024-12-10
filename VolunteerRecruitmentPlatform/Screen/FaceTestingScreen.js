@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef,useEffect  } from 'react';
 import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { ProgressBar } from 'react-native-paper'; // Importing ProgressBar
 import Button from '../components/Button';
 
-const FaceTestingScreen = () => {
+const FaceTestingScreen = ({ route,navigation  }) => {
   const [capturedImages, setCapturedImages] = useState([]);
   const [picturesTaken, setPicturesTaken] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -12,82 +12,118 @@ const FaceTestingScreen = () => {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const cameraRef = useRef(null);
   const picturesTakenRef = useRef(0);
+  const { email, onComplete } = route.params;
 
   // Function to take a single picture silently
   const takePicture = async () => {
     if (!cameraRef.current || !isCameraReady) {
-      console.log('Camera is not ready or ref not set.');
-      return;
+      // console.log('Camera is not ready or ref not set.');
+      return null;
     }
-
+  
     try {
       console.log(`Taking picture ${picturesTakenRef.current + 1}...`);
       const picture = await cameraRef.current.takePictureAsync({
         base64: true,
-        skipProcessing: true, // Skip post-processing for faster, silent capture
+        skipProcessing: true,
       });
-      setCapturedImages((prev) => [...prev, picture.base64]);
-      setPicturesTaken((prev) => prev + 1);
-      picturesTakenRef.current += 1;
+  
+      if (picture.base64) {
+        setPicturesTaken((prev) => prev + 1);
+        picturesTakenRef.current += 1;
+        // console.log(`Picture ${picturesTakenRef.current} captured.`);
+        return picture; // Return the captured picture
+      } else {
+        console.error('Failed to capture image.');
+      }
     } catch (err) {
       console.error('Error while taking a picture:', err);
     }
+    return null;
   };
-
+  
   // Function to start auto-capture
   const startCapture = async () => {
     if (!isCameraReady) {
       Alert.alert('Camera is not ready yet.');
       return;
     }
-
+  
     setIsCapturing(true);
-    setCapturedImages([]);
+    const tempCapturedImages = []; // Local array for synchronous tracking
+    setCapturedImages([]); // Reset state for a new capture session
     setPicturesTaken(0);
     picturesTakenRef.current = 0;
-
+  
     const captureInterval = setInterval(async () => {
-      if (picturesTakenRef.current < 3) {
-        await takePicture();
+      if (picturesTakenRef.current < 15) {
+        const picture = await takePicture();
+  
+        if (picture) {
+          tempCapturedImages.push(picture.base64); // Store in local array
+          // console.log(`Stored image in local array. Count: ${tempCapturedImages.length}`);
+        }
       } else {
-        clearInterval(captureInterval); // Stop the interval when 3 pictures are taken
+        clearInterval(captureInterval);
         setIsCapturing(false);
-        uploadCapturedImages(); // Upload the captured images
+  
+        // Update state for UI purposes
+        setCapturedImages(tempCapturedImages);
+  
+        // Directly pass the local array to the upload function
+        if (tempCapturedImages.length === 15) {
+          uploadCapturedImages(email, tempCapturedImages);
+        } else {
+          console.error(
+            'Captured images count mismatch or no images found:',
+            tempCapturedImages.length
+          );
+          Alert.alert('Error', 'Failed to capture the required number of images.');
+        }
       }
-    }, 3000); // Capture a picture every 3 seconds
+    }, 1000); // Capture a picture every second
   };
 
   // Function to upload captured images
-  const uploadCapturedImages = async () => {
-    if (capturedImages.length === 0) return;
-
+  const uploadCapturedImages = async (email,images) => {
+    if (!images || images.length === 0) {
+      Alert.alert('Error', 'No images to upload.');
+      return;
+    }
+  
     setIsUploading(true);
-
+  
     const formData = new FormData();
-    capturedImages.forEach((image, index) => {
+    formData.append('email', email); // add email to form data
+  
+    images.forEach((image, index) => {
       formData.append(`image${index}`, {
         uri: `data:image/jpeg;base64,${image}`,
         name: `image${index}.jpg`,
         type: 'image/jpeg',
       });
     });
-
+  
     try {
-      const response = await fetch('http://192.168.0.9:5000/start_capture', {
+      const response = await fetch('http://192.168.0.11:5000/start_capture', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
       });
-
+  
       const result = await response.json();
       if (result.success) {
+        onComplete(true);
         Alert.alert('Success', result.message + ` (${result.count} faces detected)`);
+        navigation.goBack();
       } else {
         Alert.alert('Error', result.message);
+        onComplete(false);
       }
     } catch (error) {
       console.error('Error uploading images:', error);
       Alert.alert('Error', 'Failed to upload images.');
+      onComplete(false);
     } finally {
       setIsUploading(false);
     }
@@ -101,7 +137,7 @@ const FaceTestingScreen = () => {
           ref={cameraRef}
           facing="front" // Use front camera for selfies
           onCameraReady={() => {
-            console.log('Camera ready');
+            // console.log('Camera ready');
             setIsCameraReady(true);
           }}
         />
@@ -110,12 +146,12 @@ const FaceTestingScreen = () => {
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <ProgressBar
-          progress={picturesTaken / 3 } // Progress is a value between 0 and 1
+          progress={picturesTaken / 15 } // Progress is a value between 0 and 1
           color="#4CAF50" // Green color for progress bar
           style={styles.progressBar}
         />
         <Text style={styles.pictureCountText}>
-          {picturesTaken} / 3 Pictures Taken
+          {picturesTaken} / 15 Pictures Taken
         </Text>
       </View>
 

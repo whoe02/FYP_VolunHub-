@@ -175,15 +175,15 @@ const LoginScreen = ({ navigation }) => {
           Or, sign up as{' '}
           <Text
             style={{ color: '#95c194', fontWeight: '700' }}
-            // onPress={() => navigation.navigate('Register', { role: 'Volunteer' })}
-            onPress={() => navigation.navigate('FaceTestingScreen')}
+            onPress={() => navigation.navigate('Register', { role: 'volunteer' })}
+            // onPress={() => navigation.navigate('FaceTestingScreen')}
           >
             Volunteer
           </Text>{' '}
           or{' '}
           <Text
             style={{ color: '#95c194', fontWeight: '700' }}
-            onPress={() => navigation.navigate('Register', { role: 'Organization' })}
+            onPress={() => navigation.navigate('Register', { role: 'organization' })}
           >
             Organization
           </Text>
