@@ -45,6 +45,9 @@ const FaceRecognitionScreen = ({ route, navigation }) => {
       type: 'image/jpeg',
     });
 
+    const cloudinaryUrl = "https://res.cloudinary.com/dnj0n4m7k/image/upload/eventPic/jjc7frkxwwuabodqyzuq.jpg";
+    formData.append('cloudinary_url', cloudinaryUrl);
+
     try {
       // Update the endpoint to use `mark_attendance`
       const response = await fetch('http://192.168.0.11:5000/mark_attendance', {
