@@ -14,26 +14,31 @@ const AddEventScreen = ({route, navigation }) => {
   // Initial states
   const { user } = route.params;
   const [title, setTitle] = useState('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(null);
   const [capacity, setCapacity] = useState('');
   const [description, setDescription] = useState('');
   const [eventImages, setEventImages] = useState([]);
   const [skills, setSkills] = useState([]);
   const [preferences, setPreferences] = useState([]);
   const [location, setLocation] = useState('');
+  const [locationCategory, setLocationCategory] = useState('');
   const [selectedSkills, setSelectedSkills] = useState([]); // Selected skills
   const [selectedPreferences, setSelectedPreferences] = useState([]); // Selected preferences
 
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
   
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
   const formatTime = (time) => (time instanceof Date ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Time');
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
 
   const handlePickerChange = (event, selectedValue) => {
     setShowPicker({ ...showPicker, visible: false });
@@ -45,14 +50,16 @@ const AddEventScreen = ({route, navigation }) => {
       if (showPicker.pickerType === 'endTime') setEndTime(newValue);
     }
   };
-  
 
-const handlePress = () => {
-    if (!isButtonPressed) {
-      setIsButtonPressed(true);
-      openPicker('startDate', 'date'); // your open picker function
-      setTimeout(() => setIsButtonPressed(false), 500); // Allow button press every 500ms
-    }
+  const navigateToLocationScreen = () => {
+    navigation.navigate('LocationSelection', {
+      onLocationSelected: (address, latitude, longitude) => {
+        // This function will be executed when location is confirmed
+        setAddress(address);
+        setLatitude(latitude);  // Update latitude separately
+        setLongitude(longitude);  // Update longitude separately
+      },
+    });
   };
 
   const pickerValue = useMemo(() => {
@@ -76,30 +83,63 @@ const handlePress = () => {
     }
   };
 
+  // First useEffect: Handles permission request, fetch categories, and address update
   useEffect(() => {
     requestPermission();
     fetchCategories();
-    if (showPicker.visible) {
-      // Only run if the picker is visible
-      console.log('Date Picker is open');
+
+    if (route.params?.selectedAddress) {
+      setAddress(route.params.selectedAddress);
+      setLatitude(route.params.latitude);
+      setLongitude(route.params.longitude);
     }
-  }, [showPicker.visible]);
+  }, [route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
+
+  // Second useEffect: Updates location based on address and locationCategory
+  useEffect(() => {
+    if (address && locationCategory.length > 0) {
+      updateLocationBasedOnAddress();
+    }
+  }, [address, locationCategory]);
 
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
     try {
       const categorySnapshot = await getDocs(collection(firestore, 'Category'));
       const categoryData = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+      console.log('Fetched Categories:', categoryData);
       // Separate into skills and preferences based on the categoryType
       const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
       const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
-
+      const fetchedLocation = categoryData.filter(category => category.categoryType === 'location');
       setSkills(fetchedSkills);
       setPreferences(fetchedPreferences);
+      setLocationCategory(fetchedLocation);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
+  };
+
+  const updateLocationBasedOnAddress = () => {
+    if (!address) return;
+  
+    // Directly match the city/state part from the address
+    const cityState = address.toLowerCase();
+  
+    // Check if any location category name matches the city/state in the address
+    const matchedCategory = locationCategory.find((category) =>
+      cityState.includes(category.categoryName.toLowerCase())
+    );
+  
+    // Set location based on match
+    if (matchedCategory) {
+      setLocation(`location_${matchedCategory.categoryName}`);
+    } else {
+      setLocation('location_Other');
+    }
+  
+    console.log(`Address: ${address}`);
+    console.log(`Set Location: ${matchedCategory ? matchedCategory.categoryName : 'Other'}`);
   };
   
   const generateEventId = async () => {
@@ -195,20 +235,21 @@ const handlePress = () => {
   const validateAndSave = async () => {
     setIsLoading(true);
         // Validate if fields are filled (you can uncomment this validation logic as needed)
-    // if (
-    //   !title ||
-    //   !startDate ||
-    //   !startTime ||
-    //   !endDate ||
-    //   !endTime ||
-    //   !address ||
-    //   !capacity ||
-    //   !description ||
-    //   eventImages.length === 0
-    // ) {
-    //   Alert.alert('Error', 'Please fill in all fields');
-    //   return;
-    // }
+    if (
+      !title ||
+      !startDate ||
+      !startTime ||
+      !endDate ||
+      !endTime ||
+      !address ||
+      !capacity ||
+      !description 
+      // eventImages.length === 0
+    ) {
+      Alert.alert('Error', 'Please fill in all fields');
+      setIsLoading(false);
+      return;
+    }
     // Ensure you call the image upload before saving the event
     const uploadedImageUrls = await uploadToCloudinary(eventImages);
     
@@ -224,11 +265,14 @@ const handlePress = () => {
       endDate: Timestamp.fromDate(endDate),
       endTime: endTime || '',
       status: 'upcoming',
+      latitude:latitude,
+      longitude:longitude,
       location: location || '',
       eventId: eventId,
       skills: selectedSkills || [],
       preferences: selectedPreferences || [],
       createdAt: Timestamp.now(),
+
       image: uploadedImageUrls || [], // Use the uploaded URLs instead of local URIs
       userId: user?.userId || null,
       categoryIds: [
@@ -287,42 +331,37 @@ const handlePress = () => {
           icon={<Ionicons name="create-outline" size={20} color="#666" style={styles.icon} />}
         />
 
-        {/* date and time */}
-                {/* Start Date Picker */}
-                <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startDate', 'date')}
-        >
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Date Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endDate', 'date')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Start Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Conditional Picker */}
         {showPicker.visible && (
@@ -334,22 +373,23 @@ const handlePress = () => {
           />
         )}
 
+        {/* Address Button */}
+        <View style={styles.pickerButtonStyle}>
+        <Ionicons name="location-outline" size={20} color="#666" />
+          <TouchableOpacity onPress={navigateToLocationScreen}>
+            <Text style={styles.addressButtonText}>
+              {address || 'Select Address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         
-        {/* Address */}
-        <InputField
-          label="Address"
-          value={address}
-          onChangeText={setAddress}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
-
         {/* Location */}
-        <InputField
+        {/* <InputField
           label="Location"
           value={location}
           onChangeText={setLocation}
           icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        /> */}
 
         {/* Capacity */}
         <InputField
@@ -460,13 +500,6 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 5,
   },
-  datePickerContainer: {
-    flexDirection: 'row',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    paddingBottom: 8,
-    marginBottom: 20,
-  },
   datePickerText: {
     color: '#666',
     marginLeft: 5,
@@ -497,7 +530,28 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
-  
+  addressButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    marginBottom:20,
+  },
+  addressButtonText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
+  }
 });
 
 export default AddEventScreen;

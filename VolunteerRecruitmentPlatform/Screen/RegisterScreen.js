@@ -140,7 +140,7 @@ const RegisterScreen = ({ route, navigation }) => {
         Alert.alert('Error', 'Please add your face data before registering.');
         return;
       }
-  
+
       const fullAddress = `${street}, ${city}, ${postalCode}`;
       const userData = {
         userId,
@@ -154,10 +154,10 @@ const RegisterScreen = ({ route, navigation }) => {
         role,
         status: 'active',
         secretQuestion,
-        secretAnswer, 
+        secretAnswer,
         image: 'https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg',
       };
-  
+
       if (role === 'volunteer') {
         userData.icNumber = icNumber;
         userData.rewardPoint = 0;
@@ -169,7 +169,7 @@ const RegisterScreen = ({ route, navigation }) => {
       } else if (role === 'admin') {
         userData.icNumber = icNumber;
       }
-  
+
       try {
 
         const response = await fetch('http://192.168.0.11:5000/register', {
@@ -189,22 +189,22 @@ const RegisterScreen = ({ route, navigation }) => {
         // Create the user document
         const userDocRef = doc(firestore, 'User', userData.userId);
         await setDoc(userDocRef, userData);
-  
+
         // If role is Volunteer, initialize the usersReward subcollection
         if (role === 'volunteer') {
           const usersRewardRef = collection(userDocRef, 'usersReward');
           await setDoc(doc(usersRewardRef, 'usersReward'), {
-            userRewardId: '',            
-            rewardCode: '',         
-            title: '',              
-            description: '',         
-            expirationDate: '',      
-            userRewardId: '',        
-            pointsRequired: 0,        
-            image: ''                
+            userRewardId: '',
+            rewardCode: '',
+            title: '',
+            description: '',
+            expirationDate: '',
+            userRewardId: '',
+            pointsRequired: 0,
+            image: ''
           });
         }
-  
+
         Alert.alert('Success', 'Registration Successful');
         navigation.goBack();
       } catch (error) {
@@ -213,33 +213,31 @@ const RegisterScreen = ({ route, navigation }) => {
       }
     }
   };
-  
+
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center' }}>
-      <ScrollView showsVerticalScrollIndicator={false} style={{ paddingHorizontal: 25 }}>
-        <View style={{ alignItems: 'center', marginBottom: 30 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ paddingHorizontal: 40 }}>
+        {/* <View style={{ alignItems: 'center', marginBottom: 0 }}>
           <Image
             source={loginImage}
-            style={{
-              height: 280,
-              width: 280,
-              transform: [{ rotate: '-5deg' }],
-            }}
+            style={{ height: 200, width: 300, marginTop: 20 }}
+            resizeMode="contain"
           />
-        </View>
+        </View> */}
 
         <Text
           style={{
             fontFamily: 'Roboto-Medium',
-            fontSize: 28,
-            fontWeight: '500',
-            color: '#6a8a6d',
-            marginBottom: 15,
+            fontWeight: 'bold',
+            fontSize: 22,
+            color: '#4CAF50',
+            marginTop: 30,
+            marginVertical: 25,
             textAlign: 'center',
           }}
         >
-          {role}
+          {role.toUpperCase()}
         </Text>
 
         <InputField
@@ -277,11 +275,10 @@ const RegisterScreen = ({ route, navigation }) => {
             borderBottomColor: '#ccc',
             borderBottomWidth: 1,
             marginBottom: 10,
-            marginTop: -20,
           }}
         >
           <Ionicons name="male-female-outline" size={20} color="#666" />
-          <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666' }}>
+          <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666', marginLeft: 3 }}>
             <Picker.Item label="Select Gender" value="" color="#aaa" />
             <Picker.Item label="Male" value="Male" />
             <Picker.Item label="Female" value="Female" />
@@ -294,14 +291,13 @@ const RegisterScreen = ({ route, navigation }) => {
             flexDirection: 'row',
             borderBottomColor: '#ccc',
             borderBottomWidth: 1,
-            paddingBottom: 8,
-            marginBottom: 20,
-            marginTop: 10,
+            paddingVertical: 15,
+            marginBottom: 10,
           }}
         >
           <Ionicons name="calendar-outline" size={20} color="#666" style={{ marginRight: 10 }} />
           <TouchableOpacity onPress={() => setShow(true)}>
-            <Text style={{ color: '#666', marginLeft: 5, marginTop: 5 }}>{dobLabel}</Text>
+            <Text style={{ color: '#666', marginLeft: 10, fontSize: 16 }}>{dobLabel}</Text>
           </TouchableOpacity>
         </View>
         {show && <DateTimePicker value={date} mode="date" display="default" onChange={onChange} />}
@@ -341,35 +337,45 @@ const RegisterScreen = ({ route, navigation }) => {
         />
 
         {/* Secret Question and Answer */}
-        <Text style={{ marginBottom: 10 }}>Choose a secret question</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc',marginBottom:20 }}>
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '500',
+          marginTop: 30
+        }}>Choose a secret question</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
           <Ionicons name="help-circle-outline" size={20} color="#666" />
           <Picker selectedValue={secretQuestion} onValueChange={(itemValue) => setSecretQuestion(itemValue)} style={{ flex: 1, color: secretQuestion ? '#333' : '#666' }}>
-            <Picker.Item label="What is your favorite movie?" value={0}  />
-            <Picker.Item label="What was the name of your first pet?" value={1}  />
-            <Picker.Item label="What is your mother's maiden name?" value={2}  />
+            <Picker.Item label="What is your favorite movie?" value={0} />
+            <Picker.Item label="What was the name of your first pet?" value={1} />
+            <Picker.Item label="What is your mother's maiden name?" value={2} />
           </Picker>
         </View>
-        <InputField
-          label="Answer"
-          value={secretAnswer}
-          onChangeText={setSecretAnswer}
-        />
+        <Text style={{
+          fontSize: 16,
+          fontWeight: '500',
+          marginTop: 10
+        }}>Answer</Text>
+        <View style={{ marginBottom: 50 }}>
+          <InputField
+            icon={<Ionicons name="create-outline" size={22} color="#666" style={{ marginRight: 5 }} />}
+            label="Answer"
+            value={secretAnswer}
+            onChangeText={setSecretAnswer}
+          />
+        </View>
 
-        <View style={{ marginTop: 20 }}>
-          <CustomButton
+        <CustomButton
+          variant='outline'
           label="Add Face Data"
           title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
           onPress={handleAddFaceData}
-          />
-        </View>
-        
+        />
 
-        <CustomButton label="Register" onPress={handleRegister} disabled={!isFaceDataAdded}/>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
+        <CustomButton label="Register" onPress={handleRegister} disabled={!isFaceDataAdded} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 30 }}>
           <Text>Already have an account?</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={{ color: '#6a8a6d', fontWeight: '700', marginLeft: 5 }}>Login</Text>
+            <Text style={{ color: '#4CAF50', fontWeight: '700', marginLeft: 5 }}>Login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

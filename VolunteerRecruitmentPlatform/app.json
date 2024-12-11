@@ -15,17 +15,23 @@
       "projectId": "13dccab0-f698-4969-9f00-1d77105d97f5"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app requires location access to validate your attendance at events.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow this app to access your location while it is in use or in the background to validate attendance."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "android.package",
+
+      "package": "com.yourcompany.volunteerrecruitmentplatform",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+
       ]
     },
     "web": {
@@ -33,6 +39,12 @@
     },
     "plugins": [
       "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location for validating attendance at events."
+        }
+      ],
       "expo-camera"
     ],
     "extra": {

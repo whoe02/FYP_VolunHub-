@@ -93,6 +93,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
+      console.log(`Fetching events for tab: ${activeTab}, userId: ${user.userId}`);
       // Filter based on selected tab
       if (isSearchResult) {
         // Extract event IDs if coming from search results
@@ -103,13 +104,29 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
         );
       } else {
         if (activeTab === 'upcoming') {
-          eventQuery = query(eventCollection, where('status', '==', 'upcoming'));
+          eventQuery = query(
+            eventCollection,
+            where('status', '==', 'upcoming'),
+            where('userId', '==', user.userId) 
+          );
         } else if (activeTab === 'inprogress') {
-          eventQuery = query(eventCollection, where('status', '==', 'inprogress'));
+          eventQuery = query(
+            eventCollection,
+            where('status', '==', 'inprogress'),
+            where('userId', '==', user.userId) 
+          );
         } else if (activeTab === 'completed') {
-          eventQuery = query(eventCollection, where('status', '==', 'completed'));
+          eventQuery = query(
+            eventCollection,
+            where('status', '==', 'completed'),
+            where('userId', '==', user.userId) 
+          );
         } else if (activeTab === 'canceled') {
-          eventQuery = query(eventCollection, where('status', '==', 'canceled'));
+          eventQuery = query(
+            eventCollection,
+            where('status', '==', 'canceled'),
+            where('userId', '==', user.userId) 
+          );
         } else if (activeTab === 'all') {
           eventQuery = query(eventCollection);
         } else if (activeTab === 'latest') {

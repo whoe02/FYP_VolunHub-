@@ -17,6 +17,7 @@ const EditEventScreen = ({route, navigation }) => {
   const [capacity, setCapacity] = useState(event.capacity);
   const [description, setDescription] = useState(event.description);
   const [location, setLocation] = useState(event.location);
+  const [locationCategory, setLocationCategory] = useState('');
   const [eventImages, setEventImages] = useState(event.image || []);
   const [skills, setSkills] = useState(event.skills || []);
   const [preferences, setPreferences] = useState(event.preferences || []);
@@ -27,6 +28,8 @@ const EditEventScreen = ({route, navigation }) => {
   const [endDate, setEndDate] = useState(new Date(event.endDate) || new Date());
   const [startTime, setStartTime] = useState(new Date(event.startTime) || new Date());
   const [endTime, setEndTime] = useState(new Date(event.endTime) || new Date());
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
   
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
@@ -42,6 +45,17 @@ const EditEventScreen = ({route, navigation }) => {
       if (showPicker.pickerType === 'startTime') setStartTime(newValue);
       if (showPicker.pickerType === 'endTime') setEndTime(newValue);
     }
+  };
+
+  const navigateToLocationScreen = () => {
+    navigation.navigate('LocationSelection', {
+      onLocationSelected: (address, latitude, longitude) => {
+        // This function will be executed when location is confirmed
+        setAddress(address);
+        setLatitude(latitude);  // Update latitude separately
+        setLongitude(longitude);  // Update longitude separately
+      },
+    });
   };
   
   const pickerValue = useMemo(() => {
@@ -72,7 +86,40 @@ const EditEventScreen = ({route, navigation }) => {
       // Only run if the picker is visible
       console.log('Date Picker is open');
     }
-  }, [showPicker.visible]);
+    if (route.params?.selectedAddress) {
+      setAddress(route.params.selectedAddress);
+      setLatitude(route.params.latitude);
+      setLongitude(route.params.longitude);
+    }
+  }, [showPicker.visible,route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
+
+  useEffect(() => {
+    if (address && locationCategory.length > 0) {
+      updateLocationBasedOnAddress();
+    }
+  }, [address, locationCategory]);
+
+  const updateLocationBasedOnAddress = () => {
+    if (!address) return;
+  
+    // Directly match the city/state part from the address
+    const cityState = address.toLowerCase();
+  
+    // Check if any location category name matches the city/state in the address
+    const matchedCategory = locationCategory.find((category) =>
+      cityState.includes(category.categoryName.toLowerCase())
+    );
+  
+    // Set location based on match
+    if (matchedCategory) {
+      setLocation(`location_${matchedCategory.categoryName}`);
+    } else {
+      setLocation('location_Other');
+    }
+  
+    console.log(`Address: ${address}`);
+    console.log(`Set Location: ${matchedCategory ? matchedCategory.categoryName : 'Other'}`);
+  };
 
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
@@ -83,9 +130,11 @@ const EditEventScreen = ({route, navigation }) => {
       // Separate into skills and preferences based on the categoryType
       const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
       const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
+      const fetchedLocation = categoryData.filter(category => category.categoryType === 'location');
 
       setSkills(fetchedSkills);
       setPreferences(fetchedPreferences);
+      setLocationCategory(fetchedLocation);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -246,8 +295,6 @@ const EditEventScreen = ({route, navigation }) => {
     }
   };
   
-  
-  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
@@ -282,42 +329,37 @@ const EditEventScreen = ({route, navigation }) => {
           icon={<Ionicons name="create-outline" size={20} color="#666" style={styles.icon} />}
         />
 
-        {/* date and time */}
-                {/* Start Date Picker */}
-                <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startDate', 'date')}
-        >
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Date Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endDate', 'date')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Start Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Conditional Picker */}
         {showPicker.visible && (
@@ -329,22 +371,15 @@ const EditEventScreen = ({route, navigation }) => {
           />
         )}
 
-        
-        {/* Address */}
-        <InputField
-          label="Address"
-          value={address}
-          onChangeText={setAddress}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
-
-        {/* Location */}
-        <InputField
-          label="Location"
-          value={location}
-          onChangeText={setLocation}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        {/* Address Button */}
+        <View style={styles.pickerButtonStyle}>
+          <Ionicons name="location-outline" size={20} color="#666" />
+          <TouchableOpacity onPress={navigateToLocationScreen}>
+            <Text style={styles.addressButtonText}>
+              {address || 'Select Address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Capacity */}
         <InputField
@@ -492,7 +527,13 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
-  
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
+  }
 });
 
 export default EditEventScreen;

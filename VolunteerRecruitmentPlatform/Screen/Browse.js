@@ -35,11 +35,6 @@ const Home = ({ navigation }) => {
   };
 
   useEffect(() => {
-    if (user?.role) {
-      if (user.role === 'organization') {
-        setActiveTab('upcoming');
-      }
-    }
     fetchUserData();
   }, [user]);
 
