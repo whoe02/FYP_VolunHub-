@@ -60,6 +60,8 @@ def generate_events(num_events):
         )[0]
         rating = round(random.uniform(1, 5), 1)
         user_id = f"OG{str(random.randint(1, num_events)).zfill(5)}"
+        latitude = round(random.uniform(-90, 90), 6)  # Latitude between -90 and 90
+        longitude = round(random.uniform(-180, 180), 6)  # Longitude between -180 and 180
 
         events.append({
             "Event ID": event_id,
@@ -73,6 +75,8 @@ def generate_events(num_events):
             "End Time": end_time.isoformat(),
             "Capacity": capacity,
             "Location": location,
+            "Latitude": latitude,
+            "Longitude": longitude,
             "Preferences": ";".join(preference),
             "Skills Required": ";".join(skills_required),
             "Status": status,
@@ -117,12 +121,14 @@ def generate_users(num_users):
         email = faker.email()
         ic_num = ''.join(random.choices("0123456789", k=12))
         phone_num = faker.phone_number()
-        check_in_streak = random.randint(0, 10)
+        check_in_streak = random.randint(0, 6)
         reward_points = random.randint(0, 500)
         password = faker.password()
         image = "https://via.placeholder.com/150/0000FF"
         status = random.choice(STATUSES)
         last_check_in_date = faker.date_this_year().strftime("%Y-%m-%d")
+        secret_question = faker.paragraph(nb_sentences=5)
+        secret_answer = faker.paragraph(nb_sentences=2)
 
         users.append({
             "User ID": user_id,
@@ -143,7 +149,9 @@ def generate_users(num_users):
             "Skills": ";".join(skills),
             "Location": ";".join(location),
             "Auto Reply Message": auto_reply_msg,
-            "Business Type": business_type
+            "Business Type": business_type,
+            "Secret Answer": secret_answer,
+            "Secret Question": secret_question
         })
 
     return users
@@ -195,7 +203,7 @@ def main():
         [
             "User ID", "Name", "Role", "Email", "Password", "Address", "Phone Number", "IC Number", "Birth Date", "Image",
             "Status", "Check In Streak", "Reward Points", "Last Check-In Date", "Preferences", "Skills", "Location",
-            "Auto Reply Message", "Business Type"
+            "Auto Reply Message", "Business Type", "Secret Answer", "Secret Question" 
         ],
         users,
     )
@@ -203,7 +211,7 @@ def main():
         "events.csv",
         [
             "Event ID", "Title", "Address", "Description", "Created At", "Start Date", "End Date", "Start Time", "End Time",
-            "Capacity", "Preferences", "Skills Required", "Location", "Category IDs", "Status", "Rating", "User ID"
+            "Capacity", "Preferences", "Skills Required", "Location", "Latitude", "Longitude", "Category IDs", "Status", "Rating", "User ID"
         ],
         events,
     )

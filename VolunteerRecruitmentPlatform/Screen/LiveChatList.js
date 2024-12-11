@@ -43,6 +43,7 @@ const LiveChatList = ({ navigation }) => {
                             avatar: otherParticipant.image,
                             lastMessage: truncatedLastMessage,
                             rawTimestamp: chat.lastMessage?.timestamp?.seconds * 1000 || Date.now(), // Use raw timestamp for sorting
+                            otherParticipant: otherParticipantId,
                         };
                     })
                 );

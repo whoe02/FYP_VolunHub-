@@ -43,6 +43,8 @@ def upload_users_to_firestore(file_path):
                     "location": user["Location"].split(";") if user["Location"] else [],
                     "preference": user["Preferences"].split(";") if user["Preferences"] else [],
                     "skills": user["Skills"].split(";") if user["Skills"] else [],
+                    "secretAnswer": user["Secret Answer"],
+                    "secretQuestion": user["Secret Question"],
                 }
 
                 # Initialize usersReward subcollection for volunteers
@@ -79,6 +81,8 @@ def upload_users_to_firestore(file_path):
                     "status": user["Status"],
                     "autoReplyMsg": user["Auto Reply Message"],
                     "businessType": user["Business Type"],
+                    "secretAnswer": user["Secret Answer"],
+                    "secretQuestion": user["Secret Question"],
                 }
 
                 doc_ref = db.collection("User").document(user_data["userId"])
@@ -119,6 +123,8 @@ def upload_events_to_firestore(file_path):
                 "status": event["Status"],
                 "rating": float(event["Rating"]),
                 "userId": event["User ID"],
+                "latitude": float(event["Latitude"]),
+                "longitude": float(event["Longitude"]),
             }
 
             doc_ref = db.collection("Event").document(event_data["eventId"])
@@ -153,4 +159,4 @@ if __name__ == "__main__":
 
     upload_users_to_firestore(user_csv_file)
     upload_events_to_firestore(event_csv_file)
-    upload_interactions_to_firestore(interaction_csv_file)
+
