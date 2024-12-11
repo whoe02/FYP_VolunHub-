@@ -27,6 +27,8 @@ const EditEventScreen = ({route, navigation }) => {
   const [endDate, setEndDate] = useState(new Date(event.endDate) || new Date());
   const [startTime, setStartTime] = useState(new Date(event.startTime) || new Date());
   const [endTime, setEndTime] = useState(new Date(event.endTime) || new Date());
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
   
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
@@ -42,6 +44,17 @@ const EditEventScreen = ({route, navigation }) => {
       if (showPicker.pickerType === 'startTime') setStartTime(newValue);
       if (showPicker.pickerType === 'endTime') setEndTime(newValue);
     }
+  };
+
+  const navigateToLocationScreen = () => {
+    navigation.navigate('LocationSelection', {
+      onLocationSelected: (address, latitude, longitude) => {
+        // This function will be executed when location is confirmed
+        setAddress(address);
+        setLatitude(latitude);  // Update latitude separately
+        setLongitude(longitude);  // Update longitude separately
+      },
+    });
   };
   
   const pickerValue = useMemo(() => {
@@ -72,7 +85,12 @@ const EditEventScreen = ({route, navigation }) => {
       // Only run if the picker is visible
       console.log('Date Picker is open');
     }
-  }, [showPicker.visible]);
+    if (route.params?.selectedAddress) {
+      setAddress(route.params.selectedAddress);
+      setLatitude(route.params.latitude);
+      setLongitude(route.params.longitude);
+    }
+  }, [showPicker.visible,route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
 
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
@@ -324,12 +342,21 @@ const EditEventScreen = ({route, navigation }) => {
 
         
         {/* Address */}
-        <InputField
+        {/* <InputField
           label="Address"
           value={address}
           onChangeText={setAddress}
           icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        /> */}
+        {/* Address Button */}
+        <View style={styles.pickerButtonStyle}>
+          <Ionicons name="location-outline" size={20} color="#666" />
+          <TouchableOpacity onPress={navigateToLocationScreen}>
+            <Text style={styles.addressButtonText}>
+              {address || 'Select Address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Location */}
         <InputField
