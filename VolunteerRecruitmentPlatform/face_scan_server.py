@@ -5,8 +5,8 @@ import os
 from flask import Flask, request, jsonify
 from deepface import DeepFace
 from sklearn.neighbors import KNeighborsClassifier
-from skimage.metrics import structural_similarity as compare_ssim
-import requests
+
+
 app = Flask(__name__)
 
 # Ensure 'data' directory exists
@@ -82,7 +82,6 @@ def start_capture():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-
 @app.route('/register', methods=['POST'])
 def register():
     global faces_data, names_data
@@ -102,36 +101,6 @@ def register():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-def compare_images(image1, image2, min_matches=10):
-    # Convert images to grayscale
-    gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
-
-    # Initialize ORB detector
-    orb = cv2.ORB_create()
-
-    # Detect keypoints and compute descriptors
-    keypoints1, descriptors1 = orb.detectAndCompute(gray1, None)
-    keypoints2, descriptors2 = orb.detectAndCompute(gray2, None)
-
-    if descriptors1 is None or descriptors2 is None:
-        return False  # Return false if no descriptors are found
-
-    # Initialize Brute-Force matcher
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-
-    # Match descriptors
-    matches = bf.match(descriptors1, descriptors2)
-
-    # Sort matches by distance
-    matches = sorted(matches, key=lambda x: x.distance)
-
-    # Debug: Print the number of matches
-    print(f"Number of matches: {len(matches)}")
-
-    # Return true if sufficient matches are found
-    return len(matches) > min_matches
-
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
     global knn
@@ -149,25 +118,9 @@ def mark_attendance():
         file_bytes = np.frombuffer(file.read(), np.uint8)
         uploaded_image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-        # Load reference image from Cloudinary
-        cloudinary_url = request.form['cloudinary_url']
-        response = requests.get(cloudinary_url)
-        if response.status_code != 200:
-            return jsonify({'success': False, 'message': 'Failed to fetch the reference image from Cloudinary.'}), 400
-        reference_image = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_COLOR)
-
-        # Validate images
-        if uploaded_image is None or reference_image is None:
-            return jsonify({'success': False, 'message': 'Invalid image files provided.'}), 400
-
-        # Step 1: ORB-Based Image Similarity Check
-        if not compare_images(uploaded_image, reference_image, min_matches=10):
-            return jsonify({'success': False, 'message': 'Uploaded image does not match the reference image.'}), 400
-
-        # Step 2: Face Detection and Attendance
         faces = DeepFace.extract_faces(uploaded_image, enforce_detection=False)
-        # if len(faces) != 1:
-        #     return jsonify({'success': False, 'message': 'Please provide an image with exactly one face.'}), 400
+        if len(faces) != 1:
+            return jsonify({'success': False, 'message': 'Please provide an image with exactly one face.'}), 400
 
         # Extract face embedding
         face_image = faces[0]['face']
@@ -181,7 +134,7 @@ def mark_attendance():
         min_distance = distances[0][0]
         print(min_distance)
         # Set a threshold for attendance marking
-        threshold = 0.63
+        threshold = 0.57
         if min_distance < threshold:
             predicted_name = predicted_label[0]
             return jsonify({'success': True, 'message': f"Attendance marked successfully for {predicted_name}!"})
@@ -214,7 +167,6 @@ def save_face_data(faces_data, names_data):
 
     print("✅ Face data and names stored successfully.")
 
-
 def train_knn_model():
     global knn
 
@@ -234,7 +186,6 @@ def train_knn_model():
 
     except Exception as e:
         print(f"Error during KNN training: {e}")
-
 
 # Load the KNN model at startup
 try:

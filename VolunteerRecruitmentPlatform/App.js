@@ -39,6 +39,7 @@ import EventAttendance from './Screen/EventAttendance';
 import VolunteerAttendance from './Screen/AttendanceVolunteer';
 import FaceTestingScreen from './Screen/FaceTestingScreen';
 import VolunteerRecognitionScreen from './Screen/VolunteerRecognitionScreen';
+import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
 
 
@@ -99,6 +100,7 @@ const App = () => {
           <Stack.Screen name="EventAttendance" component={EventAttendance} />
           <Stack.Screen name="VolunteerAttendance" component={VolunteerAttendance} />
           <Stack.Screen name="FaceTestingScreen" component={FaceTestingScreen} />
+          <Stack.Screen name="LocationSelection" component={LocationSelection} />
           <Stack.Screen name="VolunteerRecognitionScreen" component={VolunteerRecognitionScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
 
