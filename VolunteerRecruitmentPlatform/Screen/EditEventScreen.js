@@ -246,8 +246,6 @@ const EditEventScreen = ({route, navigation }) => {
     }
   };
   
-  
-  
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
@@ -282,42 +280,37 @@ const EditEventScreen = ({route, navigation }) => {
           icon={<Ionicons name="create-outline" size={20} color="#666" style={styles.icon} />}
         />
 
-        {/* date and time */}
-                {/* Start Date Picker */}
-                <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startDate', 'date')}
-        >
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Date Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endDate', 'date')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Start Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Conditional Picker */}
         {showPicker.visible && (
@@ -492,7 +485,13 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
-  
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
+  }
 });
 
 export default EditEventScreen;

@@ -24,10 +24,10 @@ const AddEventScreen = ({route, navigation }) => {
   const [selectedSkills, setSelectedSkills] = useState([]); // Selected skills
   const [selectedPreferences, setSelectedPreferences] = useState([]); // Selected preferences
 
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
   
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
@@ -301,42 +301,37 @@ const AddEventScreen = ({route, navigation }) => {
           icon={<Ionicons name="create-outline" size={20} color="#666" style={styles.icon} />}
         />
 
-        {/* date and time */}
-                {/* Start Date Picker */}
-                <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startDate', 'date')}
-        >
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Date Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endDate', 'date')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(endDate)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Start Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('startTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('startTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(startTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* End Time Picker */}
-        <TouchableOpacity
-          style={styles.datePickerContainer}
-          onPress={() => openPicker('endTime', 'time')}
-        >
+        <View style={styles.pickerButtonStyle}>
           <Ionicons name="time-outline" size={20} color="#666" />
-          <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => openPicker('endTime', 'time')}>
+            <Text style={styles.datePickerText}>{formatTime(endTime)}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Conditional Picker */}
         {showPicker.visible && (
@@ -348,23 +343,15 @@ const AddEventScreen = ({route, navigation }) => {
           />
         )}
 
-        
-        {/* Address */}
-        {/* <InputField
-          label="Address"
-          value={address}
-          onChangeText={setAddress}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        /> */}
-
         {/* Address Button */}
-        <TouchableOpacity style={styles.addressButton} onPress={navigateToLocationScreen}>
-          <Ionicons name="location-outline" size={20} color="#666" />
-          <Text style={styles.addressButtonText}>
-            {address || 'Select Address'}
-          </Text>
-        </TouchableOpacity>
-
+        <View style={styles.pickerButtonStyle}>
+        <Ionicons name="location-outline" size={20} color="#666" />
+          <TouchableOpacity onPress={navigateToLocationScreen}>
+            <Text style={styles.addressButtonText}>
+              {address || 'Select Address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         {/* Location */}
         <InputField
           label="Location"
@@ -482,13 +469,6 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 5,
   },
-  datePickerContainer: {
-    flexDirection: 'row',
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    paddingBottom: 8,
-    marginBottom: 20,
-  },
   datePickerText: {
     color: '#666',
     marginLeft: 5,
@@ -531,9 +511,16 @@ const styles = StyleSheet.create({
   },
   addressButtonText: {
     marginLeft: 10,
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
+  }
 });
 
 export default AddEventScreen;
