@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { firestore } from '../firebaseConfig';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
 import { useUserContext } from '../UserContext';
 import axios from 'axios'; // Import axios
 import { getDistance } from 'geolib'; // For calculating distance
@@ -83,9 +83,12 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
       if (distance <= 50) {
         navigation.navigate('VolunteerRecognitionScreen', {
           email,
-          onComplete: (status) => {
+          onComplete: async (status) => {
             if (status) {
               Alert.alert('Success', 'Face recognition completed successfully!');
+
+              // Now handle the attendance check-in/check-out
+              await handleAttendance();
             } else {
               Alert.alert('Error', 'Face recognition failed.');
             }
@@ -97,6 +100,53 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error validating location:', error);
       Alert.alert('Error', 'Unable to fetch your location. Please try again.');
+    }
+  };
+
+  const handleAttendance = async () => {
+    // Fetch the latest attendance record
+    const latestAttendance = attendanceRecords[0];
+    const currentTime = new Date();
+    const lastStatus = latestAttendance?.status; // Get the last status if exists
+  
+    // If there's no previous attendance record, this is the first one of the day, so it must be "check-in"
+    if (!latestAttendance || !lastStatus) {
+      await saveAttendance('check-in');
+    } else {
+      // If there's a record, check the last status and decide whether to check-in or check-out
+      const currentHour = currentTime.getHours();
+      const isNewDay = currentHour < 12; // This can be adjusted based on your needs
+  
+      // If it's a new day or last status was check-out, we must check-in
+      if (isNewDay || lastStatus === 'check-out') {
+        // Save check-in status
+        await saveAttendance('check-in');
+      } else {
+        // Otherwise, it's check-out
+        await saveAttendance('check-out');
+      }
+    }
+  };
+
+  const saveAttendance = async (status) => {
+    try {
+      const eventRef = doc(firestore, 'Event', eventId);
+      const participantDocRef = doc(eventRef, 'EventParticipant', userId);
+      const attendanceRef = collection(participantDocRef, 'Attendance');
+
+      // Create the attendance document with the current status and timestamp
+      await setDoc(doc(attendanceRef, new Date().toISOString()), {
+        status: status,
+        timestamp: new Date(),
+        userName: user.name, // Assuming `user.name` exists
+      });
+
+      // Refresh the attendance records
+      fetchAttendanceRecords();
+      Alert.alert('Success', `Successfully marked as ${status}`);
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      Alert.alert('Error', 'Failed to save attendance.');
     }
   };
 
@@ -146,7 +196,6 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
