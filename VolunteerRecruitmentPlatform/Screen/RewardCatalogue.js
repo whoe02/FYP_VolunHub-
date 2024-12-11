@@ -136,7 +136,6 @@ const CatalogueScreen = () => {
       ]
     );
   };
-  
 
   const generateQRCode = async (rewardCode) => {
     return new Promise((resolve, reject) => {
@@ -160,8 +159,6 @@ const CatalogueScreen = () => {
       }
     });
   };
-  
-  
 
   const uploadQRCodeToCloudinary = async (uri) => {
     try {
@@ -193,8 +190,6 @@ const CatalogueScreen = () => {
       throw error;
     }
   };
-  
-  
 
   useEffect(() => {
     fetchVouchers();
@@ -266,7 +261,7 @@ const CatalogueScreen = () => {
         />
       )}
 
-      <ViewShot ref={qrCodeRef} style={{ opacity: 0,width: 100, height: 100}}>
+      <ViewShot ref={qrCodeRef} style={{ opacity: 0,width: 100, height: 100,position: 'absolute',top:-1000,left:-1000}}>
         <QRCode value="sampleQR" size={100} />
       </ViewShot>
     </View>
@@ -305,7 +300,6 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 20,
   },
   tab: {
@@ -313,6 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: '#e8e3df',
     borderRadius: 8,
+    marginRight:20,
   },
   activeTab: {
     backgroundColor: '#6a8a6d',
