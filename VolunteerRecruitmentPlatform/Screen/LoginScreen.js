@@ -106,31 +106,19 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center' }}>
-      <View style={{ paddingHorizontal: 25 }}>
-        <View style={{marginBottom:-40}}>
-          <View style={{ alignItems: 'center' }}>
+      <View style={{ paddingHorizontal: 40 }}>
+        <View>
+          <View style={{ alignItems: 'center', marginBottom:0 }}>
             <Image
               source={loginImage}
-              style={{ height: 200, width: 500, transform: [{ rotate: '-5deg' }] }}
+              style={{ height: 200, width: 300, marginBottom: 30, marginTop:-40 }}
               resizeMode="contain"
             />
           </View>
 
-          <Text
-            style={{
-              fontFamily: 'Roboto-Medium',
-              fontSize: 28,
-              fontWeight: '500',
-              color: '#333',
-              marginBottom: 30,
-            }}
-          >
-            Login
-          </Text>
-
           <InputField
             label={'Email ID'}
-            icon={<MaterialIcons name="mail" size={20} color="#666" style={{ marginRight: 5 }} />}
+            icon={<Ionicons name="mail-outline" size={22} color="#666" style={{ marginRight: 5 }} />}
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
@@ -139,9 +127,9 @@ const LoginScreen = ({ navigation }) => {
           <InputField 
             label={'Password'}
             inputType="password"  // Specify the type as password
-            icon={<Ionicons name="lock-closed" size={20} color="#666" style={{ marginRight: 5 }} />}
+            icon={<Ionicons name="lock-closed-outline" size={22} color="#666" style={{ marginRight: 5 }} />}
             secureTextEntry={!showPassword}  // Use showPassword to toggle visibility
-            fieldButtonLabel={<Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#666" />}
+            fieldButtonLabel={<Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={22} color="#666" />}
             fieldButtonFunction={() => setShowPassword(!showPassword)}  // Toggle the visibility state
             value={password}
             onChangeText={setPassword}
@@ -158,14 +146,14 @@ const LoginScreen = ({ navigation }) => {
             <Ionicons
               name={rememberMe ? 'checkbox' : 'square-outline'}
               size={24}
-              color={rememberMe ? '#95c194' : '#ccc'}
+              color={rememberMe ? '#4CAF50' : '#ccc'}
             />
             <Text style={{ marginLeft: 8 }}>Remember Me</Text>
           </TouchableOpacity>
 
           {/* Forgot Password */}
           <TouchableOpacity onPress={() => navigation.navigate('Forgot')}>
-            <Text style={{ color: '#95c194', fontWeight: '500' }}>Forgot?</Text>
+            <Text style={{ color: '#4CAF50', fontWeight: '500' }}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
 
@@ -174,7 +162,7 @@ const LoginScreen = ({ navigation }) => {
         <Text style={{ textAlign: 'center', marginVertical: 15 }}>
           Or, sign up as{' '}
           <Text
-            style={{ color: '#95c194', fontWeight: '700' }}
+            style={{ color: '#4CAF50', fontWeight: '700' }}
             onPress={() => navigation.navigate('Register', { role: 'volunteer' })}
             // onPress={() => navigation.navigate('FaceTestingScreen')}
           >
@@ -182,7 +170,7 @@ const LoginScreen = ({ navigation }) => {
           </Text>{' '}
           or{' '}
           <Text
-            style={{ color: '#95c194', fontWeight: '700' }}
+            style={{ color: '#4CAF50', fontWeight: '700' }}
             onPress={() => navigation.navigate('Register', { role: 'organization' })}
           >
             Organization
