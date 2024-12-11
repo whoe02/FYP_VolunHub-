@@ -32,14 +32,15 @@ const MapWithSearch = ({route }) => {
       longitudeDelta: 0.005,
     };
     setRegion(newRegion);
-    setSelectedLocation({ latitude: lat, longitude: lng });
+    setLatitude(lat); 
+    setLongitude(lng);
     setSelectedAddress(details.formatted_address);
     mapRef.current.animateToRegion(newRegion, 1000);
   };
 
   const confirmLocation = () => {
-    setLatitude(selectedLocation.latitude);
-    setLongitude(selectedLocation.longitude);
+    // setLatitude(selectedLocation.latitude);
+    // setLongitude(selectedLocation.longitude);
 
     console.log("Address:", selectedAddress);
     console.log("Latitude:", latitude);
@@ -75,11 +76,11 @@ const MapWithSearch = ({route }) => {
         style={styles.map}
         region={region}
       >
-        {selectedLocation && (
-          <Marker coordinate={selectedLocation} title={selectedAddress || 'Selected Location'} />
+        {latitude && longitude && (
+          <Marker coordinate={{latitude, longitude}} title={selectedAddress || 'Selected Location'} />
         )}
       </MapView>
-      {selectedLocation && (
+      {latitude && longitude && (
         <TouchableOpacity style={styles.confirmButton} onPress={confirmLocation}>
           <Text style={styles.confirmText}>✔</Text>
         </TouchableOpacity>
