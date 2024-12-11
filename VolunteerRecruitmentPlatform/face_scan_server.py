@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 from deepface import DeepFace
 from sklearn.neighbors import KNeighborsClassifier
 
+
 app = Flask(__name__)
 
 # Ensure 'data' directory exists
@@ -81,7 +82,6 @@ def start_capture():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-
 @app.route('/register', methods=['POST'])
 def register():
     global faces_data, names_data
@@ -109,54 +109,37 @@ def mark_attendance():
         return jsonify({'success': False, 'message': 'KNN model is not available. Please register users first.'}), 500
 
     try:
-        if 'image' not in request.files:
-            return jsonify({'success': False, 'message': 'No image uploaded'}), 400
+        # Ensure both image and Cloudinary reference URL are provided
+        if 'image' not in request.files or 'cloudinary_url' not in request.form:
+            return jsonify({'success': False, 'message': 'No image or reference image URL provided.'}), 400
 
+        # Load uploaded image
         file = request.files['image']
         file_bytes = np.frombuffer(file.read(), np.uint8)
-        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        uploaded_image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-        if img is None:
-            return jsonify({'success': False, 'message': 'Invalid image file'}), 400
+        faces = DeepFace.extract_faces(uploaded_image, enforce_detection=False)
+        if len(faces) != 1:
+            return jsonify({'success': False, 'message': 'Please provide an image with exactly one face.'}), 400
 
-        # Extract and preprocess the face
-        try:
-            faces = DeepFace.extract_faces(img, enforce_detection=False)
+        # Extract face embedding
+        face_image = faces[0]['face']
+        if face_image.dtype == np.float64:
+            face_image = (face_image * 255).astype(np.uint8)
+        face_embedding = extract_face_embedding(face_image)
 
-            if len(faces) != 1:
-                return jsonify({'success': False, 'message': 'Invalid number of faces detected. Please provide a clear image with one face.'}), 400
-
-            face_image = faces[0]['face']
-            if face_image.dtype == np.float64:
-                face_image = (face_image * 255).astype(np.uint8)
-
-            # Extract the face embedding
-            face_embedding = extract_face_embedding(face_image)
-
-        except Exception as e:
-            return jsonify({'success': False, 'message': 'Error during face detection'}), 500
-
-        # Use the trained KNN model to predict
+        # Predict using KNN
         predicted_label = knn.predict([face_embedding])
-
-        # Calculate the Euclidean distance between the input face embedding and the registered embeddings
         distances, indices = knn.kneighbors([face_embedding])
         min_distance = distances[0][0]
-
-        # Set a threshold for the distance to confirm the match
-        threshold = 0.6  # You can adjust this threshold value
-
+        print(min_distance)
+        # Set a threshold for attendance marking
+        threshold = 0.57
         if min_distance < threshold:
             predicted_name = predicted_label[0]
-            with open('data/names_data.pkl', 'rb') as f:
-                registered_names = pickle.load(f)
-
-            if predicted_name in registered_names:
-                return jsonify({'success': True, 'message': f"Attendance marked successfully for {predicted_name}!"})
-            else:
-                return jsonify({'success': False, 'message': 'Face verification failed. Try again.'}), 400
+            return jsonify({'success': True, 'message': f"Attendance marked successfully for {predicted_name}!"})
         else:
-            return jsonify({'success': False, 'message': 'Face not recognized. The distance is too large.'}), 400
+            return jsonify({'success': False, 'message': 'Face not recognized. Distance too large.'}), 400
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -184,7 +167,6 @@ def save_face_data(faces_data, names_data):
 
     print("✅ Face data and names stored successfully.")
 
-
 def train_knn_model():
     global knn
 
@@ -204,7 +186,6 @@ def train_knn_model():
 
     except Exception as e:
         print(f"Error during KNN training: {e}")
-
 
 # Load the KNN model at startup
 try:

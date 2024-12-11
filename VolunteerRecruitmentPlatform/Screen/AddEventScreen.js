@@ -14,7 +14,7 @@ const AddEventScreen = ({route, navigation }) => {
   // Initial states
   const { user } = route.params;
   const [title, setTitle] = useState('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(null);
   const [capacity, setCapacity] = useState('');
   const [description, setDescription] = useState('');
   const [eventImages, setEventImages] = useState([]);
@@ -35,6 +35,10 @@ const AddEventScreen = ({route, navigation }) => {
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
   const handlePickerChange = (event, selectedValue) => {
     setShowPicker({ ...showPicker, visible: false });
     if (selectedValue) {
@@ -45,14 +49,16 @@ const AddEventScreen = ({route, navigation }) => {
       if (showPicker.pickerType === 'endTime') setEndTime(newValue);
     }
   };
-  
 
-const handlePress = () => {
-    if (!isButtonPressed) {
-      setIsButtonPressed(true);
-      openPicker('startDate', 'date'); // your open picker function
-      setTimeout(() => setIsButtonPressed(false), 500); // Allow button press every 500ms
-    }
+  const navigateToLocationScreen = () => {
+    navigation.navigate('LocationSelection', {
+      onLocationSelected: (address, latitude, longitude) => {
+        // This function will be executed when location is confirmed
+        setAddress(address);
+        setLatitude(latitude);  // Update latitude separately
+        setLongitude(longitude);  // Update longitude separately
+      },
+    });
   };
 
   const pickerValue = useMemo(() => {
@@ -81,9 +87,13 @@ const handlePress = () => {
     fetchCategories();
     if (showPicker.visible) {
       // Only run if the picker is visible
-      console.log('Date Picker is open');
     }
-  }, [showPicker.visible]);
+    if (route.params?.selectedAddress) {
+      setAddress(route.params.selectedAddress);
+      setLatitude(route.params.latitude);
+      setLongitude(route.params.longitude);
+    }
+  }, [showPicker.visible,route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
 
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
@@ -195,20 +205,21 @@ const handlePress = () => {
   const validateAndSave = async () => {
     setIsLoading(true);
         // Validate if fields are filled (you can uncomment this validation logic as needed)
-    // if (
-    //   !title ||
-    //   !startDate ||
-    //   !startTime ||
-    //   !endDate ||
-    //   !endTime ||
-    //   !address ||
-    //   !capacity ||
-    //   !description ||
-    //   eventImages.length === 0
-    // ) {
-    //   Alert.alert('Error', 'Please fill in all fields');
-    //   return;
-    // }
+    if (
+      !title ||
+      !startDate ||
+      !startTime ||
+      !endDate ||
+      !endTime ||
+      !address ||
+      !capacity ||
+      !description 
+      // eventImages.length === 0
+    ) {
+      Alert.alert('Error', 'Please fill in all fields');
+      setIsLoading(false);
+      return;
+    }
     // Ensure you call the image upload before saving the event
     const uploadedImageUrls = await uploadToCloudinary(eventImages);
     
@@ -224,11 +235,14 @@ const handlePress = () => {
       endDate: Timestamp.fromDate(endDate),
       endTime: endTime || '',
       status: 'upcoming',
+      latitude:latitude,
+      longitude:longitude,
       location: location || '',
       eventId: eventId,
       skills: selectedSkills || [],
       preferences: selectedPreferences || [],
       createdAt: Timestamp.now(),
+
       image: uploadedImageUrls || [], // Use the uploaded URLs instead of local URIs
       userId: user?.userId || null,
       categoryIds: [
@@ -336,12 +350,20 @@ const handlePress = () => {
 
         
         {/* Address */}
-        <InputField
+        {/* <InputField
           label="Address"
           value={address}
           onChangeText={setAddress}
           icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        /> */}
+
+        {/* Address Button */}
+        <TouchableOpacity style={styles.addressButton} onPress={navigateToLocationScreen}>
+          <Ionicons name="location-outline" size={20} color="#666" />
+          <Text style={styles.addressButtonText}>
+            {address || 'Select Address'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Location */}
         <InputField
@@ -497,7 +519,21 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
-  
+  addressButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    marginBottom:20,
+  },
+  addressButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#666',
+  },
 });
 
 export default AddEventScreen;
