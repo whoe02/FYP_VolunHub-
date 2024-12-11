@@ -11,6 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "notifications": {
+      "projectId": "13dccab0-f698-4969-9f00-1d77105d97f5"
+    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -23,10 +26,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+
       "package": "com.yourcompany.volunteerrecruitmentplatform",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
+
       ]
     },
     "web": {
@@ -41,6 +46,11 @@
         }
       ],
       "expo-camera"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "13dccab0-f698-4969-9f00-1d77105d97f5"
+      }
+    }
   }
 }

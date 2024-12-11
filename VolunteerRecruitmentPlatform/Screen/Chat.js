@@ -30,54 +30,54 @@ const Chat = ({ route, navigation }) => {
         if (!categoryIds || categoryIds.length === 0) {
             return {}; // Return empty object if no categoryIds
         }
-    
+
         try {
             const categoryQuery = query(
                 collection(firestore, 'Category'),
                 where('__name__', 'in', categoryIds) // Use `__name__` to query by document ID
             );
-    
+
             const querySnapshot = await getDocs(categoryQuery);
-    
+
             const categoryMap = {};
             querySnapshot.docs.forEach((doc) => {
                 const { categoryName } = doc.data(); // Get `categoryName` field
                 categoryMap[doc.id] = categoryName; // Map document ID to category name
             });
-    
+
             return categoryMap;
         } catch (error) {
             console.error('Error fetching categories:', error);
             return {};
         }
     };
-    
+
     const fetchOrganizationNames = async (userIds) => {
         if (userIds.length === 0) {
             return {}; // Return empty object if no userIds
         }
-    
+
         try {
             const userQuery = query(
                 collection(firestore, 'User'),
                 where('__name__', 'in', userIds) // Use `__name__` for document IDs
             );
-    
+
             const querySnapshot = await getDocs(userQuery);
-    
+
             const organizationMap = {};
             querySnapshot.docs.forEach((doc) => {
                 const { name } = doc.data(); // Assuming the field is `organizationName`
                 organizationMap[doc.id] = name || 'Unknown Organization'; // Map userId to organization name
             });
-    
+
             return organizationMap;
         } catch (error) {
             console.error('Error fetching organization names:', error);
             return {};
         }
     };
-    
+
     const fetchEvents = async (eventIds) => {
         try {
             const eventQuery = query(
@@ -85,16 +85,16 @@ const Chat = ({ route, navigation }) => {
                 where('__name__', 'in', eventIds)
             );
             const querySnapshot = await getDocs(eventQuery);
-    
+
             const fetchedEvents = querySnapshot.docs.map((doc) => {
                 const data = doc.data();
-    
+
                 // Convert Firestore Timestamp fields to Date if necessary
                 const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
                 const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
                 const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
                 const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
-    
+
                 return {
                     id: doc.id,
                     ...data,
@@ -104,54 +104,54 @@ const Chat = ({ route, navigation }) => {
                     endTime,
                 };
             });
-    
+
             const allCategoryIds = [
                 ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
             ];
-    
+
             const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-    
+
             // Fetch categories and organizations
             const categoryMap = await fetchCategoryNames(allCategoryIds);
             const organizationMap = await fetchOrganizationNames(allUserIds);
-    
+
             // Update event data with category names
             const eventsWithDetails = fetchedEvents.map((event) => {
                 // Map categories and organization name
                 const mappedCategories = event.categoryIds
                     ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
                     : [];
-    
+
                 const organizationName = organizationMap[event.userId] || 'Unknown Organization';
-    
+
                 return {
                     ...event,
                     categories: mappedCategories,
                     organizationName,
                 };
             });
-    
+
             setEvents(eventsWithDetails);
         } catch (error) {
             console.error('Error fetching events:', error);
         }
     };
-    
+
     useEffect(() => {
         if (eventToSend) {
             setInputMessage('I am interested in this event!');
         }
-    
+
         const loadChatMessages = async () => {
             if (!chat || !chat.id) return;
-    
+
             const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
             const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    
+
             const unsubscribe = onSnapshot(q, async (snapshot) => {
                 const groupedMessages = [];
                 let lastDate = null;
-    
+
                 // Fetch and process messages
                 const rawMessages = snapshot.docs.map((doc) => {
                     const data = doc.data();
@@ -161,14 +161,14 @@ const Chat = ({ route, navigation }) => {
                         timestamp: data.timestamp?.toDate(),
                     };
                 });
-    
+
                 // Filter out placeholder messages
                 const filteredMessages = rawMessages.filter((msg) => !msg.isPlaceholder);
-    
+
                 // Add date headers and group messages
                 filteredMessages.forEach((message) => {
                     const messageDate = message.timestamp.toDateString();
-    
+
                     if (messageDate !== lastDate) {
                         groupedMessages.push({
                             id: `date-${messageDate}`,
@@ -177,25 +177,25 @@ const Chat = ({ route, navigation }) => {
                         });
                         lastDate = messageDate;
                     }
-    
+
                     groupedMessages.push(message);
                 });
-    
+
                 setMessages(groupedMessages);
-    
+
                 // Fetch events related to eventId in messages
                 const eventIds = [
                     ...new Set(filteredMessages.filter((msg) => msg.eventId).map((msg) => msg.eventId)),
                 ];
-    
+
                 if (eventIds.length > 0) {
                     await fetchEvents(eventIds);
                 }
             });
-    
+
             return () => unsubscribe();
         };
-    
+
         loadChatMessages();
     }, [chat.id, eventToSend]);
 
@@ -239,6 +239,34 @@ const Chat = ({ route, navigation }) => {
         }
     };
 
+    const sendNotification = async (recipientToken, message) => {
+        try {
+            const messageBody = {
+                to: recipientToken,
+                sound: 'default',
+                title: 'New Message',
+                body: message,
+                data: { 
+                    type: 'message',
+                    chat: chat,
+                 },
+            };
+
+            const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(messageBody),
+            });
+
+            
+        } catch (error) {
+            console.error('Error sending notification:', error);
+        }
+    };
+
     const sendMessage = async ({ eventId }) => {
 
         if (inputMessage.trim().length === 0 && !selectedImage) {
@@ -278,42 +306,78 @@ const Chat = ({ route, navigation }) => {
             if (eventId) {
                 triggerAutoReply(eventId);
             }
+
+            try {
+                // Fetch the recipient's device token from Firestore
+                const recipientRef = doc(firestore, 'User', chat.otherParticipant);
+                const recipientDoc = await getDoc(recipientRef);
+
+                if (recipientDoc.exists()) {
+                    const recipientData = recipientDoc.data();
+                    const recipientToken = recipientData.deviceToken;
+
+                    if (recipientToken) {
+                        // Send push notification to the recipient if the token exists
+                        sendNotification(recipientToken, inputMessage);
+                    } else {
+                        // Log or handle the case where the recipient has no token
+                        console.warn(`Recipient ${recipientId} does not have a device token.`);
+                        // Optionally notify the user that the recipient cannot be notified
+                    }
+                } else {
+                    console.warn(`Recipient document not found for ID: ${recipientId}`);
+                }
+            } catch (error) {
+                console.error('Error fetching recipient data:', error);
+            }
+
         } catch (error) {
             console.error('Error sending message:', error);
         }
     };
 
+    const getRecipientId = (participants, currentUserId) => {
+        // Check if participants is an array and contains items
+        if (Array.isArray(participants) && participants.length > 0) {
+            // Filter the participants array to find the user who is not the current user
+            return participants.find(participantId => participantId !== currentUserId);
+        }
+        // Return null or an appropriate value if participants is not valid
+        console.error('Participants array is not defined or empty');
+        return null;
+    };
+
     const triggerAutoReply = (eventId) => {
         setTimeout(async () => {
             if (!chat || !chat.id) return;
-    
+
             try {
                 // Fetch the event document
                 const eventRef = doc(firestore, 'Event', eventId);
                 const eventDoc = await getDoc(eventRef);
-    
+
                 if (eventDoc.exists()) {
                     const eventData = eventDoc.data();
                     const { userId } = eventData;
-    
+
                     if (!userId) {
                         console.warn('Event does not have a userId for auto-reply.');
                         return;
                     }
-    
+
                     // Fetch the user document to get the autoReplyMsg
                     const userRef = doc(firestore, 'User', userId);
                     const userDoc = await getDoc(userRef);
-    
+
                     let autoReplyMsg = `Thank you for your message regarding the event: ${eventData.title}. We will follow up soon!`; // Default message
-    
+
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         autoReplyMsg = userData.autoReplyMsg || autoReplyMsg; // Use autoReplyMsg if it exists
                     } else {
                         console.warn('User document not found for auto-reply.');
                     }
-    
+
                     // Prepare the auto-reply message
                     const autoReplyMessage = {
                         text: autoReplyMsg,
@@ -330,7 +394,7 @@ const Chat = ({ route, navigation }) => {
                             timestamp: new Date(),
                         },
                     }
-    
+
                     // Save the auto-reply in the Firestore
                     const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
                     await addDoc(messagesRef, autoReplyMessage);
@@ -417,10 +481,10 @@ const Chat = ({ route, navigation }) => {
                 {/* Render linked event */}
                 {linkedEvent && (
                     <TouchableOpacity
-                        style={isCurrentUser ? styles.eventMessage: styles.oEventMessage}
+                        style={isCurrentUser ? styles.eventMessage : styles.oEventMessage}
                         onPress={() => navigation.navigate('EventDetail', { event: linkedEvent, user: user })}
                     >
-                        <Text style={isCurrentUser ? styles.eventMessageText: styles.oEventMessageText}>{linkedEvent.title}</Text>
+                        <Text style={isCurrentUser ? styles.eventMessageText : styles.oEventMessageText}>{linkedEvent.title}</Text>
                         <Text style={isCurrentUser ? styles.orgText : styles.oOrgText}>{linkedEvent.organizationName}</Text>
                     </TouchableOpacity>
 
@@ -491,10 +555,10 @@ const Chat = ({ route, navigation }) => {
 
                         <TouchableOpacity
                             style={styles.cancelEventButton}
-                            onPress={() => {setEventToSend(null); setInputMessage('');}}
+                            onPress={() => { setEventToSend(null); setInputMessage(''); }}
                         >
-                                <Ionicons name="close" size={24} color="#000" />
-                                </TouchableOpacity>
+                            <Ionicons name="close" size={24} color="#000" />
+                        </TouchableOpacity>
                     </View>
                 </View>
             )}
