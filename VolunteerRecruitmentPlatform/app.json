@@ -11,6 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "notifications": {
+      "projectId": "13dccab0-f698-4969-9f00-1d77105d97f5"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +22,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "android.package"
+      "package": "android.package",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -27,6 +34,11 @@
     "plugins": [
       "expo-font",
       "expo-camera"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "13dccab0-f698-4969-9f00-1d77105d97f5"
+      }
+    }
   }
 }

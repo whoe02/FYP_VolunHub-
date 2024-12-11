@@ -1,4 +1,4 @@
-import React, { useState, useContext,useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -11,23 +11,24 @@ import {
 import CheckBox from '@react-native-community/checkbox';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { getDoc, getDocs, collection, doc } from 'firebase/firestore';
-import { firestore } from '../firebaseConfig'; 
+import { getDoc, getDocs, collection, updateDoc, doc } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
 import { UserContext } from '../UserContext'; // Import UserContext
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomButton from '../components/CustomButton';
 import InputField from '../components/InputField';
-
+import * as Notifications from 'expo-notifications';
 const loginImage = require('../assets/misc/login.png');
+
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); 
-  const [rememberMe, setRememberMe] = useState(false); 
-  
-  const { setUser } = useContext(UserContext); 
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const { setUser } = useContext(UserContext);
+
   useEffect(() => {
     const loadUserData = async () => {
       const storedEmail = await AsyncStorage.getItem('email');
@@ -45,6 +46,31 @@ const LoginScreen = ({ navigation }) => {
   const isValidEmail = (email) => {
     const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
     return regex.test(email);
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Notification permissions denied. Notifications will not work.');
+      return false;
+    }
+    return true;
+  };
+
+  const setupNotifications = async (userId) => {
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const token = tokenData.data; // Extract the token
+      if (token) {
+        console.log('Expo Push Token:', token);
+
+        // Save the token to Firestore
+        const userRef = doc(firestore, 'User', userId);
+        await updateDoc(userRef, { deviceToken: token });
+      }
+    } catch (error) {
+      console.error('Error setting up notifications:', error);
+    }
   };
 
   const handleLogin = async () => {
@@ -83,8 +109,8 @@ const LoginScreen = ({ navigation }) => {
       }
 
       // Set the user data in context
-      setUser(userData); 
-      
+      setUser(userData);
+
       if (rememberMe) {
         await AsyncStorage.setItem('email', email);
         await AsyncStorage.setItem('password', password);
@@ -94,9 +120,13 @@ const LoginScreen = ({ navigation }) => {
       }
 
       Alert.alert('Login Successful', 'You have logged in successfully');
-      
+      // Request notification permissions and setup token
+      const permissionGranted = await requestPermissions();
+      if (permissionGranted) {
+        await setupNotifications(userData.userId); // Ensure the user data includes an `id` field
+      }
       // Navigate to the main screen after successful login
-      navigation.replace('VolunHub'); 
+      navigation.replace('VolunHub');
     } catch (error) {
       console.error('Error logging in:', error);
       Alert.alert('Error', 'Something went wrong. Please try again later');
@@ -107,7 +137,7 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center' }}>
       <View style={{ paddingHorizontal: 25 }}>
-        <View style={{marginBottom:-40}}>
+        <View style={{ marginBottom: -40 }}>
           <View style={{ alignItems: 'center' }}>
             <Image
               source={loginImage}
@@ -136,7 +166,7 @@ const LoginScreen = ({ navigation }) => {
             onChangeText={setEmail}
           />
 
-          <InputField 
+          <InputField
             label={'Password'}
             inputType="password"  // Specify the type as password
             icon={<Ionicons name="lock-closed" size={20} color="#666" style={{ marginRight: 5 }} />}
@@ -176,7 +206,7 @@ const LoginScreen = ({ navigation }) => {
           <Text
             style={{ color: '#95c194', fontWeight: '700' }}
             onPress={() => navigation.navigate('Register', { role: 'volunteer' })}
-            // onPress={() => navigation.navigate('FaceTestingScreen')}
+          // onPress={() => navigation.navigate('FaceTestingScreen')}
           >
             Volunteer
           </Text>{' '}
