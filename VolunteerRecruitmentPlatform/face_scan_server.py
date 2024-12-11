@@ -109,9 +109,6 @@ def mark_attendance():
         return jsonify({'success': False, 'message': 'KNN model is not available. Please register users first.'}), 500
 
     try:
-        # Ensure both image and Cloudinary reference URL are provided
-        if 'image' not in request.files or 'cloudinary_url' not in request.form:
-            return jsonify({'success': False, 'message': 'No image or reference image URL provided.'}), 400
 
         # Load uploaded image
         file = request.files['image']
