@@ -17,6 +17,7 @@ const EditEventScreen = ({route, navigation }) => {
   const [capacity, setCapacity] = useState(event.capacity);
   const [description, setDescription] = useState(event.description);
   const [location, setLocation] = useState(event.location);
+  const [locationCategory, setLocationCategory] = useState('');
   const [eventImages, setEventImages] = useState(event.image || []);
   const [skills, setSkills] = useState(event.skills || []);
   const [preferences, setPreferences] = useState(event.preferences || []);
@@ -92,6 +93,34 @@ const EditEventScreen = ({route, navigation }) => {
     }
   }, [showPicker.visible,route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
 
+  useEffect(() => {
+    if (address && locationCategory.length > 0) {
+      updateLocationBasedOnAddress();
+    }
+  }, [address, locationCategory]);
+
+  const updateLocationBasedOnAddress = () => {
+    if (!address) return;
+  
+    // Directly match the city/state part from the address
+    const cityState = address.toLowerCase();
+  
+    // Check if any location category name matches the city/state in the address
+    const matchedCategory = locationCategory.find((category) =>
+      cityState.includes(category.categoryName.toLowerCase())
+    );
+  
+    // Set location based on match
+    if (matchedCategory) {
+      setLocation(`location_${matchedCategory.categoryName}`);
+    } else {
+      setLocation('location_Other');
+    }
+  
+    console.log(`Address: ${address}`);
+    console.log(`Set Location: ${matchedCategory ? matchedCategory.categoryName : 'Other'}`);
+  };
+
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
     try {
@@ -101,9 +130,11 @@ const EditEventScreen = ({route, navigation }) => {
       // Separate into skills and preferences based on the categoryType
       const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
       const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
+      const fetchedLocation = categoryData.filter(category => category.categoryType === 'location');
 
       setSkills(fetchedSkills);
       setPreferences(fetchedPreferences);
+      setLocationCategory(fetchedLocation);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -340,14 +371,6 @@ const EditEventScreen = ({route, navigation }) => {
           />
         )}
 
-        
-        {/* Address */}
-        {/* <InputField
-          label="Address"
-          value={address}
-          onChangeText={setAddress}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        /> */}
         {/* Address Button */}
         <View style={styles.pickerButtonStyle}>
           <Ionicons name="location-outline" size={20} color="#666" />
@@ -357,14 +380,6 @@ const EditEventScreen = ({route, navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Location */}
-        <InputField
-          label="Location"
-          value={location}
-          onChangeText={setLocation}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
 
         {/* Capacity */}
         <InputField

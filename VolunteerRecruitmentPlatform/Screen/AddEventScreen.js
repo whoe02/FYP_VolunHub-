@@ -21,6 +21,7 @@ const AddEventScreen = ({route, navigation }) => {
   const [skills, setSkills] = useState([]);
   const [preferences, setPreferences] = useState([]);
   const [location, setLocation] = useState('');
+  const [locationCategory, setLocationCategory] = useState('');
   const [selectedSkills, setSelectedSkills] = useState([]); // Selected skills
   const [selectedPreferences, setSelectedPreferences] = useState([]); // Selected preferences
 
@@ -82,34 +83,63 @@ const AddEventScreen = ({route, navigation }) => {
     }
   };
 
+  // First useEffect: Handles permission request, fetch categories, and address update
   useEffect(() => {
     requestPermission();
     fetchCategories();
-    if (showPicker.visible) {
-      // Only run if the picker is visible
-    }
+
     if (route.params?.selectedAddress) {
       setAddress(route.params.selectedAddress);
       setLatitude(route.params.latitude);
       setLongitude(route.params.longitude);
     }
-  }, [showPicker.visible,route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
+  }, [route.params?.selectedAddress, route.params?.latitude, route.params?.longitude]);
+
+  // Second useEffect: Updates location based on address and locationCategory
+  useEffect(() => {
+    if (address && locationCategory.length > 0) {
+      updateLocationBasedOnAddress();
+    }
+  }, [address, locationCategory]);
 
   // Fetch skills and preferences from Firestore (Category collection)
   const fetchCategories = async () => {
     try {
       const categorySnapshot = await getDocs(collection(firestore, 'Category'));
       const categoryData = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+      console.log('Fetched Categories:', categoryData);
       // Separate into skills and preferences based on the categoryType
       const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
       const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
-
+      const fetchedLocation = categoryData.filter(category => category.categoryType === 'location');
       setSkills(fetchedSkills);
       setPreferences(fetchedPreferences);
+      setLocationCategory(fetchedLocation);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
+  };
+
+  const updateLocationBasedOnAddress = () => {
+    if (!address) return;
+  
+    // Directly match the city/state part from the address
+    const cityState = address.toLowerCase();
+  
+    // Check if any location category name matches the city/state in the address
+    const matchedCategory = locationCategory.find((category) =>
+      cityState.includes(category.categoryName.toLowerCase())
+    );
+  
+    // Set location based on match
+    if (matchedCategory) {
+      setLocation(`location_${matchedCategory.categoryName}`);
+    } else {
+      setLocation('location_Other');
+    }
+  
+    console.log(`Address: ${address}`);
+    console.log(`Set Location: ${matchedCategory ? matchedCategory.categoryName : 'Other'}`);
   };
   
   const generateEventId = async () => {
@@ -352,13 +382,14 @@ const AddEventScreen = ({route, navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+        
         {/* Location */}
-        <InputField
+        {/* <InputField
           label="Location"
           value={location}
           onChangeText={setLocation}
           icon={<Ionicons name="location-outline" size={20} color="#666" style={styles.icon} />}
-        />
+        /> */}
 
         {/* Capacity */}
         <InputField
