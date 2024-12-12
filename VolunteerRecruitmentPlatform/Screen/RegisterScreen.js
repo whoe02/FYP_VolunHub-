@@ -144,7 +144,7 @@ const RegisterScreen = ({ route, navigation }) => {
       const fullAddress = `${street}, ${city}, ${postalCode}`;
       const userData = {
         userId,
-        fullName,
+        name:fullName,
         email,
         phoneNumber,
         address: fullAddress,

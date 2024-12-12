@@ -380,7 +380,7 @@ const EventDetail = ({ route, navigation }) => {
                                         : 'Apply Now'}
                                 </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonShort}>
+                            <TouchableOpacity style={styles.buttonShort} onPress={() => navigation.navigate('Reviews', { event })}>
                                 <Ionicons name="chatbubble-outline" size={24} color="black" />
                             </TouchableOpacity>
                         </>
