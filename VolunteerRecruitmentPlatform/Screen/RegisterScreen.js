@@ -16,6 +16,7 @@ import InputField from '../components/InputField';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getDocs, collection, query, where, setDoc, doc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig'; // Your Firestore config
+import { useCameraPermissions } from 'expo-camera';
 
 const loginImage = require('../assets/misc/login.png');
 
@@ -41,7 +42,19 @@ const RegisterScreen = ({ route, navigation }) => {
   const [secretAnswer, setSecretAnswer] = useState('');
 
   const [isFaceDataAdded, setIsFaceDataAdded] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
+  useEffect(() => {
+    const requestCameraPermission = async () => {
+      const { status } = await requestPermission();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is denied. Please enable it in the settings.');
+      }
+    };
+    
+    requestCameraPermission(); // Request permission explicitly
+  }, []);
+  
   useEffect(() => {
     const fetchLatestUserId = async () => {
       let prefix = '';
@@ -89,6 +102,10 @@ const RegisterScreen = ({ route, navigation }) => {
   const handleAddFaceData = () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email first.');
+      return;
+    }
+    if (permission?.status !== 'granted') {
+      Alert.alert('Error', 'Camera permission is required to add face data.');
       return;
     }
 
