@@ -41,6 +41,7 @@ import FaceTestingScreen from './Screen/FaceTestingScreen';
 import VolunteerRecognitionScreen from './Screen/VolunteerRecognitionScreen';
 import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
+import PushNotification from './Screen/PushNotification';
 
 
 const Stack = createNativeStackNavigator();
@@ -103,6 +104,7 @@ const App = () => {
           <Stack.Screen name="LocationSelection" component={LocationSelection} />
           <Stack.Screen name="VolunteerRecognitionScreen" component={VolunteerRecognitionScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
+          <Stack.Screen name="PushNotification" component={PushNotification} />
 
 
         </Stack.Navigator>
