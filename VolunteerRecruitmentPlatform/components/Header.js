@@ -21,7 +21,7 @@ function Header({ user }) {
                     <Text style={styles.userName}>{user.name}</Text>
                 </View>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
+            <TouchableOpacity onPress={() => navigation.navigate('PushNotification')}>
                 <Ionicons name="notifications-outline" size={24} color={Colors.black} />
             </TouchableOpacity>
         </View>
