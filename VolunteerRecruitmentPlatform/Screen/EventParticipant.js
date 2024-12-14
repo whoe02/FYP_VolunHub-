@@ -13,7 +13,7 @@ import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc } from
 
 const ParticipantListScreen = ({ route }) => {
   const { event } = route.params;
-  const eventId = event.eventId; 
+  const eventId = event.eventId;
 
   const [tab, setTab] = useState('waiting');
   const [waitingApproval, setWaitingApproval] = useState([]);
@@ -30,27 +30,27 @@ const ParticipantListScreen = ({ route }) => {
     const fetchParticipants = () => {
       const eventRef = doc(firestore, 'Event', eventId);
       const participantsRef = collection(eventRef, 'EventParticipant');
-    
+
       const q = query(participantsRef);
       const unsubscribe = onSnapshot(q, async (snapshot) => {
         console.log('Snapshot received:', snapshot.docs.map(doc => doc.data()));
         const waiting = [];
         const approved = [];
-    
+
         const fetchUserDetails = async (userId) => {
           const userRef = doc(firestore, 'User', userId);
           const userSnap = await getDoc(userRef);
           return userSnap.exists() ? { id: userId, ...userSnap.data() } : null;
         };
-    
+
         const participantPromises = snapshot.docs.map(async (docSnap) => {
           const userId = docSnap.id; // Document ID is the userId
           const { status } = docSnap.data();
-    
+
           const userDetails = await fetchUserDetails(userId);
           if (userDetails) {
             const participantData = { id: userId, status, ...userDetails };
-    
+
             if (status === 'pending') {
               waiting.push(participantData);
             } else if (status === 'approved') {
@@ -60,16 +60,16 @@ const ParticipantListScreen = ({ route }) => {
             console.warn(`User details not found for userId: ${userId}`);
           }
         });
-    
+
         await Promise.all(participantPromises);
-    
+
         setWaitingApproval(waiting);
         setApprovedParticipants(approved);
       });
-    
+
       return unsubscribe;
     };
-    
+
     const unsubscribe = fetchParticipants();
     return () => unsubscribe();
   }, [eventId]);
@@ -101,28 +101,77 @@ const ParticipantListScreen = ({ route }) => {
     );
   };
 
+  const sendNotification = async (recipientToken, message) => {
+    try {
+      const messageBody = {
+        to: recipientToken,
+        sound: 'default',
+        title: 'Application Update',
+        body: message,
+        data: {
+          type: 'event',
+        },
+      };
+
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageBody),
+      });
+
+
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
   const handleAction = async (action, participant) => {
     const eventRef = doc(firestore, 'Event', eventId);
     const participantRef = doc(eventRef, 'EventParticipant', participant.id); // Use participant.id as userId
-  
+
     try {
       const participantSnap = await getDoc(participantRef);
       if (!participantSnap.exists()) {
         Alert.alert('Error', 'Participant not found.');
         return;
       }
+      try {
+        // Fetch the recipient's device token from Firestore
+        const recipientRef = doc(firestore, 'User', participant.id);
+        const recipientDoc = await getDoc(recipientRef);
+        if (action === 'approve') {
+          await updateDoc(participantRef, { status: 'approved' });
+        } 
+        else if (action === 'reject' || action === 'remove') {
+          await deleteDoc(participantRef);
+        }
+
+        if (recipientDoc.exists()) {
+          const recipientData = recipientDoc.data();
+          const recipientToken = recipientData.deviceToken;
+          if (recipientToken) {
+            const message = action === 'approve'
+              ? `Your application for ${event.title} has been approved`
+              : `Your application for ${event.title} has been rejected`;
   
-      if (action === 'approve') {
-        await updateDoc(participantRef, { status: 'approved' });
-      } else if (action === 'reject' || action === 'remove') {
-        await deleteDoc(participantRef);
+            sendNotification(recipientToken, message);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error fetching recipient data:', error);
       }
+
+
     } catch (error) {
       console.error('Error handling action:', error);
       Alert.alert('Error', 'Failed to perform the action.');
     }
   };
-  
+
   const viewDetails = (participant) => {
     setSelectedParticipant(participant);
     setShowDetailsModal(true);
@@ -130,7 +179,7 @@ const ParticipantListScreen = ({ route }) => {
 
   const renderTabContent = () => {
     const data = tab === 'waiting' ? waitingApproval : approvedParticipants;
-  
+
     return (
       <FlatList
         data={data}
@@ -158,7 +207,7 @@ const ParticipantListScreen = ({ route }) => {
                     style={styles.rejectButton}
                     onPress={() => confirmAction('reject', item)}
                   >
-                      <Text style={styles.buttonText}>Reject</Text>
+                    <Text style={styles.buttonText}>Reject</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -186,7 +235,7 @@ const ParticipantListScreen = ({ route }) => {
       />
     );
   };
-  
+
 
   return (
     <View style={styles.container}>
@@ -459,7 +508,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     paddingBottom: 5,
   },
-  
+
 });
 
 export default ParticipantListScreen;
