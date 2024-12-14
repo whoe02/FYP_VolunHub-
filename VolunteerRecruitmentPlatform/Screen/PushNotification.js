@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig'; // Adjust path to your Firebase config
 
 const PushNotification = () => {
@@ -10,7 +10,18 @@ const PushNotification = () => {
   const [content, setContent] = useState('');
   const [recipient, setRecipient] = useState('all'); // Default to "all"
 
-  const sendNotification = async (recipientToken, message) => {
+  const saveNotificationToFirestore = async (userId, notificationData) => {
+    try {
+      const userRef = doc(firestore, 'User', userId);
+      const notificationRef = collection(userRef, 'Notification');
+      await addDoc(notificationRef, notificationData);
+      console.log('Notification saved to Firestore successfully');
+    } catch (error) {
+      console.error('Error saving notification to Firestore:', error);
+    }
+  };
+  
+  const sendNotification = async (recipientToken, title, body, content) => {
     try {
       const messageBody = {
         to: recipientToken,
@@ -19,7 +30,7 @@ const PushNotification = () => {
         body,
         data: { content },
       };
-
+  
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: {
@@ -32,42 +43,54 @@ const PushNotification = () => {
       console.error('Error sending notification:', error);
     }
   };
-
+  
   const handlePushNotification = async () => {
     if (!title || !body || !content) {
       Alert.alert('Validation Error', 'Please fill in all fields before sending.');
       return;
     }
-
+  
     try {
       const usersQuery = await getDocs(collection(firestore, 'User'));
       const tokens = [];
-
-      usersQuery.forEach((doc) => {
+      const notificationData = {
+        title,
+        body,
+        content,
+        type: 'announcement', // or 'event' if applicable
+        eventId: null, // Set to null if it's an announcement
+        timestamp: new Date(),
+      };
+  
+      // Collect tokens and save notifications to Firestore
+      usersQuery.forEach(async (doc) => {
         const user = doc.data();
-
+  
         if (
           recipient === 'all' ||
           (recipient === 'volunteer' && user.role === 'volunteer') ||
           (recipient === 'organization' && user.role === 'organization')
         ) {
           if (user.deviceToken) {
-            tokens.push(user.deviceToken);
+            tokens.push({ token: user.deviceToken, userId: doc.id });
           }
+  
+          // Save notification to Firestore for eligible users
+          await saveNotificationToFirestore(doc.id, notificationData);
         }
       });
-
+  
       if (tokens.length === 0) {
         Alert.alert('No Recipients', 'No users found for the selected recipient group.');
         return;
       }
-
+  
       // Send notifications to each token
-      for (const token of tokens) {
-        await sendNotification(token, body);
+      for (const { token } of tokens) {
+        await sendNotification(token, title, body, content);
       }
-
-      Alert.alert('Success', 'Notification push successfully to the selected group.');
+  
+      Alert.alert('Success', 'Notification pushed successfully to the selected group.');
       setTitle('');
       setBody('');
       setContent('');
