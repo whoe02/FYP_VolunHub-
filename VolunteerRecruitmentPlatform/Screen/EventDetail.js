@@ -198,93 +198,118 @@ const EventDetail = ({ route, navigation }) => {
         );
     };
 
-    const sendNotification = async (recipientToken, message) => {
-        try {
-          const messageBody = {
-            to: recipientToken,
-            sound: 'default',
-            title: 'New Application',
-            body: message,
-            data: {
-              type: 'event',
-            },
-          };
-    
-          const response = await fetch('https://exp.host/--/api/v2/push/send', {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messageBody),
-          });
-    
-    
-        } catch (error) {
-          console.error('Error sending notification:', error);
-        }
-      };
 
-    const applyForEvent = async () => {
-        try {
-            if (!user?.userId || !event?.eventId) {
-                throw new Error('User ID or Event ID is missing.');
-            }
-
-            setLoading(true);
-
-            // Step 2: Add or update the EventParticipant subcollection
-            const eventRef = doc(firestore, 'Event', event.eventId);
-            const participantRef = doc(eventRef, 'EventParticipant', user.userId);
-
-            const participantData = {
-                status: 'pending', // Set the participant status as pending
-            };
-
-            await setDoc(participantRef, participantData, { merge: true });
-
-            // Step 3: Update the UserEvent applicationStatus to 'pending'
-            const userRef = doc(firestore, 'User', user.userId);
-            const userEventRef = doc(userRef, 'UserEvent', event.eventId);
-
-            const userEventData = {
-                eventId: event.eventId,
-                applicationStatus: 'pending', // Update user application status
-                lastUpdated: new Date(),
-            };
-
-            await setDoc(userEventRef, userEventData, { merge: true });
-
-            // Step 4: Update local state to reflect the application status
-            setUserApplicationStatus('pending');  // Update state immediately after applying
-            logInteraction(user.userId, event.id, 'apply');
-
-            try {
-                // Fetch the recipient's device token from Firestore
-                const recipientRef = doc(firestore, 'User', event.userId);
-                const recipientDoc = await getDoc(recipientRef);    
-                if (recipientDoc.exists()) {
-                  const recipientData = recipientDoc.data();
-                  const recipientToken = recipientData.deviceToken;
-                  if (recipientToken) {
-                    const message = `A volunteer applied for ${event.title}.`;
-          
-                    sendNotification(recipientToken, message);
-                  }
-                }
-        
-              } catch (error) {
-                console.error('Error fetching recipient data:', error);
-              }
-
-            Alert.alert('Application Submitted', 'Your application is now pending.');
-        } catch (error) {
-            console.error('Error applying for event:', error);
-            Alert.alert('Error', 'Something went wrong while submitting your application.');
-        } finally {
-            setLoading(false);
-        }
+    // Save the notification to Firestore
+    const saveNotificationToFirestore = async (userId, notificationData) => {
+      try {
+        const userRef = doc(firestore, 'User', userId);
+        const notificationRef = collection(userRef, 'Notification');
+        await addDoc(notificationRef, notificationData);
+        console.log('Notification saved to Firestore successfully');
+      } catch (error) {
+        console.error('Error saving notification to Firestore:', error);
+      }
     };
+    
+    const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
+      try {
+        const messageBody = {
+          to: recipientToken,
+          sound: 'default',
+          title: notificationData.title,
+          body: notificationData.body,
+          data: {
+            type: notificationData.type,
+            content: notificationData.content,
+          },
+        };
+    
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messageBody),
+        });
+    
+        // Save notification to Firestore
+        await saveNotificationToFirestore(recipientId, notificationData);
+      } catch (error) {
+        console.error('Error sending notification:', error);
+      }
+    };
+    
+    const applyForEvent = async () => {
+      try {
+        if (!user?.userId || !event?.eventId) {
+          throw new Error('User ID or Event ID is missing.');
+        }
+    
+        setLoading(true);
+    
+        // Step 2: Add or update the EventParticipant subcollection
+        const eventRef = doc(firestore, 'Event', event.eventId);
+        const participantRef = doc(eventRef, 'EventParticipant', user.userId);
+    
+        const participantData = {
+          status: 'pending', // Set the participant status as pending
+        };
+    
+        await setDoc(participantRef, participantData, { merge: true });
+    
+        // Step 3: Update the UserEvent applicationStatus to 'pending'
+        const userRef = doc(firestore, 'User', user.userId);
+        const userEventRef = doc(userRef, 'UserEvent', event.eventId);
+    
+        const userEventData = {
+          eventId: event.eventId,
+          applicationStatus: 'pending', // Update user application status
+          lastUpdated: new Date(),
+        };
+    
+        await setDoc(userEventRef, userEventData, { merge: true });
+    
+        // Step 4: Update local state to reflect the application status
+        setUserApplicationStatus('pending'); // Update state immediately after applying
+        logInteraction(user.userId, event.id, 'apply');
+    
+        try {
+          // Fetch the recipient's device token from Firestore
+          const recipientRef = doc(firestore, 'User', event.userId);
+          const recipientDoc = await getDoc(recipientRef);
+    
+          if (recipientDoc.exists()) {
+            const recipientData = recipientDoc.data();
+            const recipientToken = recipientData.deviceToken;
+    
+            if (recipientToken) {
+              const notificationData = {
+                title: 'New Application',
+                body: `A volunteer applied for ${event.title}.`,
+                content: ``,
+                type: 'event',
+                eventId: event.eventId,
+                timestamp: new Date(),
+              };
+    
+              await sendNotification(recipientToken, notificationData.body, notificationData, event.userId);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching recipient data:', error);
+        }
+    
+        Alert.alert('Application Submitted', 'Your application is now pending.');
+      } catch (error) {
+        console.error('Error applying for event:', error);
+        Alert.alert('Error', 'Something went wrong while submitting your application.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+
 
     const handleCancelApplication = async () => {
         try {

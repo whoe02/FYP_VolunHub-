@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { firestore } from '../firebaseConfig'; // Ensure your Firebase config is imported
-import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc, setDoc, addDoc } from 'firebase/firestore';
 
 const ParticipantListScreen = ({ route }) => {
   const { event } = route.params;
@@ -100,77 +100,92 @@ const ParticipantListScreen = ({ route }) => {
       { cancelable: true }
     );
   };
+// Save the notification to Firestore
+const saveNotificationToFirestore = async (userId, notificationData) => {
+  try {
+    const userRef = doc(firestore, 'User', userId);
+    const notificationRef = collection(userRef, 'Notification');
+    await addDoc(notificationRef, notificationData);
+    console.log('Notification saved to Firestore successfully');
+  } catch (error) {
+    console.error('Error saving notification to Firestore:', error);
+  }
+};
 
-  const sendNotification = async (recipientToken, message) => {
-    try {
-      const messageBody = {
-        to: recipientToken,
-        sound: 'default',
-        title: 'Application Update',
-        body: message,
-        data: {
+// Send notification to a user
+const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
+  try {
+    const messageBody = {
+      to: recipientToken,
+      sound: 'default',
+      title: notificationData.title,
+      body: notificationData.body,
+      data: {
+        type: notificationData.type,
+      },
+    };
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messageBody),
+    });
+
+    // Save notification to Firestore
+    await saveNotificationToFirestore(recipientId, notificationData);
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
+};
+
+// Handle participant actions (approve/reject/remove)
+const handleAction = async (action, participant) => {
+  const eventRef = doc(firestore, 'Event', eventId);
+  const participantRef = doc(eventRef, 'EventParticipant', participant.id); // Use participant.id as userId
+
+  try {
+    const participantSnap = await getDoc(participantRef);
+    if (!participantSnap.exists()) {
+      Alert.alert('Error', 'Participant not found.');
+      return;
+    }
+
+    const recipientRef = doc(firestore, 'User', participant.id);
+    const recipientDoc = await getDoc(recipientRef);
+
+    if (action === 'approve') {
+      await updateDoc(participantRef, { status: 'approved' });
+    } else if (action === 'reject' || action === 'remove') {
+      await deleteDoc(participantRef);
+    }
+
+    if (recipientDoc.exists()) {
+      const recipientData = recipientDoc.data();
+      const recipientToken = recipientData.deviceToken;
+
+      if (recipientToken) {
+        const notificationData = {
+          title: 'Application Update',
+          body:
+            action === 'approve'
+              ? `Your application for ${event.title} has been approved.`
+              : `Your application for ${event.title} has been rejected.`,
           type: 'event',
-        },
-      };
+          eventId: eventId,
+          timestamp: new Date(),
+        };
 
-      const response = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageBody),
-      });
-
-
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  };
-
-  const handleAction = async (action, participant) => {
-    const eventRef = doc(firestore, 'Event', eventId);
-    const participantRef = doc(eventRef, 'EventParticipant', participant.id); // Use participant.id as userId
-
-    try {
-      const participantSnap = await getDoc(participantRef);
-      if (!participantSnap.exists()) {
-        Alert.alert('Error', 'Participant not found.');
-        return;
+        await sendNotification(recipientToken, notificationData.body, notificationData, participant.id);
       }
-      try {
-        // Fetch the recipient's device token from Firestore
-        const recipientRef = doc(firestore, 'User', participant.id);
-        const recipientDoc = await getDoc(recipientRef);
-        if (action === 'approve') {
-          await updateDoc(participantRef, { status: 'approved' });
-        } 
-        else if (action === 'reject' || action === 'remove') {
-          await deleteDoc(participantRef);
-        }
-
-        if (recipientDoc.exists()) {
-          const recipientData = recipientDoc.data();
-          const recipientToken = recipientData.deviceToken;
-          if (recipientToken) {
-            const message = action === 'approve'
-              ? `Your application for ${event.title} has been approved`
-              : `Your application for ${event.title} has been rejected`;
-  
-            sendNotification(recipientToken, message);
-          }
-        }
-
-      } catch (error) {
-        console.error('Error fetching recipient data:', error);
-      }
-
-
-    } catch (error) {
-      console.error('Error handling action:', error);
-      Alert.alert('Error', 'Failed to perform the action.');
     }
-  };
+  } catch (error) {
+    console.error('Error handling action:', error);
+    Alert.alert('Error', 'Failed to perform the action.');
+  }
+};
 
   const viewDetails = (participant) => {
     setSelectedParticipant(participant);
