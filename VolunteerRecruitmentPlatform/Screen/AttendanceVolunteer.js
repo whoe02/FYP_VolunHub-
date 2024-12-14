@@ -13,6 +13,7 @@ import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
 import { useUserContext } from '../UserContext';
 import axios from 'axios'; // Import axios
 import { getDistance } from 'geolib'; // For calculating distance
+import { useCameraPermissions } from 'expo-camera';
 
 const GOOGLE_API_KEY = 'AIzaSyDmpiHdkyhItoKFv5HWfx0XBixlK2vWqno'; // Replace with your API key
 
@@ -24,6 +25,18 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
   const email = user.email;
 
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  useEffect(() => {
+    const requestCameraPermission = async () => {
+      const { status } = await requestPermission();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is denied. Please enable it in the settings.');
+      }
+    };
+    
+    requestCameraPermission(); // Request permission explicitly
+  }, []);
 
   useEffect(() => {
     fetchAttendanceRecords();
@@ -187,9 +200,10 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
       />
 
       <TouchableOpacity
-        style={styles.addButton}
+        style={[styles.addButton, { opacity: permission?.status !== 'granted' ? 0.5 : 1 }]} // Disable button if no permission
         onPress={validateLocation} // Call validation before navigation
         activeOpacity={0.7}
+        disabled={permission?.status !== 'granted'}
       >
         <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>

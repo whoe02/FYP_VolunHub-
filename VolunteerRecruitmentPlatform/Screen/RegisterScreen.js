@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -16,6 +17,7 @@ import InputField from '../components/InputField';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getDocs, collection, query, where, setDoc, doc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig'; // Your Firestore config
+import { useCameraPermissions } from 'expo-camera';
 
 const loginImage = require('../assets/misc/login.png');
 
@@ -30,9 +32,7 @@ const RegisterScreen = ({ route, navigation }) => {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [icNumber, setIcNumber] = useState('');
-  const [street, setStreet] = useState('');
-  const [city, setCity] = useState('');
-  const [postalCode, setPostalCode] = useState('');
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userId, setUserId] = useState('');
@@ -41,7 +41,23 @@ const RegisterScreen = ({ route, navigation }) => {
   const [secretAnswer, setSecretAnswer] = useState('');
 
   const [isFaceDataAdded, setIsFaceDataAdded] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
+  const [address, setAddress] = useState(null);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
+  useEffect(() => {
+    const requestCameraPermission = async () => {
+      const { status } = await requestPermission();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is denied. Please enable it in the settings.');
+      }
+    };
+    
+    requestCameraPermission(); // Request permission explicitly
+  }, []);
+  
   useEffect(() => {
     const fetchLatestUserId = async () => {
       let prefix = '';
@@ -79,6 +95,17 @@ const RegisterScreen = ({ route, navigation }) => {
     fetchLatestUserId();
   }, [role]);
 
+  const navigateToLocationScreen = () => {
+    navigation.navigate('LocationSelection', {
+      onLocationSelected: (address, latitude, longitude) => {
+        // This function will be executed when location is confirmed
+        setAddress(address);
+        setLatitude(latitude);  // Update latitude separately
+        setLongitude(longitude);  // Update longitude separately
+      },
+    });
+  };
+
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShow(false);
@@ -89,6 +116,10 @@ const RegisterScreen = ({ route, navigation }) => {
   const handleAddFaceData = () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email first.');
+      return;
+    }
+    if (permission?.status !== 'granted') {
+      Alert.alert('Error', 'Camera permission is required to add face data.');
       return;
     }
 
@@ -106,7 +137,7 @@ const RegisterScreen = ({ route, navigation }) => {
   };
 
   const validateRegistration = () => {
-    if (!fullName || !email || !phoneNumber || !street || !city || !postalCode || !password || !confirmPassword || !gender) {
+    if (!fullName || !email || !phoneNumber || !address || !password || !confirmPassword || !gender) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
@@ -136,18 +167,17 @@ const RegisterScreen = ({ route, navigation }) => {
         Alert.alert('Error', 'Email already exists');
         return;
       }
-      if (!isFaceDataAdded) {
+      if (role=='volunteer' && !isFaceDataAdded) {
         Alert.alert('Error', 'Please add your face data before registering.');
         return;
       }
 
-      const fullAddress = `${street}, ${city}, ${postalCode}`;
       const userData = {
         userId,
-        fullName,
+        name:fullName,
         email,
         phoneNumber,
-        address: fullAddress,
+        address,
         gender,
         birthDate: date.toLocaleDateString(),
         password,
@@ -302,24 +332,14 @@ const RegisterScreen = ({ route, navigation }) => {
         </View>
         {show && <DateTimePicker value={date} mode="date" display="default" onChange={onChange} />}
 
-        <InputField
-          label={'Street'}
-          value={street}
-          onChangeText={setStreet}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
-        />
-        <InputField
-          label={'City'}
-          value={city}
-          onChangeText={setCity}
-          icon={<Ionicons name="location-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
-        />
-        <InputField
-          label={'Postal Code'}
-          value={postalCode}
-          onChangeText={setPostalCode}
-          icon={<Ionicons name="mail-outline" size={20} color="#666" style={{ marginRight: 10 }} />}
-        />
+        <View style={styles.pickerButtonStyle}>
+          <Ionicons name="location-outline" size={25} color="#666" style={{marginRight:15}} />
+          <TouchableOpacity onPress={navigateToLocationScreen}>
+            <Text style={styles.addressButtonText}>
+              {address || 'Select Address'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <InputField
           label={'Password'}
@@ -364,12 +384,14 @@ const RegisterScreen = ({ route, navigation }) => {
           />
         </View>
 
-        <CustomButton
-          variant='outline'
-          label="Add Face Data"
-          title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
-          onPress={handleAddFaceData}
-        />
+        {role === 'volunteer' && (
+          <CustomButton
+            variant='outline'
+            label="Add Face Data"
+            title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
+            onPress={handleAddFaceData}
+          />
+        )}
 
         <CustomButton label="Register" onPress={handleRegister} disabled={!isFaceDataAdded} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 30 }}>
@@ -383,4 +405,13 @@ const RegisterScreen = ({ route, navigation }) => {
   );
 };
 
+const styles = StyleSheet.create({
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
+  }
+});
 export default RegisterScreen;
