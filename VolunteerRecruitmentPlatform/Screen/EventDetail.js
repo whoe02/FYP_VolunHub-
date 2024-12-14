@@ -198,6 +198,33 @@ const EventDetail = ({ route, navigation }) => {
         );
     };
 
+    const sendNotification = async (recipientToken, message) => {
+        try {
+          const messageBody = {
+            to: recipientToken,
+            sound: 'default',
+            title: 'New Application',
+            body: message,
+            data: {
+              type: 'event',
+            },
+          };
+    
+          const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageBody),
+          });
+    
+    
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
+      };
+
     const applyForEvent = async () => {
         try {
             if (!user?.userId || !event?.eventId) {
@@ -231,6 +258,24 @@ const EventDetail = ({ route, navigation }) => {
             // Step 4: Update local state to reflect the application status
             setUserApplicationStatus('pending');  // Update state immediately after applying
             logInteraction(user.userId, event.id, 'apply');
+
+            try {
+                // Fetch the recipient's device token from Firestore
+                const recipientRef = doc(firestore, 'User', event.userId);
+                const recipientDoc = await getDoc(recipientRef);    
+                if (recipientDoc.exists()) {
+                  const recipientData = recipientDoc.data();
+                  const recipientToken = recipientData.deviceToken;
+                  if (recipientToken) {
+                    const message = `A volunteer applied for ${event.title}.`;
+          
+                    sendNotification(recipientToken, message);
+                  }
+                }
+        
+              } catch (error) {
+                console.error('Error fetching recipient data:', error);
+              }
 
             Alert.alert('Application Submitted', 'Your application is now pending.');
         } catch (error) {
