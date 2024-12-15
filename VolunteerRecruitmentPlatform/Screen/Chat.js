@@ -239,13 +239,13 @@ const Chat = ({ route, navigation }) => {
         }
     };
 
-    const sendNotification = async (recipientToken, message) => {
+    const sendNotification = async (recipientToken, message, name) => {
         try {
             const messageBody = {
                 to: recipientToken,
                 sound: 'default',
-                title: 'New Message',
-                body: message,
+                title: name,
+                body: message || '[Media]',
                 data: { 
                     type: 'message',
                     chat: chat,
@@ -315,14 +315,16 @@ const Chat = ({ route, navigation }) => {
                 if (recipientDoc.exists()) {
                     const recipientData = recipientDoc.data();
                     const recipientToken = recipientData.deviceToken;
-
-                    if (recipientToken) {
+                    const preferences = await fetchNotificationPreferences(chat.otherParticipant);
+                    const isNotificationEnabled = preferences.message;
+                    const oppname = chat.name;
+                    if (recipientToken && isNotificationEnabled) {
                         // Send push notification to the recipient if the token exists
-                        sendNotification(recipientToken, inputMessage);
+                        sendNotification(recipientToken, inputMessage, oppname);
                     } else {
-                        // Log or handle the case where the recipient has no token
-                        console.warn(`Recipient ${recipientId} does not have a device token.`);
-                        // Optionally notify the user that the recipient cannot be notified
+
+                        console.warn(`The notification did not sent.`);
+
                     }
                 } else {
                     console.warn(`Recipient document not found for ID: ${recipientId}`);
@@ -336,16 +338,33 @@ const Chat = ({ route, navigation }) => {
         }
     };
 
-    const getRecipientId = (participants, currentUserId) => {
-        // Check if participants is an array and contains items
-        if (Array.isArray(participants) && participants.length > 0) {
-            // Filter the participants array to find the user who is not the current user
-            return participants.find(participantId => participantId !== currentUserId);
+    const fetchNotificationPreferences = async (userId) => {
+        try {
+          const preferencesRef = doc(firestore, 'User', userId, 'NotificationPreferences', 'Preferences');
+          const preferencesSnap = await getDoc(preferencesRef);
+      
+          if (preferencesSnap.exists()) {
+            return preferencesSnap.data();
+          } else {
+            // Assume default preferences (all true) if the subcollection does not exist
+            return {
+              application: true,
+              announcement: true,
+              message: true,
+              review: true,
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching notification preferences:', error);
+          // Fallback to default preferences in case of error
+          return {
+            application: true,
+            announcements: true,
+            messages: true,
+            review: true,
+          };
         }
-        // Return null or an appropriate value if participants is not valid
-        console.error('Participants array is not defined or empty');
-        return null;
-    };
+      };
 
     const triggerAutoReply = (eventId) => {
         setTimeout(async () => {

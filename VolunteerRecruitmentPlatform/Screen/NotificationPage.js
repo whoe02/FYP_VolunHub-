@@ -192,10 +192,13 @@ const NotificationPage = ({ route, navigation }) => {
             if (linkedEvent) {
                 switch (item.type) {
                     case 'application':
-                        navigation.navigate('EventDetail', { event: linkedEvent, user: user });
-                        break;
-                    case 'orgApplication':
-                        navigation.navigate('EventParticipant', { event: linkedEvent });
+                        if (user.role === 'volunteer') {
+                            // Navigate to EventDetail for volunteers
+                            navigation.navigate('EventDetail', { event: linkedEvent, user: user });
+                        } else if (user.role === 'organization') {
+                            // Navigate to EventParticipant for organizations
+                            navigation.navigate('EventParticipant', { event: linkedEvent });
+                        }
                         break;
                     case 'review':
                         navigation.navigate('Reviews', { event: linkedEvent });
@@ -305,6 +308,17 @@ const styles = StyleSheet.create({
         padding: 15,
         marginBottom: 10,
         borderRadius: 8,
+        flexDirection: 'row',
+        borderRadius: 8,
+        backgroundColor: '#e8e3df',
+        overflow: 'hidden',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 5 },
+        borderLeftWidth: 5,
+        borderLeftColor: '#6a8a6d',
     },
     unreadNotification: {
         backgroundColor: '#e8e3df',

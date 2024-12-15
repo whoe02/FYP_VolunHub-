@@ -102,7 +102,6 @@ const LiveChatList = ({ navigation }) => {
 
     return (
         <View style={[styles.container, { paddingTop: safeTop }]}>
-            <Text style={styles.header}>Live Chat</Text>
             {chatData.length === 0 ? (
                 <View style={styles.noChatContainer}>
                     <Text style={styles.noChatText}>No Available Chat</Text>

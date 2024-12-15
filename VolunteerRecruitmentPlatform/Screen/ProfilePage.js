@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Image, Text, TouchableOpacity, SafeAreaView, Alert } from "react-native";
+import { View, ScrollView, StyleSheet, Image, Text, TouchableOpacity, SafeAreaView, Alert } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { useUserContext } from '../UserContext';
@@ -45,7 +45,7 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: safeTop }]}>
+    <ScrollView style={[styles.container, { paddingTop: safeTop }]}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topSection}>
           <View style={styles.propicArea}>
@@ -98,6 +98,20 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.buttonSection}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('NotificationPreference', { userId: userData.userId })} // Pass user data here
+          >
+            <View style={styles.buttonArea}>
+              <View style={styles.iconArea}>
+                <Ionicons name="notifications" size={25} color={'#6a8a6d'} />
+              </View>
+              <Text style={styles.buttonName}>Notification Setting</Text>
+            </View>
+            <View style={styles.sp}></View>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
@@ -142,7 +156,7 @@ const ProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -207,6 +221,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     height: 1,
     backgroundColor: 'lightgrey',
+  },
+  buttonList: {
+
+    marginBottom: 100,
   },
 });
 

@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { firestore } from '../firebaseConfig'; // Ensure your Firebase config is imported
-import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc, setDoc, addDoc,getDocs } from 'firebase/firestore';
+import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc, setDoc, addDoc, getDocs } from 'firebase/firestore';
 
 const ParticipantListScreen = ({ route }) => {
   const { event } = route.params;
@@ -99,121 +99,160 @@ const ParticipantListScreen = ({ route }) => {
       { cancelable: true }
     );
   };
-// Save the notification to Firestore
-const saveNotificationToFirestore = async (userId, notificationData) => {
-  try {
-    const userRef = doc(firestore, 'User', userId);
-    const notificationRef = collection(userRef, 'Notification');
-    await addDoc(notificationRef, notificationData);
-    console.log('Notification saved to Firestore successfully');
-  } catch (error) {
-    console.error('Error saving notification to Firestore:', error);
-  }
-};
-
-// Send notification to a user
-const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
-  try {
-    const messageBody = {
-      to: recipientToken,
-      sound: 'default',
-      title: notificationData.title,
-      body: notificationData.body,
-      data: {
-        type: notificationData.type,
-      },
-    };
-
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(messageBody),
-    });
-
-    // Save notification to Firestore
-    await saveNotificationToFirestore(recipientId, notificationData);
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-};
-
-const deleteDocumentAndSubCollections = async (docRef, subCollectionNames) => {
-  try {
-    for (const subCollectionName of subCollectionNames) {
-      // Fetch all documents in the sub-collection
-      const subCollectionRef = collection(docRef, subCollectionName);
-      const subCollectionDocs = await getDocs(subCollectionRef);
-
-      for (const subDoc of subCollectionDocs.docs) {
-        // Recursively delete documents and their sub-collections
-        const subDocRef = doc(subCollectionRef.firestore, `${subCollectionRef.path}`, subDoc.id);
-        await deleteDocumentAndSubCollections(subDocRef, []); // Pass [] for nested sub-collections if not tracked
-      }
+  // Save the notification to Firestore
+  const saveNotificationToFirestore = async (userId, notificationData) => {
+    try {
+      const userRef = doc(firestore, 'User', userId);
+      const notificationRef = collection(userRef, 'Notification');
+      await addDoc(notificationRef, notificationData);
+      console.log('Notification saved to Firestore successfully');
+    } catch (error) {
+      console.error('Error saving notification to Firestore:', error);
     }
+  };
 
-    // Delete the parent document
-    await deleteDoc(docRef);
-  } catch (error) {
-    console.error('Error deleting document and sub-collections:', error);
-    throw error; // Optionally re-throw for higher-level error handling
-  }
-};
+  const fetchNotificationPreferences = async (userId) => {
+    try {
+      const preferencesRef = doc(firestore, 'User', userId, 'NotificationPreferences', 'Preferences');
+      const preferencesSnap = await getDoc(preferencesRef);
 
-// Handle participant actions (approve/reject/remove)
-const handleAction = async (action, participant) => {
-  const eventRef = doc(firestore, 'Event', eventId);
-  const participantRef = doc(eventRef, 'EventParticipant', participant.id); // Use participant.id as userId
-
-  try {
-    const participantSnap = await getDoc(participantRef);
-    if (!participantSnap.exists()) {
-      Alert.alert('Error', 'Participant not found.');
-      return;
-    }
-
-    const recipientRef = doc(firestore, 'User', participant.id);
-    const userEventRef = doc(recipientRef, 'UserEvent', eventId);
-    const recipientDoc = await getDoc(recipientRef);
-
-    if (action === 'approve') {
-      await updateDoc(participantRef, { status: 'approved' });
-      await updateDoc(userEventRef, { applicationStatus: 'approved' });
-    } else if (action === 'reject') {
-      await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
-      await updateDoc(userEventRef, { applicationStatus: 'rejected' });
-    } else if (action === 'remove') {
-      await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
-      await updateDoc(userEventRef, { applicationStatus: 'removed' });
-    }
-
-    if (recipientDoc.exists()) {
-      const recipientData = recipientDoc.data();
-      const recipientToken = recipientData.deviceToken;
-
-      if (recipientToken) {
-        const notificationData = {
-          title: 'Application Update',
-          body:
-            action === 'approve'
-              ? `Your application for ${event.title} has been approved.`
-              : `Your application for ${event.title} has been rejected.`,
-          type: 'application',
-          eventId: eventId,
-          timestamp: new Date(),
-          read: false,
+      if (preferencesSnap.exists()) {
+        return preferencesSnap.data();
+      } else {
+        // Assume default preferences (all true) if the subcollection does not exist
+        return {
+          application: true,
+          announcement: true,
+          message: true,
+          review: true,
         };
-
-        await sendNotification(recipientToken, notificationData.body, notificationData, participant.id);
       }
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      // Fallback to default preferences in case of error
+      return {
+        application: true,
+        announcement: true,
+        message: true,
+        review: true,
+      };
     }
-  } catch (error) {
-    console.error('Error handling action:', error);
-    Alert.alert('Error', 'Failed to perform the action.');
-  }
-};
+  };
+
+  // Send notification to a user
+  const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
+    try {
+      // Fetch notification preferences for the recipient
+      const preferences = await fetchNotificationPreferences(recipientId);
+
+      // Check if the notification type is enabled in preferences
+      const notificationType = notificationData.type;
+      if (!preferences[notificationType]) {
+        console.log(`Notification type "${notificationType}" is disabled for user ${recipientId}.`);
+        // Save the notification in Firestore without pushing it
+        await saveNotificationToFirestore(recipientId, notificationData);
+        return;
+      }
+      const messageBody = {
+        to: recipientToken,
+        sound: 'default',
+        title: notificationData.title,
+        body: notificationData.body,
+        data: {
+          type: notificationData.type,
+        },
+      };
+
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageBody),
+      });
+
+      // Save notification to Firestore
+      await saveNotificationToFirestore(recipientId, notificationData);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
+  const deleteDocumentAndSubCollections = async (docRef, subCollectionNames) => {
+    try {
+      for (const subCollectionName of subCollectionNames) {
+        // Fetch all documents in the sub-collection
+        const subCollectionRef = collection(docRef, subCollectionName);
+        const subCollectionDocs = await getDocs(subCollectionRef);
+
+        for (const subDoc of subCollectionDocs.docs) {
+          // Recursively delete documents and their sub-collections
+          const subDocRef = doc(subCollectionRef.firestore, `${subCollectionRef.path}`, subDoc.id);
+          await deleteDocumentAndSubCollections(subDocRef, []); // Pass [] for nested sub-collections if not tracked
+        }
+      }
+
+      // Delete the parent document
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Error deleting document and sub-collections:', error);
+      throw error; // Optionally re-throw for higher-level error handling
+    }
+  };
+
+  // Handle participant actions (approve/reject/remove)
+  const handleAction = async (action, participant) => {
+    const eventRef = doc(firestore, 'Event', eventId);
+    const participantRef = doc(eventRef, 'EventParticipant', participant.id); // Use participant.id as userId
+
+    try {
+      const participantSnap = await getDoc(participantRef);
+      if (!participantSnap.exists()) {
+        Alert.alert('Error', 'Participant not found.');
+        return;
+      }
+
+      const recipientRef = doc(firestore, 'User', participant.id);
+      const userEventRef = doc(recipientRef, 'UserEvent', eventId);
+      const recipientDoc = await getDoc(recipientRef);
+
+      if (action === 'approve') {
+        await updateDoc(participantRef, { status: 'approved' });
+        await updateDoc(userEventRef, { applicationStatus: 'approved' });
+      } else if (action === 'reject') {
+        await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
+        await updateDoc(userEventRef, { applicationStatus: 'rejected' });
+      } else if (action === 'remove') {
+        await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
+        await updateDoc(userEventRef, { applicationStatus: 'removed' });
+      }
+
+      if (recipientDoc.exists()) {
+        const recipientData = recipientDoc.data();
+        const recipientToken = recipientData.deviceToken;
+
+        if (recipientToken) {
+          const notificationData = {
+            title: 'Application Update',
+            body:
+              action === 'approve'
+                ? `Your application for ${event.title} has been approved.`
+                : `Your application for ${event.title} has been rejected.`,
+            type: 'application',
+            eventId: eventId,
+            timestamp: new Date(),
+            read: false,
+          };
+
+          await sendNotification(recipientToken, notificationData.body, notificationData, participant.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling action:', error);
+      Alert.alert('Error', 'Failed to perform the action.');
+    }
+  };
 
   const viewDetails = (participant) => {
     setSelectedParticipant(participant);
