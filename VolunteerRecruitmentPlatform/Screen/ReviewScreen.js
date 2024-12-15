@@ -136,6 +136,16 @@ const ReviewScreen = ({ route }) => {
     }
     
     try {
+      const reviewRef = doc(firestore, 'Review', reviewId);
+      const reviewSnapshot = await getDoc(reviewRef);
+
+      if (!reviewSnapshot.exists()) {
+          alert('Review does not exist!');
+          return;
+      }
+
+      const reviewData = reviewSnapshot.data();
+      const reviewUserId = reviewData.userId; // Assuming `userId` field exists in the review document
       // Check if a reply already exists for this review
       const replyRef = collection(firestore, 'Review', reviewId, 'Reply');
       const existingRepliesSnapshot = await getDocs(replyRef);
@@ -192,6 +202,33 @@ const ReviewScreen = ({ route }) => {
           )
         );
       }
+
+      try {
+        // Fetch the recipient's device token from Firestore
+        const recipientRef = doc(firestore, 'User', reviewUserId);
+        const recipientDoc = await getDoc(recipientRef);
+  
+        if (recipientDoc.exists()) {
+          const recipientData = recipientDoc.data();
+          const recipientToken = recipientData.deviceToken;
+  
+          if (recipientToken) {
+            const notificationData = {
+              title: 'New Review Reply',
+              body: `A new review reply for ${event.title}.`,
+              content: ``,
+              type: 'review',
+              eventId: event.eventId,
+              timestamp: new Date(),
+              read: false,
+            };
+  
+            await sendNotification(recipientToken, notificationData.body, notificationData, reviewUserId);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching recipient data:', error);
+      }
       
       setReplies((prevReplies) => ({ ...prevReplies, [reviewId]: '' })); // Clear reply input
       setIsReplyVisible(null);
@@ -211,6 +248,47 @@ const ReviewScreen = ({ route }) => {
     
     return newReviewId;
   };
+
+      // Save the notification to Firestore
+      const saveNotificationToFirestore = async (userId, notificationData) => {
+        try {
+          const userRef = doc(firestore, 'User', userId);
+          const notificationRef = collection(userRef, 'Notification');
+          await addDoc(notificationRef, notificationData);
+          console.log('Notification saved to Firestore successfully');
+        } catch (error) {
+          console.error('Error saving notification to Firestore:', error);
+        }
+      };
+      
+      const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
+        try {
+          const messageBody = {
+            to: recipientToken,
+            sound: 'default',
+            title: notificationData.title,
+            body: notificationData.body,
+            data: {
+              type: notificationData.type,
+              content: notificationData.content,
+            },
+          };
+      
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageBody),
+          });
+      
+          // Save notification to Firestore
+          await saveNotificationToFirestore(recipientId, notificationData);
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
+      };
   //add and update
   const addReview = async () => {
     if (user.role !== 'volunteer') {
@@ -259,6 +337,33 @@ const ReviewScreen = ({ route }) => {
           return [{ id: Date.now().toString(), ...reviewData, date: new Date() }, ...prevReviews];
         }
       });
+          
+      try {
+        // Fetch the recipient's device token from Firestore
+        const recipientRef = doc(firestore, 'User', event.userId);
+        const recipientDoc = await getDoc(recipientRef);
+  
+        if (recipientDoc.exists()) {
+          const recipientData = recipientDoc.data();
+          const recipientToken = recipientData.deviceToken;
+  
+          if (recipientToken) {
+            const notificationData = {
+              title: 'New Review',
+              body: `A new review for ${event.title}.`,
+              content: ``,
+              type: 'review',
+              eventId: event.eventId,
+              timestamp: new Date(),
+              read: false,
+            };
+  
+            await sendNotification(recipientToken, notificationData.body, notificationData, event.userId);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching recipient data:', error);
+      }
 
       setNewReview(''); 
       setUserRating(3); 
