@@ -126,7 +126,7 @@ const LoginScreen = ({ navigation }) => {
         await setupNotifications(userData.userId); // Ensure the user data includes an `id` field
       }
       // Navigate to the main screen after successful login
-      navigation.replace('VolunHub');
+      navigation.replace('VolunHub',{ role: userData.role });
     } catch (error) {
       console.error('Error logging in:', error);
       Alert.alert('Error', 'Something went wrong. Please try again later');

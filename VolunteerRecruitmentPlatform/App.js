@@ -44,7 +44,7 @@ import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
 import PushNotification from './Screen/PushNotification';
 import Announcement from './Screen/Announcement';
-import NotificationPreferences from './Screen/NotificationPreference';
+// import NotificationPreferences from './Screen/NotificationPreference';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -109,7 +109,7 @@ const App = () => {
           <Stack.Screen name="FaceTestingEditScreen" component={FaceTestingEditScreen} />
           <Stack.Screen name="PushNotification" component={PushNotification} />
           <Stack.Screen name="Announcement" component={Announcement} />
-          <Stack.Screen name="NotificationPreference" component={NotificationPreferences} />
+          {/* <Stack.Screen name="NotificationPreference" component={NotificationPreferences} /> */}
 
         </Stack.Navigator>
       </NavigationContainer>
@@ -118,19 +118,49 @@ const App = () => {
 };
 
 // Define Bottom Tab Navigator
-const TabNavigator = () => {
+const TabNavigator = ({ route }) => {
+  const { role } = route.params || {}; 
+  const getTabsForRole = () => {
+    if (role === 'volunteer') {
+      return (
+        <>
+          <Tab.Screen name="Browse" component={Home} />
+          <Tab.Screen name="My Event" component={MyEvent} />
+          <Tab.Screen name="Rewards" component={RewardScreen} />
+          <Tab.Screen name="Live Chat" component={LiveChat} />
+          <Tab.Screen name="Profile" component={Profile} />
+        </>
+      );
+    } else if (role === 'organization') {
+      return (
+        <>
+          <Tab.Screen name="Browse" component={Home} />
+          <Tab.Screen name="Live Chat" component={LiveChat} />
+          <Tab.Screen name="Profile" component={Profile} />
+        </>
+      );
+    } else if (role === 'admin') {
+      return (
+        <>
+          {/* <Tab.Screen name="UserMan" component={UserMan} />  */}
+          <Tab.Screen name="Rewards" component={RewardManagement} /> 
+          <Tab.Screen name="Live Chat" component={LiveChat} />
+          <Tab.Screen name="Profile" component={Profile} />
+        </>
+      );
+    }
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerStyle: {
-          backgroundColor: '#e8e3df',
-        },
-        headerShown: false, // Hides the header
+        headerStyle: { backgroundColor: '#e8e3df' },
+        headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Browse') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'My Event') {
+          } else if (route.name === 'My Event' || route.name === 'Manage Events') {
             iconName = focused ? 'clipboard' : 'clipboard-outline';
           } else if (route.name === 'Rewards') {
             iconName = focused ? 'trophy' : 'trophy-outline';
@@ -138,22 +168,19 @@ const TabNavigator = () => {
             iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Announcements') {
+            iconName = focused ? 'megaphone' : 'megaphone-outline';
+          } else if (route.name === 'User Management') {
+            iconName = focused ? 'people' : 'people-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarStyle: { backgroundColor: 'white', height: 50 },
+        tabBarStyle: { backgroundColor: '#e8e3df', height: 50 },
         tabBarActiveTintColor: '#6a8a6d',
         tabBarInactiveTintColor: '#003300',
       })}
     >
-      <Tab.Screen name="Browse" component={Home} />
-      <Tab.Screen name="My Event" component={MyEvent} />
-      {/* <Tab.Screen name="Rewards" component={EventParticipant} />  */}
-      <Tab.Screen name="Rewards" component={RewardScreen} /> 
-      {/* <Tab.Screen name="Rewards" component={VolunteerAttendance} />  */}
-      {/* <Tab.Screen name="Rewards" component={RewardManagement} />  */}
-      <Tab.Screen name="Live Chat" component={LiveChat} />
-      <Tab.Screen name="Profile" component={Profile} />
+      {getTabsForRole()}
     </Tab.Navigator>
   );
 };
