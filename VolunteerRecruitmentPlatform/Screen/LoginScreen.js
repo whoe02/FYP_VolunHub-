@@ -74,15 +74,15 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    // if (email.trim() === '' || password.trim() === '') {
-    //   Alert.alert('Error', 'Please fill in all fields');
-    //   return;
-    // }
+    if (email.trim() === '' || password.trim() === '') {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-    // if (!isValidEmail(email)) {
-    //   Alert.alert('Error', 'Please enter a valid email');
-    //   return;
-    // }
+    if (!isValidEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email');
+      return;
+    }
 
     try {
       const usersQuery = await getDocs(collection(firestore, 'User'));
@@ -96,7 +96,7 @@ const LoginScreen = ({ navigation }) => {
       });
 
       if (!userDocRef) {
-        Alert.alert('Error', 'User not found');
+        Alert.alert('Error', 'User or password wrong');
         return;
       }
 
@@ -104,7 +104,7 @@ const LoginScreen = ({ navigation }) => {
       const userData = userDoc.data();
 
       if (password !== userData.password) {
-        Alert.alert('Error', 'Invalid email or password');
+        Alert.alert('Error', 'User or password wrong');
         return;
       }
 

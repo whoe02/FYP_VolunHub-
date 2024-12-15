@@ -155,8 +155,11 @@ const fetchUserCheckInStreak = async () => {
 
   // Handle voucher redemption
   const handleRedeem = async (item) => {
+    setLoading(true);
     if (userPoints < item.pointsRequired) {
       Alert.alert('Not Enough Points', 'You do not have enough points to redeem this voucher.');
+      setLoading(false);
+
       return;
     }
 
@@ -213,6 +216,7 @@ const fetchUserCheckInStreak = async () => {
               
               await updateDoc(rewardRef, { remainingStock: newStock });
               setRefreshTrigger((prev) => !prev);
+              setLoading(false);
 
               // Success alert
               Alert.alert('Redemption Successful', `You have redeemed "${item.title}"!`);
