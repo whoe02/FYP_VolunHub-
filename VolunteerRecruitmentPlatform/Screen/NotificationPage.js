@@ -205,7 +205,7 @@ const NotificationPage = ({ route, navigation }) => {
                         break;
                 }
             } else {
-                console.warn('No linked event, navigate to mail page (to be implemented).');
+                navigation.navigate('Announcement', { notification: item });
             }
         };
 
