@@ -233,8 +233,49 @@ const EditEventScreen = ({route, navigation }) => {
     setIsLoading(true); // Show loading indicator
     
     // Validate form fields
-    if (!title || !startDate || !endDate || !address || !capacity || !description) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (
+      !title ||
+      !startDate ||
+      !startTime ||
+      !endDate ||
+      !endTime ||
+      !address ||
+      !capacity ||
+      !description 
+    ) {
+      Alert.alert('Error', 'Please fill in all fields');
+      setIsLoading(false);
+      return;
+    }
+    // if ( eventImages.length === 0) {
+    //   Alert.alert('Error', 'upload at least 1 photo');
+    //   setIsLoading(false);
+    //   return;
+    // }
+
+      // Validate if skills and preferences are selected
+    if (selectedSkills.length === 0) {
+      Alert.alert('Error', 'Please select at least one skill');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (selectedPreferences.length === 0) {
+      Alert.alert('Error', 'Please select at least one preference');
+      setIsLoading(false);
+      return;
+    }
+
+    const today = new Date();
+    if (startDate <= today) {
+      Alert.alert('Error', 'Start date cannot be today or earlier');
+      setIsLoading(false);
+      return;
+    }
+  
+    // Check if the end date is before the start date
+    if (endDate && startDate && endDate < startDate) {
+      Alert.alert('Error', 'End date cannot be before the start date');
       setIsLoading(false);
       return;
     }
