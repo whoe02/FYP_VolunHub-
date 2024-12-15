@@ -105,7 +105,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     });
   
     try {
-      const response = await fetch('http://192.168.0.12:5000/start_capture', {
+      const response = await fetch('http://192.168.0.12:5000/edit_face_data', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,

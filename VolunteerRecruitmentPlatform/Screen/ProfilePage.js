@@ -59,7 +59,7 @@ const ProfileScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.buttonSection}
             activeOpacity={0.9}
-            onPress={() => navigation.navigate('ManageProfile', { userId: userData.userId, onProfileUpdate: handleProfileUpdate })} // Pass user data and callback
+            onPress={() => navigation.navigate('ManageProfile', { userId: userData.userId,email:userData.email, onProfileUpdate: handleProfileUpdate })} // Pass user data and callback
           >
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>

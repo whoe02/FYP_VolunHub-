@@ -38,6 +38,7 @@ import AddRewardScreen from './Screen/AddRewardScreen';
 import EventAttendance from './Screen/EventAttendance';
 import VolunteerAttendance from './Screen/AttendanceVolunteer';
 import FaceTestingScreen from './Screen/FaceTestingScreen';
+import FaceTestingEditScreen from './Screen/FaceTestingEditScreen';
 import VolunteerRecognitionScreen from './Screen/VolunteerRecognitionScreen';
 import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
@@ -104,6 +105,7 @@ const App = () => {
           <Stack.Screen name="LocationSelection" component={LocationSelection} />
           <Stack.Screen name="VolunteerRecognitionScreen" component={VolunteerRecognitionScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
+          <Stack.Screen name="FaceTestingEditScreen" component={FaceTestingEditScreen} />
           <Stack.Screen name="PushNotification" component={PushNotification} />
 
 

@@ -16,12 +16,27 @@ import InputField from '../components/InputField';
 import CustomButton from '../components/CustomButton';
 import * as ImagePicker from 'expo-image-picker';
 import UUID from 'react-native-uuid';
+import { useCameraPermissions } from 'expo-camera';
 
 const ManageProfile = ({ route, navigation }) => {
-    const { userId, onProfileUpdate } = route.params; 
+    const { userId,email, onProfileUpdate } = route.params; 
     const [userData, setUserData] = useState(null);
     const [newProfileImage, setNewProfileImage] = useState(null); // Temporary image state
     const [isLoading, setIsLoading] = useState(false); // Loading state
+    const [permission, requestPermission] = useCameraPermissions();
+    const [isFaceDataAdded, setIsFaceDataAdded] = useState(false);
+    
+
+    useEffect(() => {
+    const requestCameraPermission = async () => {
+        const { status } = await requestPermission();
+        if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera access is denied. Please enable it in the settings.');
+        }
+    };
+    
+    requestCameraPermission(); // Request permission explicitly
+    }, []);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -45,6 +60,26 @@ const ManageProfile = ({ route, navigation }) => {
         fetchUserData();
     }, [userId]);
 
+    const handleAddFaceData = () => {
+
+        if (permission?.status !== 'granted') {
+        Alert.alert('Error', 'Camera permission is required to add face data.');
+        return;
+        }
+
+        navigation.navigate('FaceTestingEditScreen', {
+        email,
+        onComplete: (status) => {
+            setIsFaceDataAdded(status); // Update state based on face data status
+            if (status) {
+            Alert.alert('Success', 'Face data added successfully!');
+            } else {
+            Alert.alert('Error', 'Failed to add face data. Try again.');
+            }
+        },
+        });
+    };
+
     // Open Image Picker
     const handleChangeProfilePicture = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -60,14 +95,14 @@ const ManageProfile = ({ route, navigation }) => {
     };
 
     const validateFields = () => {
-        if (!userData.name || !userData.email || !userData.phoneNum) {
+        if (!userData.name || !userData.phoneNum) {
             Alert.alert('Validation Error', 'Please fill all required fields.');
             return false;
         }
-        if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
-            Alert.alert('Validation Error', 'Please enter a valid email address.');
-            return false;
-        }
+        // if (userData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
+        //     Alert.alert('Validation Error', 'Please enter a valid email address.');
+        //     return false;
+        // }
         return true;
     };
 
@@ -113,12 +148,26 @@ const ManageProfile = ({ route, navigation }) => {
 
         try {
             let updatedData = { ...userData };
-
+            updatedData.email = email;
             // If a new profile picture is selected, upload it and update the profile image URL
             if (newProfileImage) {
                 const imageUrl = await uploadImageToCloudinary(newProfileImage);
                 if (!imageUrl) return; // Stop if image upload fails
                 updatedData.image = imageUrl;
+            }
+
+            const response = await fetch('http://192.168.0.12:5000/confirmEditFace', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedData), // Send updated user data to the server
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                Alert.alert('Error', errorData.message || 'Failed to update face data. Please try again.');
+                return; // Stop the process if the server returns an error
             }
 
             // Update Firestore with the new data
@@ -173,13 +222,13 @@ const ManageProfile = ({ route, navigation }) => {
                         onChangeText={(text) => setUserData({ ...userData, address: text })}
                         editable={true}
                     />
-                    <InputField
+                    {/* <InputField
                         label="Email ID"
                         value={userData.email}
                         onChangeText={(text) => setUserData({ ...userData, email: text })}
                         keyboardType="email-address"
                         editable={true}
-                    />
+                    /> */}
                     <InputField
                         label="Phone Number"
                         value={userData.phoneNum}
@@ -188,6 +237,13 @@ const ManageProfile = ({ route, navigation }) => {
                         editable={true}
                     />
                 </View>
+
+                <CustomButton
+                    variant='outline'
+                    label="Add Face Data"
+                    title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
+                    onPress={handleAddFaceData}
+                />
 
                 <CustomButton label="Save Profile" onPress={handleSavePress} />
 
