@@ -82,6 +82,65 @@ def start_capture():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+#edit face data
+@app.route('/edit_face_data', methods=['POST'])
+def edit_face_data():
+    global faces_data, names_data
+
+    try:
+        if 'image0' not in request.files:
+            return jsonify({'success': False, 'message': 'No images uploaded'}), 400
+
+        name = request.form.get('email')  # Retrieve the name
+        files = [file for key, file in request.files.items()]
+
+        # Clear the previous faces_data and names_data
+        faces_data = []
+        names_data = []
+
+        # Validate if name already exists
+        names_file_path = 'data/names_data.pkl'
+        if os.path.exists(names_file_path):
+            with open(names_file_path, 'rb') as f:
+                existing_names = pickle.load(f)
+            if name not in existing_names:
+                return jsonify({'success': False, 'message': f"The email - '{name}' not exist please contact admin"}), 400
+
+        for file in files:
+            file_bytes = np.frombuffer(file.read(), np.uint8)
+            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+            if img is None:
+                return jsonify({'success': False, 'message': 'Invalid image file'}), 400
+
+            try:
+                faces = DeepFace.extract_faces(img, enforce_detection=False)
+
+                if len(faces) > 1:
+                    return jsonify({'success': False, 'message': 'Multiple faces detected. Please provide one face per image.'}), 400
+
+                for face in faces:
+                    face_image = face['face']
+                    if face_image.dtype == np.float64:
+                        face_image = (face_image * 255).astype(np.uint8)
+
+                    # Extract the face embedding and store it
+                    face_embedding = extract_face_embedding(face_image)
+                    faces_data.append(face_embedding)
+                    names_data.append(name)  # Store the name corresponding to the face
+
+            except Exception as e:
+                return jsonify({'success': False, 'message': 'Error during face detection'}), 500
+
+        if not faces_data:
+            return jsonify({'success': False, 'message': 'No valid faces detected'}), 400
+
+        return jsonify({'success': True, 'message': 'Faces data captured successfully', 'count': len(faces_data)})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/register', methods=['POST'])
 def register():
     global faces_data, names_data
@@ -97,6 +156,62 @@ def register():
         train_knn_model()
 
         return jsonify({'success': True, 'message': 'Registered successfully and model updated!'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+#edit face data
+@app.route('/confirmEditFace', methods=['POST'])
+def confirm_edit_face():
+    global faces_data, names_data
+
+    try:
+        if not faces_data or not names_data:
+            return jsonify({'success': False, 'message': 'No valid face data captured'}), 400
+
+        # email = request.form.get('email')  # Get the email from the request
+        email = request.json.get('email')
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+
+        # Paths to pickle files
+        face_file_path = 'data/face_data.pkl'
+        name_file_path = 'data/names_data.pkl'
+
+        # Load existing data
+        existing_faces = []
+        existing_names = []
+        if os.path.exists(face_file_path) and os.path.exists(name_file_path):
+            with open(face_file_path, 'rb') as f:
+                existing_faces = pickle.load(f)
+            with open(name_file_path, 'rb') as f:
+                existing_names = pickle.load(f)
+
+        print("pkl name",existing_names)
+        print("email:",email)
+        # Ensure email exists in the data
+        if email not in existing_names:
+            return jsonify({'success': False, 'message': f"No data found for email: {email}"}), 400
+
+        # Remove old data for the email
+        indices_to_keep = [i for i, name in enumerate(existing_names) if name != email]
+        updated_faces = [existing_faces[i] for i in indices_to_keep]
+        updated_names = [existing_names[i] for i in indices_to_keep]
+
+        # Add new data (captured in memory)
+        updated_faces.extend(faces_data)  # Add new face embeddings
+        updated_names.extend(names_data)  # Add corresponding names
+
+        # Save updated data back to pickle files
+        with open(face_file_path, 'wb') as f:
+            pickle.dump(updated_faces, f)
+        with open(name_file_path, 'wb') as f:
+            pickle.dump(updated_names, f)
+
+        # Train and save the updated KNN model
+        train_knn_model()
+
+        return jsonify({'success': True, 'message': 'Face data updated successfully and model retrained!'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
