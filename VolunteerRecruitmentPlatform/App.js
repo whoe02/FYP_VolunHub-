@@ -44,7 +44,7 @@ import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
 import PushNotification from './Screen/PushNotification';
 import Announcement from './Screen/Announcement';
-
+import NotificationPreferences from './Screen/NotificationPreference';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -109,6 +109,7 @@ const App = () => {
           <Stack.Screen name="FaceTestingEditScreen" component={FaceTestingEditScreen} />
           <Stack.Screen name="PushNotification" component={PushNotification} />
           <Stack.Screen name="Announcement" component={Announcement} />
+          <Stack.Screen name="NotificationPreference" component={NotificationPreferences} />
 
         </Stack.Navigator>
       </NavigationContainer>
@@ -140,7 +141,7 @@ const TabNavigator = () => {
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarStyle: { backgroundColor: '#e8e3df', height: 50 },
+        tabBarStyle: { backgroundColor: 'white', height: 50 },
         tabBarActiveTintColor: '#6a8a6d',
         tabBarInactiveTintColor: '#003300',
       })}
