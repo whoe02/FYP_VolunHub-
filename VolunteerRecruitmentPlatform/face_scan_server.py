@@ -167,7 +167,7 @@ def confirm_edit_face():
 
     try:
         if not faces_data or not names_data:
-            return jsonify({'success': False, 'message': 'No valid face data captured'}), 400
+            return jsonify({'success': True, 'message': 'No face data to update, success.'}), 200
 
         # email = request.form.get('email')  # Get the email from the request
         email = request.json.get('email')
@@ -175,7 +175,7 @@ def confirm_edit_face():
             return jsonify({'success': False, 'message': 'Email is required'}), 400
 
         # Paths to pickle files
-        face_file_path = 'data/face_data.pkl'
+        face_file_path = 'data/faces_data.pkl'
         name_file_path = 'data/names_data.pkl'
 
         # Load existing data
@@ -187,8 +187,6 @@ def confirm_edit_face():
             with open(name_file_path, 'rb') as f:
                 existing_names = pickle.load(f)
 
-        print("pkl name",existing_names)
-        print("email:",email)
         # Ensure email exists in the data
         if email not in existing_names:
             return jsonify({'success': False, 'message': f"No data found for email: {email}"}), 400
