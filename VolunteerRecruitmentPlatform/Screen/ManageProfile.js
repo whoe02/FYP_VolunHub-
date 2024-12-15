@@ -155,8 +155,8 @@ const ManageProfile = ({ route, navigation }) => {
                 if (!imageUrl) return; // Stop if image upload fails
                 updatedData.image = imageUrl;
             }
-
-            const response = await fetch('http://192.168.0.12:5000/confirmEditFace', { 
+            const response = await fetch('https://fair-casual-garfish.ngrok-free.app/confirmEditFace', { 
+            // const response = await fetch('http://192.168.0.12:5000/confirmEditFace', { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

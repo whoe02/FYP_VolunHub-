@@ -105,7 +105,8 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     });
   
     try {
-      const response = await fetch('http://192.168.0.12:5000/edit_face_data', {
+      const response = await fetch('https://fair-casual-garfish.ngrok-free.app/edit_face_data', {
+      // const response = await fetch('http://192.168.0.12:5000/edit_face_data', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
