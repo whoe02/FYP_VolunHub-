@@ -60,6 +60,7 @@ const PushNotification = () => {
         type: 'announcement', // or 'event' if applicable
         eventId: null, // Set to null if it's an announcement
         timestamp: new Date(),
+        read: false,
       };
   
       // Collect tokens and save notifications to Firestore

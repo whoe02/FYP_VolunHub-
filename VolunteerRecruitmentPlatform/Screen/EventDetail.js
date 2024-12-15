@@ -288,9 +288,10 @@ const EventDetail = ({ route, navigation }) => {
                 title: 'New Application',
                 body: `A volunteer applied for ${event.title}.`,
                 content: ``,
-                type: 'event',
+                type: 'orgApplication',
                 eventId: event.eventId,
                 timestamp: new Date(),
+                read: false,
               };
     
               await sendNotification(recipientToken, notificationData.body, notificationData, event.userId);

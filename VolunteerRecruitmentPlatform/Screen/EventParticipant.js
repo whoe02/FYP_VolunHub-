@@ -200,9 +200,10 @@ const handleAction = async (action, participant) => {
             action === 'approve'
               ? `Your application for ${event.title} has been approved.`
               : `Your application for ${event.title} has been rejected.`,
-          type: 'event',
+          type: 'application',
           eventId: eventId,
           timestamp: new Date(),
+          read: false,
         };
 
         await sendNotification(recipientToken, notificationData.body, notificationData, participant.id);
