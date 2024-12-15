@@ -9,7 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { firestore } from '../firebaseConfig'; // Ensure your Firebase config is imported
-import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDoc, setDoc, addDoc,getDocs } from 'firebase/firestore';
 
 const ParticipantListScreen = ({ route }) => {
   const { event } = route.params;
@@ -33,7 +33,6 @@ const ParticipantListScreen = ({ route }) => {
 
       const q = query(participantsRef);
       const unsubscribe = onSnapshot(q, async (snapshot) => {
-        console.log('Snapshot received:', snapshot.docs.map(doc => doc.data()));
         const waiting = [];
         const approved = [];
 
@@ -141,6 +140,28 @@ const sendNotification = async (recipientToken, message, notificationData, recip
   }
 };
 
+const deleteDocumentAndSubCollections = async (docRef, subCollectionNames) => {
+  try {
+    for (const subCollectionName of subCollectionNames) {
+      // Fetch all documents in the sub-collection
+      const subCollectionRef = collection(docRef, subCollectionName);
+      const subCollectionDocs = await getDocs(subCollectionRef);
+
+      for (const subDoc of subCollectionDocs.docs) {
+        // Recursively delete documents and their sub-collections
+        const subDocRef = doc(subCollectionRef.firestore, `${subCollectionRef.path}`, subDoc.id);
+        await deleteDocumentAndSubCollections(subDocRef, []); // Pass [] for nested sub-collections if not tracked
+      }
+    }
+
+    // Delete the parent document
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Error deleting document and sub-collections:', error);
+    throw error; // Optionally re-throw for higher-level error handling
+  }
+};
+
 // Handle participant actions (approve/reject/remove)
 const handleAction = async (action, participant) => {
   const eventRef = doc(firestore, 'Event', eventId);
@@ -154,12 +175,18 @@ const handleAction = async (action, participant) => {
     }
 
     const recipientRef = doc(firestore, 'User', participant.id);
+    const userEventRef = doc(recipientRef, 'UserEvent', eventId);
     const recipientDoc = await getDoc(recipientRef);
 
     if (action === 'approve') {
       await updateDoc(participantRef, { status: 'approved' });
-    } else if (action === 'reject' || action === 'remove') {
-      await deleteDoc(participantRef);
+      await updateDoc(userEventRef, { applicationStatus: 'approved' });
+    } else if (action === 'reject') {
+      await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
+      await updateDoc(userEventRef, { applicationStatus: 'rejected' });
+    } else if (action === 'remove') {
+      await deleteDocumentAndSubCollections(participantRef, ['EventParticipant']);
+      await updateDoc(userEventRef, { applicationStatus: 'removed' });
     }
 
     if (recipientDoc.exists()) {
