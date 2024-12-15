@@ -9,27 +9,27 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { collection, getDocs, addDoc, query, where, Timestamp, updateDoc,doc,deleteDoc,getDoc,setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, Timestamp, updateDoc, doc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';  // Ensure firestore is imported from your firebase config
 import { useUserContext } from '../UserContext'; // User context for getting user details
 import { Ionicons } from '@expo/vector-icons';
-import { KeyboardAvoidingView, ScrollView, Platform } from 'react-native'; 
+import { KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 
 
 const ReviewScreen = ({ route }) => {
-  const { user } = useUserContext();  
-  const { event } = route.params;  
+  const { user } = useUserContext();
+  const { event } = route.params;
 
-  const [reviews, setReviews] = useState([]); 
-  const [loading, setLoading] = useState(true);  
-  const [newReview, setNewReview] = useState('');  
-  const [userRating, setUserRating] = useState(3); 
-  const [userReviewExists, setUserReviewExists] = useState(false);  
-  const [selectedTab, setSelectedTab] = useState('all');  
-  const [userReview, setUserReview] = useState(null); 
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newReview, setNewReview] = useState('');
+  const [userRating, setUserRating] = useState(3);
+  const [userReviewExists, setUserReviewExists] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('all');
+  const [userReview, setUserReview] = useState(null);
   //reply
-  const [replies, setReplies] = useState({});  
-  const [isReplyVisible, setIsReplyVisible] = useState(null);  
+  const [replies, setReplies] = useState({});
+  const [isReplyVisible, setIsReplyVisible] = useState(null);
   const isEventEligibleForReview = event.status === 'inprogress' || event.status === 'complete';
 
 
@@ -69,12 +69,12 @@ const ReviewScreen = ({ route }) => {
   const generateReplyId = async (reviewId) => {
     const replyRef = collection(firestore, 'Review', reviewId, 'Reply');
     const repliesSnapshot = await getDocs(replyRef);
-  
+
     // Generate new reply ID based on the number of replies for the review
     const newReplyId = `RPL${(repliesSnapshot.size + 1).toString().padStart(5, '0')}`;
     return newReplyId;
   };
-    const handleDeleteReply = (reviewId, replyId) => {
+  const handleDeleteReply = (reviewId, replyId) => {
     Alert.alert(
       'Confirm Deletion',
       'Are you sure you want to delete this reply?',
@@ -87,7 +87,7 @@ const ReviewScreen = ({ route }) => {
             try {
               const replyDocRef = doc(firestore, 'Review', reviewId, 'Reply', replyId);
               console.log('Attempting to delete document:', replyDocRef.path);
-  
+
               // Confirm document exists
               const docSnapshot = await getDoc(replyDocRef);
               if (!docSnapshot.exists()) {
@@ -95,23 +95,23 @@ const ReviewScreen = ({ route }) => {
                 Alert.alert('Error', 'The reply does not exist or has already been deleted.');
                 return;
               }
-  
+
               // Delete the document
               await deleteDoc(replyDocRef);
               console.log('Document deleted successfully');
-  
+
               // Update local state
               setReviews((prevReviews) =>
                 prevReviews.map((review) =>
                   review.id === reviewId
                     ? {
-                        ...review,
-                        replies: review.replies.filter((reply) => reply.id !== replyId),
-                      }
+                      ...review,
+                      replies: review.replies.filter((reply) => reply.id !== replyId),
+                    }
                     : review
                 )
               );
-  
+
               Alert.alert('Success', 'Reply deleted successfully!');
             } catch (error) {
               console.error('Error deleting reply:', error);
@@ -126,22 +126,22 @@ const ReviewScreen = ({ route }) => {
   const handleSubmitReply = async (reviewId) => {
     if (user.role !== 'organization') {
       alert('Only organization users can reply to reviews');
-      return; 
+      return;
     }
     const replyText = replies[reviewId];
-    
+
     if (!replyText) {
       alert('Reply cannot be empty!');
       return;
     }
-    
+
     try {
       const reviewRef = doc(firestore, 'Review', reviewId);
       const reviewSnapshot = await getDoc(reviewRef);
 
       if (!reviewSnapshot.exists()) {
-          alert('Review does not exist!');
-          return;
+        alert('Review does not exist!');
+        return;
       }
 
       const reviewData = reviewSnapshot.data();
@@ -152,7 +152,7 @@ const ReviewScreen = ({ route }) => {
       const existingReplyDoc = existingRepliesSnapshot.docs.find(
         (doc) => doc.data().userId === user.userId
       );
-      
+
       if (existingReplyDoc) {
         // Update existing reply
         const replyDocRef = doc(
@@ -163,19 +163,19 @@ const ReviewScreen = ({ route }) => {
           existingReplyDoc.id
         );
         await updateDoc(replyDocRef, { replyText, date: Timestamp.fromDate(new Date()) });
-        
+
         // Update local state
         setReviews((prevReviews) =>
           prevReviews.map((review) =>
             review.id === reviewId
               ? {
-                  ...review,
-                  replies: review.replies.map((reply) =>
-                    reply.id === existingReplyDoc.id
-                      ? { ...reply, replyText, date: new Date() }
-                      : reply
-                  ),
-                }
+                ...review,
+                replies: review.replies.map((reply) =>
+                  reply.id === existingReplyDoc.id
+                    ? { ...reply, replyText, date: new Date() }
+                    : reply
+                ),
+              }
               : review
           )
         );
@@ -188,11 +188,11 @@ const ReviewScreen = ({ route }) => {
           replyText,
           date: Timestamp.fromDate(new Date()),
         };
-        
+
         // Add new reply with custom ID
         const replyDocRef = doc(firestore, 'Review', reviewId, 'Reply', newReplyId);
         await setDoc(replyDocRef, replyData);
-        
+
         // Update local state
         setReviews((prevReviews) =>
           prevReviews.map((review) =>
@@ -207,11 +207,11 @@ const ReviewScreen = ({ route }) => {
         // Fetch the recipient's device token from Firestore
         const recipientRef = doc(firestore, 'User', reviewUserId);
         const recipientDoc = await getDoc(recipientRef);
-  
+
         if (recipientDoc.exists()) {
           const recipientData = recipientDoc.data();
           const recipientToken = recipientData.deviceToken;
-  
+
           if (recipientToken) {
             const notificationData = {
               title: 'New Review Reply',
@@ -222,14 +222,14 @@ const ReviewScreen = ({ route }) => {
               timestamp: new Date(),
               read: false,
             };
-  
+
             await sendNotification(recipientToken, notificationData.body, notificationData, reviewUserId);
           }
         }
       } catch (error) {
         console.error('Error fetching recipient data:', error);
       }
-      
+
       setReplies((prevReplies) => ({ ...prevReplies, [reviewId]: '' })); // Clear reply input
       setIsReplyVisible(null);
     } catch (error) {
@@ -242,66 +242,107 @@ const ReviewScreen = ({ route }) => {
     // Query the Firestore collection for reviews related to the specific event
     const reviewsRef = collection(firestore, 'Review');
     const reviewsSnapshot = await getDocs(reviewsRef);
-    
+
     // Generate new review ID based on the number of reviews in the collection
     const newReviewId = `RV${(reviewsSnapshot.size + 1).toString().padStart(5, '0')}`;
-    
+
     return newReviewId;
   };
 
-      // Save the notification to Firestore
-      const saveNotificationToFirestore = async (userId, notificationData) => {
-        try {
-          const userRef = doc(firestore, 'User', userId);
-          const notificationRef = collection(userRef, 'Notification');
-          await addDoc(notificationRef, notificationData);
-          console.log('Notification saved to Firestore successfully');
-        } catch (error) {
-          console.error('Error saving notification to Firestore:', error);
-        }
+  // Save the notification to Firestore
+  const saveNotificationToFirestore = async (userId, notificationData) => {
+    try {
+      const userRef = doc(firestore, 'User', userId);
+      const notificationRef = collection(userRef, 'Notification');
+      await addDoc(notificationRef, notificationData);
+      console.log('Notification saved to Firestore successfully');
+    } catch (error) {
+      console.error('Error saving notification to Firestore:', error);
+    }
+  };
+
+  const fetchNotificationPreferences = async (userId) => {
+    try {
+      const preferencesRef = doc(firestore, 'User', userId, 'NotificationPreferences', 'Preferences');
+      const preferencesSnap = await getDoc(preferencesRef);
+
+      if (preferencesSnap.exists()) {
+        return preferencesSnap.data();
+      } else {
+        // Assume default preferences (all true) if the subcollection does not exist
+        return {
+          application: true,
+          announcement: true,
+          message: true,
+          review: true,
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      // Fallback to default preferences in case of error
+      return {
+        application: true,
+        announcement: true,
+        message: true,
+        review: true,
       };
-      
-      const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
-        try {
-          const messageBody = {
-            to: recipientToken,
-            sound: 'default',
-            title: notificationData.title,
-            body: notificationData.body,
-            data: {
-              type: notificationData.type,
-              content: notificationData.content,
-            },
-          };
-      
-          await fetch('https://exp.host/--/api/v2/push/send', {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messageBody),
-          });
-      
-          // Save notification to Firestore
-          await saveNotificationToFirestore(recipientId, notificationData);
-        } catch (error) {
-          console.error('Error sending notification:', error);
-        }
+    }
+  };
+
+  const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
+    try {
+      // Fetch notification preferences for the recipient
+      const preferences = await fetchNotificationPreferences(recipientId);
+
+      // Check if the notification type is enabled in preferences
+      const notificationType = notificationData.type;
+      if (!preferences[notificationType]) {
+        console.log(`Notification type "${notificationType}" is disabled for user ${recipientId}.`);
+        // Save the notification in Firestore without pushing it
+        await saveNotificationToFirestore(recipientId, notificationData);
+        return;
+      }
+      const messageBody = {
+        to: recipientToken,
+        sound: 'default',
+        title: notificationData.title,
+        body: notificationData.body,
+        data: {
+          type: notificationData.type,
+          content: notificationData.content,
+        },
       };
+
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageBody),
+      });
+
+      // Save notification to Firestore
+      await saveNotificationToFirestore(recipientId, notificationData);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
+
   //add and update
   const addReview = async () => {
     if (user.role !== 'volunteer') {
       alert('Only volunteers can add or update reviews');
-      return; 
+      return;
     }
     if (!newReview.trim()) {
       alert('Your review is empty');
       return; // Prevent empty reviews
     }
-  
+
     const reviewId = userReviewExists ? userReview.reviewId : await generateReviewId(); // If review exists, update; else generate a new ID
-  
+
     const reviewData = {
       reviewId: reviewId,
       userId: user.userId,
@@ -311,12 +352,12 @@ const ReviewScreen = ({ route }) => {
       rating: userRating,
       date: Timestamp.fromDate(new Date()),
     };
-  
+
     try {
       if (userReviewExists) {
         if (!userReview.reviewId) {
           console.error("Error: Review ID is missing when updating");
-          return; 
+          return;
         }
         await updateDoc(doc(firestore, 'Review', userReview.id), reviewData);
         alert('Review updated!');
@@ -324,7 +365,7 @@ const ReviewScreen = ({ route }) => {
         await addDoc(collection(firestore, 'Review'), reviewData);
         alert('Review added!');
       }
-  
+
       // Update the local reviews state after adding or updating
       setReviews((prevReviews) => {
         if (userReviewExists) {
@@ -337,16 +378,16 @@ const ReviewScreen = ({ route }) => {
           return [{ id: Date.now().toString(), ...reviewData, date: new Date() }, ...prevReviews];
         }
       });
-          
+
       try {
         // Fetch the recipient's device token from Firestore
         const recipientRef = doc(firestore, 'User', event.userId);
         const recipientDoc = await getDoc(recipientRef);
-  
+
         if (recipientDoc.exists()) {
           const recipientData = recipientDoc.data();
           const recipientToken = recipientData.deviceToken;
-  
+
           if (recipientToken) {
             const notificationData = {
               title: 'New Review',
@@ -357,7 +398,7 @@ const ReviewScreen = ({ route }) => {
               timestamp: new Date(),
               read: false,
             };
-  
+
             await sendNotification(recipientToken, notificationData.body, notificationData, event.userId);
           }
         }
@@ -365,11 +406,11 @@ const ReviewScreen = ({ route }) => {
         console.error('Error fetching recipient data:', error);
       }
 
-      setNewReview(''); 
-      setUserRating(3); 
-      setUserReviewExists(true); 
+      setNewReview('');
+      setUserRating(3);
+      setUserReviewExists(true);
       fetchReviews();
-  
+
     } catch (error) {
       console.error('Error adding/updating review:', error);
     }
@@ -380,7 +421,7 @@ const ReviewScreen = ({ route }) => {
       const reviewsRef = collection(firestore, 'Review');
       const q = query(reviewsRef, where('eventId', '==', event.id));
       const reviewsSnapshot = await getDocs(q);
-  
+
       // Fetch reviews and their replies
       const reviewsData = await Promise.all(
         reviewsSnapshot.docs.map(async (doc) => {
@@ -389,27 +430,27 @@ const ReviewScreen = ({ route }) => {
             ...doc.data(),
             date: doc.data().date.toDate(), // Convert Firestore timestamp to JS Date
           };
-  
+
           // Fetch replies subcollection for the review
           const repliesRef = collection(firestore, 'Review', doc.id, 'Reply');
           const repliesSnapshot = await getDocs(repliesRef);
-  
+
           // Map replies data
           const repliesData = repliesSnapshot.docs.map((replyDoc) => ({
             id: replyDoc.id,
             ...replyDoc.data(),
             date: replyDoc.data().date.toDate(), // Convert Firestore timestamp to JS Date
           }));
-  
+
           return {
             ...reviewData,
             replies: repliesData, // Attach replies to the review
           };
         })
       );
-  
+
       setReviews(reviewsData);
-  
+
       // Check if the user has already submitted a review
       const existingUserReview = reviewsData.find((review) => review.userId === user.userId);
       if (existingUserReview) {
@@ -430,11 +471,11 @@ const ReviewScreen = ({ route }) => {
   const deleteReview = async () => {
     if (user.role !== 'volunteer') {
       alert('Only volunteers can delete their reviews');
-      return; 
+      return;
     }
 
     if (!userReview) return;
-  
+
     try {
       // Use Alert to confirm the delete action
       Alert.alert(
@@ -451,18 +492,18 @@ const ReviewScreen = ({ route }) => {
             onPress: async () => {
               // Delete the review from Firestore
               await deleteDoc(doc(firestore, 'Review', userReview.id));
-        
+
               // Remove the review from the local state
               setReviews((prevReviews) =>
                 prevReviews.filter((review) => review.id !== userReview.id)
               );
-        
+
               // Reset the user's review state
               setUserReview(null);
               setUserReviewExists(false);
               setNewReview('');
               setUserRating(3);
-        
+
               alert('Review deleted successfully!');
             },
           },
@@ -483,7 +524,7 @@ const ReviewScreen = ({ route }) => {
     if (review.replies && review.replies.length > 0) {
       const reply = review.replies[0]; // Ensure only one reply is handled
       const replyDate = reply.date.toDate ? reply.date.toDate() : new Date(reply.date);
-  
+
       return (
         <View style={styles.replyCard}>
           <Text style={styles.replyText}>
@@ -491,31 +532,31 @@ const ReviewScreen = ({ route }) => {
           </Text>
           <Text style={styles.replyDate}>{replyDate.toLocaleString()}</Text>
           <View style={styles.replyActions}>
-          {/* Only show the reply edit and delete buttons if user is an organization */}
-          {user.role === 'organization' && (
-            <>
-              <TouchableOpacity
-                style={styles.replyEditButton}
-                onPress={() => {
-                  setReplies({ [review.id]: reply.replyText }); // Pre-fill the reply input
-                  setIsReplyVisible(review.id);
-                }}
-              >
-                <Text style={styles.replyEditButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.replyDeleteButton}
-                onPress={() => handleDeleteReply(review.id, reply.id)}
-              >
-                <Text style={styles.replyDeleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </>
-          )}
+            {/* Only show the reply edit and delete buttons if user is an organization */}
+            {user.role === 'organization' && (
+              <>
+                <TouchableOpacity
+                  style={styles.replyEditButton}
+                  onPress={() => {
+                    setReplies({ [review.id]: reply.replyText }); // Pre-fill the reply input
+                    setIsReplyVisible(review.id);
+                  }}
+                >
+                  <Text style={styles.replyEditButtonText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.replyDeleteButton}
+                  onPress={() => handleDeleteReply(review.id, reply.id)}
+                >
+                  <Text style={styles.replyDeleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       );
     }
-  
+
     return null;
   };
 
@@ -527,7 +568,7 @@ const ReviewScreen = ({ route }) => {
       </View>
       <Text style={styles.reviewDescription}>{item.description}</Text>
       {renderReplies(item)}
-  
+
       {!item.replies?.length && user.role === 'organization' && (
         <TouchableOpacity
           onPress={() => toggleReplyVisibility(item.id)}
@@ -538,7 +579,7 @@ const ReviewScreen = ({ route }) => {
           </Text>
         </TouchableOpacity>
       )}
-  
+
       {isReplyVisible === item.id && (
         <View style={styles.replyInputContainer}>
           <TextInput
@@ -559,7 +600,7 @@ const ReviewScreen = ({ route }) => {
   );
 
   return (
-    <View style={{ flex: 1,paddingHorizontal:10 }}>
+    <View style={{ flex: 1, paddingHorizontal: 10 }}>
       {/* Main Content */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -568,7 +609,7 @@ const ReviewScreen = ({ route }) => {
         {/* Static Title and Average Rating */}
         <View style={styles.ratingSection}>
           <Text style={styles.title}>{event.title}</Text>
-          <Text style={{fontSize:13}}>Rating and Reviews</Text>
+          <Text style={{ fontSize: 13 }}>Rating and Reviews</Text>
           <View style={styles.ratingDetailsRow}>
             <View style={styles.averageRatingContainer}>
               <Text style={styles.averageRating}>
@@ -582,7 +623,7 @@ const ReviewScreen = ({ route }) => {
               {renderStars(parseFloat(calculateAverageRating()))}
             </View>
           </View>
-  
+
           {/* Rating Chart */}
           <View style={styles.ratingChartContainer}>
             {[5, 4, 3, 2, 1].map((star, index) => (
@@ -593,9 +634,8 @@ const ReviewScreen = ({ route }) => {
                     style={[
                       styles.progressBarFill,
                       {
-                        width: `${
-                          (ratingCounts[index] / reviews.length) * 100
-                        }%`,
+                        width: `${(ratingCounts[index] / reviews.length) * 100
+                          }%`,
                       },
                     ]}
                   />
@@ -605,7 +645,7 @@ const ReviewScreen = ({ route }) => {
             ))}
           </View>
         </View>
-  
+
         {/* Tabbed Rating Filter */}
         <View style={styles.tabsContainer}>
           {['all', '1', '5'].map((tab) => (
@@ -640,9 +680,9 @@ const ReviewScreen = ({ route }) => {
           keyboardShouldPersistTaps="handled"
         />
       </KeyboardAvoidingView>
-  
+
       {/* Fixed Add Review Section */}
-      {user.role === 'volunteer' && (event.status === 'inprogress' || event.status === 'completed') &&  (
+      {user.role === 'volunteer' && (event.status === 'inprogress' || event.status === 'completed') && (
         <View style={styles.addReviewSection}>
           <Text style={styles.addReviewTitle}>Review</Text>
           <View style={styles.starsContainer}>
@@ -684,253 +724,253 @@ const ReviewScreen = ({ route }) => {
 
     </View>
   );
-  
+
 };
 
 const styles = StyleSheet.create({
-    container: {
-      padding: 20,
-      backgroundColor: '#FFFFFF',
-    },
-    title: {
-      fontSize: 20,
-      fontWeight: 'bold',
-    },
-    ratingSection: {
-      padding: 15,
-      backgroundColor: '#fff',
-      borderBottomWidth: 1,
-      borderBottomColor: '#ccc',
-    },
-    ratingDetailsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    averageRatingContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    averageRating: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      marginRight: 5,
-    },
-    starsContainer: {
-      flexDirection: 'row',
-      marginBottom: 5,
-    },
-    ratingChartContainer: {
-      marginTop: 10,
-    },
-    ratingChartRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    starText: {
-      width: 60,
-    },
-    progressBar: {
-      flex: 1,
-      height: 7,
-      backgroundColor: '#ddd',
-      borderRadius: 5,
-      overflow: 'hidden',
-    },
-    progressBarFill: {
-      height: '100%',
-      backgroundColor: '#6a8a6d',
-    },
-    ratingCount: {
-      marginLeft: 10,
-    },
-    tabsContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingVertical: 8,
-      backgroundColor: '#fff',
-    },
-    tabButton: {
-      padding: 6,
-      backgroundColor: '#f0f0f0',
-      borderRadius: 5,
-      alignItems: 'center',
-      width: '30%',
-    },
-    activeTab: {
-      backgroundColor: '#6a8a6d',
-    },
-    tabText: {
-      fontSize: 14,
-      color: '#333',
-    },
-    activeTabText: {
-      color: '#fff',
-    },
-    reviewCard: {
-      padding: 10,
-      paddingTop:7,
-      marginBottom: 15,
-      borderBottomWidth: 1,  
-      borderBottomColor: '#ccc',  
-    },
-    reviewHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 5,
-    },
-    reviewerName: {
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    reviewRating: {
-      fontSize: 14,
-      color: '#f5c518',
-      flexDirection: 'row',
-    },
-    reviewDate: {
-      fontSize: 12,
-      color: 'gray',
-    },
-    reviewDescription: {
-      fontSize: 14,
-      marginTop: 5,
-    },
-    addReviewSection: {
-      position: 'absolute',
-      height:220,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: '#ffffff',
-      padding: 15,
-      borderTopWidth: 1,
-      borderTopColor: '#ccc',
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowOffset: { width: 0, height: -2 },
-      shadowRadius: 5,
-      elevation: 3, 
-      padding:15,
-    },
-    addReviewTitle: {
-      fontSize: 17,
-      fontWeight: 'bold',
-      marginBottom: 5,
-    },
-    descriptionInput: {
-      height: 70,
-      borderColor: 'gray',
-      borderWidth: 1,
-      borderRadius: 10,
-      padding: 10,
-      textAlignVertical: 'top',
-    },
-    submitButton: {
-      backgroundColor: '#6a8a6d',
-      paddingVertical: 10,
-      width:120,
-      borderRadius: 10,
-      marginTop: 10,
-    },
-    submitButtonText: {
-      textAlign: 'center',
-      fontWeight: 'bold',
-      color: '#fff',
-    },
-    flatList: {
-      flex: 1,
-    },
-    scrollView: {
-      flexGrow: 1, 
-    },
-    reviewActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center', 
-      marginTop: 10,
-    },
-    deleteButton: {
-      backgroundColor: '#ff4d4d',
-      marginLeft:10,
-      paddingVertical: 10,
-      borderRadius: 10,
-      marginTop: 10,
-      width:120,
-    },
-    deleteButtonText: {
-      color: '#fff',
-      fontWeight: 'bold',
-    },
-    repliesContainer: {
-      marginTop: 10,
-      paddingLeft: 20,
-      borderLeftWidth: 2,
-      borderLeftColor: '#ccc',
-    },
-    replyCard: {
-      marginBottom: 10,
-      backgroundColor: '#f9f9f9',
-      padding: 10,
-      borderRadius: 5,
-    },
-    replyText: {
-      fontSize: 14,
-      color: '#333',
-    },
-    replyDate: {
-      fontSize: 12,
-      color: 'gray',
-      marginTop: 5,
-    },
-    replyButton: {
-      marginTop: 10,
-      alignSelf: 'flex-end',
-    },
-    replyButtonText: {
-      fontSize: 14,
-      color: '#6a8a6d',
-      fontWeight: 'bold',
-    },
-    replyInputContainer: {
-      marginTop: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    replyInput: {
-      flex: 1,
-      height: 40,
-      borderColor: 'gray',
-      borderWidth: 1,
-      borderRadius: 5,
-      padding: 10,
-    },
-    submitReplyButton: {
-      backgroundColor: '#6a8a6d',
-      marginLeft: 10,
-      paddingVertical: 8,
-      paddingHorizontal: 15,
-      borderRadius: 5,
-    },
-    submitReplyButtonText: {
-      color: '#fff',
-      fontWeight: 'bold',
-    },
-    replyActions: {
-      flexDirection: 'row', 
-      justifyContent: 'flex-end', 
-      alignItems: 'center', 
-      marginTop: 5, 
-    },
-    replyEditButtonText: {
-      marginRight:15,
-      color: '#6a8a6d',
-      fontWeight: 'bold',
-    },
-    replyDeleteButtonText: {
-      color: '#6a8a6d',
-      fontWeight: 'bold',
-    }
+  container: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  ratingSection: {
+    padding: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  ratingDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  averageRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  averageRating: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginRight: 5,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  ratingChartContainer: {
+    marginTop: 10,
+  },
+  ratingChartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starText: {
+    width: 60,
+  },
+  progressBar: {
+    flex: 1,
+    height: 7,
+    backgroundColor: '#ddd',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#6a8a6d',
+  },
+  ratingCount: {
+    marginLeft: 10,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+  },
+  tabButton: {
+    padding: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+    alignItems: 'center',
+    width: '30%',
+  },
+  activeTab: {
+    backgroundColor: '#6a8a6d',
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  reviewCard: {
+    padding: 10,
+    paddingTop: 7,
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  reviewerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  reviewRating: {
+    fontSize: 14,
+    color: '#f5c518',
+    flexDirection: 'row',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: 'gray',
+  },
+  reviewDescription: {
+    fontSize: 14,
+    marginTop: 5,
+  },
+  addReviewSection: {
+    position: 'absolute',
+    height: 220,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 5,
+    elevation: 3,
+    padding: 15,
+  },
+  addReviewTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  descriptionInput: {
+    height: 70,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    backgroundColor: '#6a8a6d',
+    paddingVertical: 10,
+    width: 120,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  submitButtonText: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  flatList: {
+    flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+  },
+  reviewActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  deleteButton: {
+    backgroundColor: '#ff4d4d',
+    marginLeft: 10,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 10,
+    width: 120,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  repliesContainer: {
+    marginTop: 10,
+    paddingLeft: 20,
+    borderLeftWidth: 2,
+    borderLeftColor: '#ccc',
+  },
+  replyCard: {
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 5,
+  },
+  replyText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  replyDate: {
+    fontSize: 12,
+    color: 'gray',
+    marginTop: 5,
+  },
+  replyButton: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
+  },
+  replyButtonText: {
+    fontSize: 14,
+    color: '#6a8a6d',
+    fontWeight: 'bold',
+  },
+  replyInputContainer: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  replyInput: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    padding: 10,
+  },
+  submitReplyButton: {
+    backgroundColor: '#6a8a6d',
+    marginLeft: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+  },
+  submitReplyButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  replyActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  replyEditButtonText: {
+    marginRight: 15,
+    color: '#6a8a6d',
+    fontWeight: 'bold',
+  },
+  replyDeleteButtonText: {
+    color: '#6a8a6d',
+    fontWeight: 'bold',
+  }
 });
-  
+
 export default ReviewScreen;

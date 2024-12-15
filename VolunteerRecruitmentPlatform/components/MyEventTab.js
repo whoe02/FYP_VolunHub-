@@ -23,7 +23,6 @@ function MyEventTab({ onTabChanged }) {
 
     return (
         <View>
-            <Text style={styles.title}>My Events</Text>
             <ScrollView
                 ref={scrollRef}
                 horizontal
