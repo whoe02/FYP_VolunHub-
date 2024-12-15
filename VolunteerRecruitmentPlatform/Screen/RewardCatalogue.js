@@ -71,6 +71,8 @@ const CatalogueScreen = () => {
           text: 'Redeem',
           onPress: async () => {
             try {
+              setLoading(true);
+
               console.log('Starting redemption process...');
               
               // Deduct points
@@ -124,7 +126,7 @@ const CatalogueScreen = () => {
               console.log('Updating stock...');
               await updateDoc(rewardRef, { remainingStock: newStock });
               console.log('Stock updated successfully. New stock:', newStock);
-  
+              setLoading(false);
               // Success alert
               Alert.alert('Redemption Successful', `You have redeemed "${item.title}"!`);
             } catch (error) {

@@ -62,23 +62,32 @@ const PointHistoryScreen = () => {
     fetchPointHistory();
   }, []);
 
-  const renderTransaction = ({ item }) => (
-    <View style={styles.transactionCard}>
-      <View style={styles.transactionHeader}>
-        <Text style={[styles.transactionTitle, styles.boldLeft]}>
-          {item.type === 'Reward' ? item.title : `${item.title}`}
+  const renderTransaction = ({ item }) => {
+    // Check if necessary fields exist or provide default values
+    const transactionDate = item.date || 'N/A';  // Default date if not available
+    const transactionTitle = item.title || 'Untitled Transaction';  // Default title if not available
+    const transactionDescription = item.description || 'No description available.';  // Default description
+    const transactionAmount = (item.pointsUsed < 0 || item.pointsRequired < 0) ? '-' : '+'; // Use + or - based on condition
+    const transactionPoints = Math.abs(item.pointGet || item.pointsRequired) || 0; // Ensure points are valid
+  
+    return (
+      <View style={styles.transactionCard}>
+        <View style={styles.transactionHeader}>
+          <Text style={[styles.transactionTitle, styles.boldLeft]}>
+            {item.type === 'Reward' ? transactionTitle : transactionTitle}
+          </Text>
+          <Text style={styles.transactionAmount}>
+            {transactionAmount} {transactionPoints} Points
+          </Text>
+        </View>
+        <Text style={styles.transactionDescription}>
+          {transactionDescription}
         </Text>
-        <Text style={styles.transactionAmount}>
-          {item.pointsUsed < 0 || item.pointsRequired < 0 ? '-' : '+'}{' '}
-          {Math.abs(item.pointGet || item.pointsRequired)} Points
-        </Text>
+        <Text style={styles.transactionDate}>Date: {transactionDate}</Text>
       </View>
-      <Text style={styles.transactionDescription}>
-        {item.description || 'No description available.'}
-      </Text>
-      <Text style={styles.transactionDate}>Date: {item.date || 'N/A'}</Text>
-    </View>
-  );
+    );
+  };
+  
 
   return (
     <View style={styles.container}>

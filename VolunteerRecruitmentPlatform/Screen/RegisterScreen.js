@@ -141,14 +141,39 @@ const RegisterScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
-    if (role === 'volunteer' || role === 'admin') {
-      if (!icNumber) {
-        Alert.alert('Error', 'IC Number is required for this role');
-        return false;
-      }
+
+    if ((role === 'admin' || role === 'volunteer') && !icNumber) {
+      Alert.alert('Error', 'Please enter your IC Number');
+      return false;
     }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
+      return false;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+
+    const phoneRegex = /^[0-9]{9,12}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      Alert.alert('Error', 'Phone number must be between 9 to 12 digits');
+      return false;
+    }
+
+    // Validate Age: Ensure user is at least 18 years old
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+    const m = today.getMonth() - date.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+
+    if (age < 18) {
+      Alert.alert('Error', 'You must be select the date of birth and at least 18 years old');
       return false;
     }
     return true;
@@ -164,7 +189,7 @@ const RegisterScreen = ({ route, navigation }) => {
     if (validateRegistration()) {
       const emailUnique = await isEmailUnique(email);
       if (!emailUnique) {
-        Alert.alert('Error', 'Email already exists');
+        Alert.alert('Error', 'Email already exists please take other email...');
         return;
       }
       if (role=='volunteer' && !isFaceDataAdded) {
@@ -201,21 +226,22 @@ const RegisterScreen = ({ route, navigation }) => {
       }
 
       try {
+        if (role === 'volunteer') {
+          const response = await fetch('https://fair-casual-garfish.ngrok-free.app/register', {
+          // const response = await fetch('http://192.168.0.12:5000/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData),
+          });
 
-        const response = await fetch('http://192.168.0.12:5000/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(userData),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          Alert.alert('Error', errorData.message || 'Registration failed. Please add face data.');
-          return;
+          if (!response.ok) {
+            const errorData = await response.json();
+            Alert.alert('Error', errorData.message || 'Registration failed. Please add face data.');
+            return;
+          }
         }
-
         // Create the user document
         const userDocRef = doc(firestore, 'User', userData.userId);
         await setDoc(userDocRef, userData);
