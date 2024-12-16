@@ -44,7 +44,7 @@ import LocationSelection from './Screen/LocationSelection'
 import SearchResult from './Screen/SearchResult';
 import PushNotification from './Screen/PushNotification';
 import Announcement from './Screen/Announcement';
-// import NotificationPreferences from './Screen/NotificationPreference';
+import NotificationPreferences from './Screen/NotificationPreference';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -107,9 +107,9 @@ const App = () => {
           <Stack.Screen name="VolunteerRecognitionScreen" component={VolunteerRecognitionScreen} />
           <Stack.Screen name="SearchResult" component={SearchResult} />
           <Stack.Screen name="FaceTestingEditScreen" component={FaceTestingEditScreen} />
-          <Stack.Screen name="PushNotification" component={PushNotification} />
+          <Stack.Screen name="Push Notification" component={PushNotification} />
           <Stack.Screen name="Announcement" component={Announcement} />
-          {/* <Stack.Screen name="NotificationPreference" component={NotificationPreferences} /> */}
+          <Stack.Screen name="NotificationPreference" component={NotificationPreferences} />
 
         </Stack.Navigator>
       </NavigationContainer>
@@ -142,8 +142,9 @@ const TabNavigator = ({ route }) => {
     } else if (role === 'admin') {
       return (
         <>
-          {/* <Tab.Screen name="UserMan" component={UserMan} />  */}
-          <Tab.Screen name="Rewards" component={RewardManagement} /> 
+          <Tab.Screen name="User" component={UserMan} />
+          <Tab.Screen name="Rewards" component={RewardManagement} />
+          <Tab.Screen name="Push Notification" component={PushNotification} />
           <Tab.Screen name="Live Chat" component={LiveChat} />
           <Tab.Screen name="Profile" component={Profile} />
         </>
@@ -168,9 +169,9 @@ const TabNavigator = ({ route }) => {
             iconName = focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
-          } else if (route.name === 'Announcements') {
+          } else if (route.name === 'Push Notification') {
             iconName = focused ? 'megaphone' : 'megaphone-outline';
-          } else if (route.name === 'User Management') {
+          } else if (route.name === 'User') {
             iconName = focused ? 'people' : 'people-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
