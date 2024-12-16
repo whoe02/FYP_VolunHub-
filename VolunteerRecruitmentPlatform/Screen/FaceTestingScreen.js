@@ -106,6 +106,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     });
   
     try {
+      //const response = await fetch('http://192.168.100.31:5000/start_capture', {
       const response = await fetch('https://fair-casual-garfish.ngrok-free.app/start_capture', {
       // const response = await fetch('http://192.168.0.12:5000/start_capture', {
         method: 'POST',

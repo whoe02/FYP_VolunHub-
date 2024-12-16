@@ -12,7 +12,8 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchRecommendedEvents = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+    //  const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+    const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
 
@@ -93,64 +94,72 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
+  
       console.log(`Fetching events for tab: ${activeTab}, userId: ${user.userId}`);
-      // Filter based on selected tab
+  
       if (isSearchResult) {
-        // Extract event IDs if coming from search results
-        const eventIds = event.map(Event => Event.id); // Use the correct field for the ID
+        const eventIds = event.map((Event) => Event.id); // Use the correct field for the ID
         eventQuery = query(
           collection(firestore, 'Event'),
           where('__name__', 'in', eventIds)
         );
+      } else if (activeTab === 'foryou') {
+        // Fetch recommended events first
+        const recommendedEvents = await fetchRecommendedEvents();
+  
+        const recommendedIds = recommendedEvents.map(event => event.eventId); // Extract event IDs
+  
+        if (recommendedIds.length === 0) {
+          console.warn('No recommendations available. Fetching fallback events.');
+          eventQuery = query(eventCollection, orderBy('createdAt', 'desc'), limit(10)); // Fallback query
+        } else {
+          eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
+        }
       } else {
+        // Handle other tabs
         if (activeTab === 'upcoming') {
           eventQuery = query(
             eventCollection,
             where('status', '==', 'upcoming'),
-            where('userId', '==', user.userId) 
+            where('userId', '==', user.userId)
           );
         } else if (activeTab === 'inprogress') {
           eventQuery = query(
             eventCollection,
             where('status', '==', 'inprogress'),
-            where('userId', '==', user.userId) 
+            where('userId', '==', user.userId)
           );
         } else if (activeTab === 'completed') {
           eventQuery = query(
             eventCollection,
             where('status', '==', 'completed'),
-            where('userId', '==', user.userId) 
+            where('userId', '==', user.userId)
           );
         } else if (activeTab === 'canceled') {
           eventQuery = query(
             eventCollection,
             where('status', '==', 'canceled'),
-            where('userId', '==', user.userId) 
+            where('userId', '==', user.userId)
           );
         } else if (activeTab === 'all') {
           eventQuery = query(eventCollection);
         } else if (activeTab === 'latest') {
           eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
-        } else if (activeTab === 'foryou') {
-          await fetchRecommendedEvents();
-          const recommendedIds = recommendedEventsWithScores.map(event => event.eventId); // Use state for recommended events
-          eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
-
         }
-
-
       }
+  
+      // Execute the Firestore query
       const querySnapshot = await getDocs(eventQuery);
-
+  
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
-
+  
         // Convert Firestore Timestamp fields to Date if necessary
         const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
         const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
         const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
         const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
-
+  
         return {
           id: doc.id,
           ...data,
@@ -160,58 +169,47 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
           endTime,
         };
       });
-
-      // Check if categoryIds is defined and non-empty before processing
+  
+      // Fetch additional details like category and organization names
       const allCategoryIds = [
         ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
       ];
-
+  
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-
-      // Fetch categories and organizations
+  
       const categoryMap = await fetchCategoryNames(allCategoryIds);
-
       const organizationMap = await fetchOrganizationNames(allUserIds);
-
-      // Update event data with category names
+  
       const eventsWithDetails = fetchedEvents.map((event) => {
-        // Map categories and organization name
         const mappedCategories = event.categoryIds
           ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
           : [];
-
+  
         const organizationName = organizationMap[event.userId] || 'Unknown Organization';
-
-
+  
         return {
           ...event,
           categories: mappedCategories,
           organizationName,
         };
       });
-
-
+  
       if (activeTab === 'foryou') {
-        // Merge the recommended events with the events fetched from Firestore
         const eventsWithScore = eventsWithDetails.map((event) => {
-          // Find the matching recommended event and attach the score to the event
           const recommendedEvent = recommendedEventsWithScores.find(
             (recommended) => recommended.eventId === event.id
           );
-
-          // Return the event with the score attached, or default to 0 if no score
+  
           return {
             ...event,
             score: recommendedEvent ? recommendedEvent.score : 0,
           };
         });
-
-        // Sort events by score in descending order
+  
         const sortedEvents = eventsWithScore.sort((a, b) => b.score - a.score);
-
-        setEvents(sortedEvents);  // Set sorted events
+        setEvents(sortedEvents);
       } else {
-        setEvents(eventsWithDetails);  // For other tabs, set normally
+        setEvents(eventsWithDetails);
       }
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -219,6 +217,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     fetchEvents(); // Fetch events based on the current user role and active tab

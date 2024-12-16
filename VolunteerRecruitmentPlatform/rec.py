@@ -12,7 +12,7 @@ from firebase_admin import credentials, firestore
 app = Flask(__name__)
 
 # Initialize Firebase app
-cred = credentials.Certificate("C:/Users/jxche/OneDrive/Documents/FYP_VolunHub-/RecommendationEngine/test-e6569-firebase-adminsdk-2pshh-c356a436fc.json")
+cred = credentials.Certificate("test-e6569-firebase-adminsdk-2pshh-c356a436fc.json")
 firebase_admin.initialize_app(cred)
 
 # Firestore client

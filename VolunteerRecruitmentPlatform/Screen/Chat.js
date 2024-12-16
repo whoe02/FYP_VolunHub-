@@ -543,12 +543,15 @@ const Chat = ({ route, navigation }) => {
                     ) : (
                         <Image source={{ uri: fullscreenMedia }} style={styles.fullscreenImage} />
                     )}
-                    <TouchableOpacity onPress={() => downloadMedia(fullscreenMedia)} style={styles.downloadButton}>
-                        <Ionicons name="download-outline" size={30} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setFullscreenMedia(null)} style={styles.closeButton}>
-                        <Text style={styles.closeButtonText}>Close</Text>
-                    </TouchableOpacity>
+                    <View style={styles.buttonctn}>
+                        <TouchableOpacity onPress={() => downloadMedia(fullscreenMedia)} style={styles.downloadButton}>
+                            <Ionicons name="download-outline" size={30} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setFullscreenMedia(null)} style={styles.closeButton}>
+                            <Text style={styles.closeButtonText}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+
                 </View>
             </Modal>
         );
@@ -940,5 +943,13 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         fontSize: 13,
     },
+    buttonctn: {
+        flexDirection: 'row',
+        alignContent: 'center'
+    },
+    downloadButton:{
+        paddingTop: 15,
+        paddingRight: 20,
+    }
 
 });
