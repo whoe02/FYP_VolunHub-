@@ -1,8 +1,9 @@
 import React, { useState, useRef,useEffect  } from 'react';
-import { StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Alert, ActivityIndicator,TouchableOpacity } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { ProgressBar } from 'react-native-paper'; // Importing ProgressBar
 import Button from '../components/Button';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const FaceTestingScreen = ({ route,navigation  }) => {
   const [capturedImages, setCapturedImages] = useState([]);
@@ -56,7 +57,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     picturesTakenRef.current = 0;
   
     const captureInterval = setInterval(async () => {
-      if (picturesTakenRef.current < 15) {
+      if (picturesTakenRef.current < 12) {
         const picture = await takePicture();
   
         if (picture) {
@@ -71,7 +72,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
         setCapturedImages(tempCapturedImages);
   
         // Directly pass the local array to the upload function
-        if (tempCapturedImages.length === 15) {
+        if (tempCapturedImages.length === 12) {
           uploadCapturedImages(email, tempCapturedImages);
         } else {
           console.error(
@@ -81,7 +82,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
           Alert.alert('Error', 'Failed to capture the required number of images.');
         }
       }
-    }, 1000); // Capture a picture every second
+    }, 1500); // Capture a picture every second
   };
 
   // Function to upload captured images
@@ -130,6 +131,14 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     }
   };
 
+  const showHelp = () => {
+    Alert.alert(
+      'How to Scan Your Face',
+      '1. Keep your face centered in the camera view.\n2. Rotate your head slowly in all directions.\n3. Avoid covering your face or changing expressions too much.\n4. Ensure proper lighting for better results.',
+      [{ text: 'Got it!' }]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.cameraContainer}>
@@ -146,14 +155,20 @@ const FaceTestingScreen = ({ route,navigation  }) => {
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom:20}}>
+          <Text style={styles.pictureCountText}>
+            {/* {picturesTaken} / 15 Pictures Taken */}
+            Progress Face Data...
+          </Text>
+          <TouchableOpacity onPress={showHelp}>
+              <Ionicons name="help-circle-outline" size={25} color="#6a8a6d" />
+          </TouchableOpacity>
+        </View>
         <ProgressBar
-          progress={picturesTaken / 15 } // Progress is a value between 0 and 1
+          progress={picturesTaken / 12 } // Progress is a value between 0 and 1
           color="#4CAF50" // Green color for progress bar
           style={styles.progressBar}
         />
-        <Text style={styles.pictureCountText}>
-          {picturesTaken} / 15 Pictures Taken
-        </Text>
       </View>
 
       {isUploading ? (
@@ -165,8 +180,10 @@ const FaceTestingScreen = ({ route,navigation  }) => {
           style={styles.captureButton}
         />
       ) : (
-        <Text style={styles.captureMessage}>Capturing images...</Text>
+        <Text style={styles.captureMessage}>Collecting Face Data...</Text>
       )}
+
+
     </View>
   );
 };
