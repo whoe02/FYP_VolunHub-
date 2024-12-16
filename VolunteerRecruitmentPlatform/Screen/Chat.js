@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUserContext } from '../UserContext';
 import { firestore } from '../firebaseConfig';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc, where, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc, where, getDocs, getDoc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
@@ -200,6 +200,7 @@ const Chat = ({ route, navigation }) => {
     }, [chat.id, eventToSend]);
 
 
+
     // Check the size of the file before uploading
     const checkFileSize = async (uri) => {
         const fileInfo = await FileSystem.getInfoAsync(uri);
@@ -246,10 +247,10 @@ const Chat = ({ route, navigation }) => {
                 sound: 'default',
                 title: name,
                 body: message || '[Media]',
-                data: { 
+                data: {
                     type: 'message',
                     chat: chat,
-                 },
+                },
             };
 
             const response = await fetch('https://exp.host/--/api/v2/push/send', {
@@ -261,7 +262,7 @@ const Chat = ({ route, navigation }) => {
                 body: JSON.stringify(messageBody),
             });
 
-            
+
         } catch (error) {
             console.error('Error sending notification:', error);
         }
@@ -287,6 +288,7 @@ const Chat = ({ route, navigation }) => {
                 eventId: eventId || null,
                 senderId: user.userId,
                 timestamp: new Date(),
+                read: false,
             };
 
             const messagesRef = collection(firestore, 'Chat', chat.id, 'Message');
@@ -340,31 +342,31 @@ const Chat = ({ route, navigation }) => {
 
     const fetchNotificationPreferences = async (userId) => {
         try {
-          const preferencesRef = doc(firestore, 'User', userId, 'NotificationPreferences', 'Preferences');
-          const preferencesSnap = await getDoc(preferencesRef);
-      
-          if (preferencesSnap.exists()) {
-            return preferencesSnap.data();
-          } else {
-            // Assume default preferences (all true) if the subcollection does not exist
-            return {
-              application: true,
-              announcement: true,
-              message: true,
-              review: true,
-            };
-          }
+            const preferencesRef = doc(firestore, 'User', userId, 'NotificationPreferences', 'Preferences');
+            const preferencesSnap = await getDoc(preferencesRef);
+
+            if (preferencesSnap.exists()) {
+                return preferencesSnap.data();
+            } else {
+                // Assume default preferences (all true) if the subcollection does not exist
+                return {
+                    application: true,
+                    announcement: true,
+                    message: true,
+                    review: true,
+                };
+            }
         } catch (error) {
-          console.error('Error fetching notification preferences:', error);
-          // Fallback to default preferences in case of error
-          return {
-            application: true,
-            announcements: true,
-            messages: true,
-            review: true,
-          };
+            console.error('Error fetching notification preferences:', error);
+            // Fallback to default preferences in case of error
+            return {
+                application: true,
+                announcements: true,
+                messages: true,
+                review: true,
+            };
         }
-      };
+    };
 
     const triggerAutoReply = (eventId) => {
         setTimeout(async () => {
