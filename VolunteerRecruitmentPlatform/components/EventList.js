@@ -12,8 +12,8 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchRecommendedEvents = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
-   // const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
+    //  const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+    const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
 
