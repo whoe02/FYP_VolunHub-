@@ -228,14 +228,6 @@ const AddRewardScreen = ({ navigation }) => {
         </Picker>
       </View>
 
-      {/* <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Expiration Date (YYYY-MM-DD):</Text>
-        <InputField
-          value={date}
-          onChangeText={setDate}
-          placeholder="Enter Expiration Date"
-        />
-      </View> */}
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Expired Date:</Text>
         {/* Start Date Picker */}
@@ -315,6 +307,8 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     marginBottom: 20,
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
   },
   pickerButtonStyle:{
     flexDirection: 'row',
