@@ -240,7 +240,7 @@ const ManageProfile = ({ route, navigation }) => {
 
                 <CustomButton
                     variant='outline'
-                    label="Add Face Data"
+                    label="Edit Face Data"
                     title={isFaceDataAdded ? 'Face Data Added ✔' : 'Add Face Data'}
                     onPress={handleAddFaceData}
                 />
