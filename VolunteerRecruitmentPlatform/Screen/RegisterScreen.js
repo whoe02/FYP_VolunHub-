@@ -201,8 +201,10 @@ const RegisterScreen = ({ route, navigation }) => {
         userId,
         name:fullName,
         email,
-        phoneNumber,
+        phoneNum: phoneNumber,
         address,
+        latitude,
+        longitude,
         gender,
         birthDate: date.toLocaleDateString(),
         password,
@@ -214,7 +216,7 @@ const RegisterScreen = ({ route, navigation }) => {
       };
 
       if (role === 'volunteer') {
-        userData.icNumber = icNumber;
+        userData.icNum = icNumber;
         userData.rewardPoint = 0;
         userData.location = [];
         userData.preference = [];
@@ -222,7 +224,7 @@ const RegisterScreen = ({ route, navigation }) => {
       } else if (role === 'organization') {
         userData.businessType = '';
       } else if (role === 'admin') {
-        userData.icNumber = icNumber;
+        userData.icNum = icNumber;
       }
 
       try {
