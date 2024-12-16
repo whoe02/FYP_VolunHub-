@@ -83,7 +83,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
-
+          {user?.role == 'volunteer' && (
           <TouchableOpacity
             style={styles.buttonSection}
             activeOpacity={0.9}
@@ -97,7 +97,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
-
+          )}
           <TouchableOpacity
             style={styles.buttonSection}
             activeOpacity={0.9}
@@ -111,7 +111,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
-
+          {user?.role != 'admin' && (
           <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
@@ -121,7 +121,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
             <View style={styles.sp}></View>
           </TouchableOpacity>
-
+          )}
           <TouchableOpacity
             style={styles.buttonSection}
             activeOpacity={0.9}

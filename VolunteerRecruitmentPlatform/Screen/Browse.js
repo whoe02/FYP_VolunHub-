@@ -13,8 +13,10 @@ import { firestore } from '../firebaseConfig';
 
 const Home = ({ navigation }) => {
   const { top: safeTop } = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState('all');
+
   const { user, setUser } = useUserContext(); // Access user from context
+  const [activeTab, setActiveTab] = useState(user?.role === 'organization' ? 'upcoming' : 'all');
+
   const [isLoading, setIsLoading] = useState(true); // Loading state
 
   const fetchUserData = async () => {

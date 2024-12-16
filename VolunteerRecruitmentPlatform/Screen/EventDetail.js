@@ -631,21 +631,34 @@ const EventDetail = ({ route, navigation }) => {
             <View style={styles.detailSection}>
                 <Text style={styles.detailHeading}>Event Details</Text>
                 <Text style={styles.detailText}>
-                    Date:
+                    Date : 
                     {event.startDate instanceof Date
                         ? event.startDate.toLocaleDateString()
                         : event.startDate
                             ? new Date(event.startDate).toLocaleDateString()
-                            : 'N/A'} -
+                            : 'N/A'}- 
                     {event.endDate instanceof Date
                         ? event.endDate.toLocaleDateString()
                         : event.endDate
                             ? new Date(event.endDate).toLocaleDateString()
                             : 'N/A'}
                 </Text>
-                <Text style={styles.detailText}>Address: {event.address || 'N/A'}</Text>
-                <Text style={styles.detailText}>Capacity: {event.capacity || 'N/A'}</Text>
-                <Text style={styles.detailText}>Status: {event.status || 'N/A'}</Text>
+                <Text style={styles.detailText}>
+                    Time : 
+                    {event.startTime instanceof Date
+                        ? event.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : event.startTime
+                            ? new Date(event.startTime).toLocaleDateString()
+                            : 'N/A'}- 
+                    {event.endDate instanceof Date
+                        ? event.endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : event.endDate
+                            ? new Date(event.endDate).toLocaleDateString()
+                            : 'N/A'}
+                </Text>
+                <Text style={styles.detailText}>Address : {event.address || 'N/A'}</Text>
+                <Text style={styles.detailText}>Capacity : {event.capacity || 'N/A'}</Text>
+                <Text style={styles.detailText}>Organizer : {event.organizationName || 'N/A'}</Text>
             </View>
             <View style={styles.categoriesSection}>
                 <Text style={styles.detailHeading}>Categories</Text>
@@ -657,7 +670,7 @@ const EventDetail = ({ route, navigation }) => {
                             </Text>
                         ))
                     ) : (
-                        <Text style={styles.noCategoryText}>No categories available</Text>
+                        <Text>No categories available</Text>
                     )}
                 </View>
             </View>
