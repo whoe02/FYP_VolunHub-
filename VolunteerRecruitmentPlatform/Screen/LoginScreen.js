@@ -126,7 +126,11 @@ const LoginScreen = ({ navigation }) => {
         await setupNotifications(userData.userId); // Ensure the user data includes an `id` field
       }
       // Navigate to the main screen after successful login
-      navigation.replace('VolunHub',{ role: userData.role });
+      // Reset the flag to false when the user logs in (so they are prompted again if needed)
+      await updateDoc(doc(firestore, 'User', userData.userId), {
+        preferencesSkipped: false, // Reset the skipped flag
+      });
+      navigation.replace('VolunHub', { role: userData.role });
     } catch (error) {
       console.error('Error logging in:', error);
       Alert.alert('Error', 'Something went wrong. Please try again later');
@@ -139,12 +143,12 @@ const LoginScreen = ({ navigation }) => {
 
       <View style={{ paddingHorizontal: 40 }}>
         <View>
-          <View style={{ alignItems: 'center', marginBottom:0 }}>
+          <View style={{ alignItems: 'center', marginBottom: 0 }}>
 
 
             <Image
               source={loginImage}
-              style={{ height: 200, width: 300, marginBottom: 30, marginTop:-40 }}
+              style={{ height: 200, width: 300, marginBottom: 30, marginTop: -40 }}
               resizeMode="contain"
             />
           </View>

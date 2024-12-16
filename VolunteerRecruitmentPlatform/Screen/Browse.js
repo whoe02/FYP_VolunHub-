@@ -29,6 +29,19 @@ const Home = ({ navigation }) => {
       } else {
         console.error('User data not found');
       }
+
+      // Check if preferences, skills, or location is empty
+      if (
+        ((!user.preferences || user.preferences.length === 0) &&
+          (!user.skills || user.skills.length === 0) &&
+          (!user.location || user.location.length === 0)) &&
+        user.role === 'volunteer'
+      ) {
+        // Only navigate to SetEventPref if the user hasn't skipped or completed setting preferences
+        if (!user.preferencesSkipped) {
+          navigation.navigate('SetEventPref', { userId: user.userId }); // Navigate to Set Preference page
+        }
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -45,7 +58,7 @@ const Home = ({ navigation }) => {
   };
 
   const handleSearchBarPress = () => {
-    navigation.navigate('SearchPage', {user: user}); // Navigate to the search page
+    navigation.navigate('SearchPage', { user: user }); // Navigate to the search page
   };
 
   // Ensure user data is loaded before rendering other components
@@ -68,16 +81,16 @@ const Home = ({ navigation }) => {
   return (
     <View style={[styles.container, { paddingTop: safeTop }]}>
       <Header user={user} />
-      
+
       {user.role === 'volunteer' && (
         <SearchBar onPress={handleSearchBarPress} />
       )}
 
       {/* Render components based on user role */}
       {user.role === 'organization' && (
-        <View style={{marginTop:20}}>
-          <MyEventTab onTabChanged={onTabChanged}  />
-        </View>  
+        <View style={{ marginTop: 20 }}>
+          <MyEventTab onTabChanged={onTabChanged} />
+        </View>
       )}
       {user.role === 'volunteer' && (
         <HomeTab onTabChanged={onTabChanged} />
@@ -85,17 +98,17 @@ const Home = ({ navigation }) => {
 
       <EventList activeTab={activeTab} navigation={navigation} user={user} />
       {user.role === 'organization' && (
-                <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddEvent',{ user: user })} activeOpacity={0.7}>
-                    <Ionicons name="add" size={30} color="#fff" />
-                </TouchableOpacity>
-            )}
+        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddEvent', { user: user })} activeOpacity={0.7}>
+          <Ionicons name="add" size={30} color="#fff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9f9f9' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }, 
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   addButton: {
     position: 'absolute',
     bottom: 30,

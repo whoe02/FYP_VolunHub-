@@ -88,41 +88,66 @@ const SetEventPreference = ({ route, navigation }) => {
 
     // Handle next step from skills to category
     const handleNextFromSkills = () => {
-        if (selectedSkills.length === 0) {
-            Alert.alert('Select Skills', 'Please select at least one skill.');
-        } else {
-            setIsSkillsPage(false);
-            setIsCategoryPage(true);
-        }
+
+        setIsSkillsPage(false);
+        setIsCategoryPage(true);
+
     };
 
     // Handle next step from category to location
     const handleNextFromCategory = () => {
-        if (selectedCategories.length === 0) {
-            Alert.alert('Select Category', 'Please select at least one category.');
-        } else {
-            setIsCategoryPage(false);
-        }
+
+        setIsCategoryPage(false);
+
     };
 
     const handleUpdatePreference = async () => {
-        if (selectedLocations.length === 0) {
-            Alert.alert('Select Location', 'Please select at least one location.');
-        } else {
-            try {
-                const updatedData = {
-                    skills: selectedSkills,
-                    preference: selectedCategories,
-                    location: selectedLocations,
-                };
 
-                await updateDoc(doc(firestore, 'User', userId), updatedData);
-                Alert.alert('Preferences Updated', 'Your event preferences have been updated.');
-                navigation.goBack(); // Go back to the profile page after updating
-            } catch (error) {
-                console.error("Error updating preferences:", error);
-                Alert.alert('Error', 'Failed to update preferences.');
-            }
+        try {
+            const updatedData = {
+                skills: selectedSkills,
+                preference: selectedCategories,
+                location: selectedLocations,
+                preferencesSkipped: true
+            };
+
+            await updateDoc(doc(firestore, 'User', userId), updatedData);
+            Alert.alert('Preferences Updated', 'Your event preferences have been updated.');
+            setTimeout(() => {
+                navigation.goBack();
+            }, 1000); // 2000 milliseconds = 2 seconds
+        } catch (error) {
+            console.error("Error updating preferences:", error);
+            Alert.alert('Error', 'Failed to update preferences.');
+
+        }
+    };
+
+    const handleSkip = () => {
+        Alert.alert(
+            "Skip Preference Setup",
+            "Are you sure you want to skip setting preferences? You can always update them later.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Skip", onPress: () => handleSkipPreference() }
+            ]
+        );
+    };
+
+    // Skip preference setup and set the flag
+    const handleSkipPreference = async () => {
+        try {
+            await updateDoc(doc(firestore, 'User', userId), {
+                preferencesSkipped: true, // Mark as skipped in Firestore
+            });
+
+            // Delay for 2 seconds before going back
+            setTimeout(() => {
+                navigation.goBack();
+            }, 1000); // 2000 milliseconds = 2 seconds
+        } catch (error) {
+            console.error('Error skipping preferences:', error);
+            Alert.alert('Error', 'Failed to skip preferences.');
         }
     };
 
@@ -132,8 +157,8 @@ const SetEventPreference = ({ route, navigation }) => {
                 {isSkillsPage
                     ? 'Select Skills for Volunteer Events'
                     : isCategoryPage
-                    ? 'Select Preferred Event Categories'
-                    : 'Select Preferred Locations'}
+                        ? 'Select Preferred Event Categories'
+                        : 'Select Preferred Locations'}
             </Text>
 
             <View style={styles.listWrapper}>
@@ -149,26 +174,26 @@ const SetEventPreference = ({ route, navigation }) => {
                         </TouchableOpacity>
                     ))
                     : isCategoryPage
-                    ? preferences.map((item) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            onPress={() => toggleCategory(item.id)}
-                            style={[styles.item, selectedCategories.includes(item.id) && styles.itemActive]}>
-                            <Text style={[styles.itemText, selectedCategories.includes(item.id) && styles.itemTextActive]}>
-                                {item.categoryName}
-                            </Text>
-                        </TouchableOpacity>
-                    ))
-                    : locations.map((item) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            onPress={() => toggleLocation(item.id)}
-                            style={[styles.item, selectedLocations.includes(item.id) && styles.itemActive]}>
-                            <Text style={[styles.itemText, selectedLocations.includes(item.id) && styles.itemTextActive]}>
-                                {item.categoryName}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                        ? preferences.map((item) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                onPress={() => toggleCategory(item.id)}
+                                style={[styles.item, selectedCategories.includes(item.id) && styles.itemActive]}>
+                                <Text style={[styles.itemText, selectedCategories.includes(item.id) && styles.itemTextActive]}>
+                                    {item.categoryName}
+                                </Text>
+                            </TouchableOpacity>
+                        ))
+                        : locations.map((item) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                onPress={() => toggleLocation(item.id)}
+                                style={[styles.item, selectedLocations.includes(item.id) && styles.itemActive]}>
+                                <Text style={[styles.itemText, selectedLocations.includes(item.id) && styles.itemTextActive]}>
+                                    {item.categoryName}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
             </View>
 
             <TouchableOpacity
@@ -177,6 +202,9 @@ const SetEventPreference = ({ route, navigation }) => {
                 <Text style={styles.buttonText}>
                     {isSkillsPage ? 'Next' : isCategoryPage ? 'Next' : 'Update Preference'}
                 </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                <Text style={styles.skipButtonText}>Skip Now</Text>
             </TouchableOpacity>
         </View>
     );
@@ -231,6 +259,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    skipButton: {
+        backgroundColor: 'transparent',
+        paddingVertical: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 10,
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    skipButtonText: { color: '#333', fontSize: 14, fontWeight: '500' },
 });
 
 export default SetEventPreference;
