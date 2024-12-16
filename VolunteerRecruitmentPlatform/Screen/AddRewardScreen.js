@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { firestore } from '../firebaseConfig';
 import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
@@ -6,16 +6,21 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import InputField from '../components/InputField'; // Import InputField component
 import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const AddRewardScreen = ({ navigation }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [pointsRequired, setPointsRequired] = useState('');
   const [remainingStock, setRemainingStock] = useState('');
-  const [rewardType, setRewardType] = useState('');  // Default to an empty string
+  const [rewardType, setRewardType] = useState('Discount');  
   const [date, setDate] = useState('');
   const [newImageUri, setNewImageUri] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
+  const [startDate, setStartDate] = useState(null);
+  const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
 
   // Function to handle image picking
   const pickImage = async () => {
@@ -75,7 +80,7 @@ const AddRewardScreen = ({ navigation }) => {
 
   const handleAddReward = async () => {
     // Validate inputs
-    if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
+    if (!title || !description || !pointsRequired || !remainingStock || !rewardType) {
       Alert.alert('Validation Error', 'All fields are required.');
       return;
     }
@@ -121,6 +126,25 @@ const AddRewardScreen = ({ navigation }) => {
     }
   };
 
+  const openPicker = (type, mode) => {
+    setShowPicker({ visible: true, mode, pickerType: type });
+  };
+
+  const handlePickerChange = (event, selectedValue) => {
+    setShowPicker({ ...showPicker, visible: false });
+    if (selectedValue) {
+      const newValue = new Date(selectedValue); // Ensure it's a Date object
+      if (showPicker.pickerType === 'startDate') setStartDate(newValue);
+      setDate(newValue ? newValue.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
+    }
+  };
+  
+
+  const pickerValue = useMemo(() => {
+    if (showPicker.pickerType === 'startDate') return startDate || new Date();
+    return new Date(); // Default to current date/time
+  }, [showPicker.pickerType, startDate]);
+  
   useEffect(() => {
     (async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -205,13 +229,25 @@ const AddRewardScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Expiration Date (YYYY-MM-DD):</Text>
-        <InputField
-          value={date}
-          onChangeText={setDate}
-          placeholder="Enter Expiration Date"
-        />
+        <Text style={styles.inputLabel}>Expired Date:</Text>
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
+          <Ionicons name="calendar-outline" size={20} color="#666" style={{marginRight:10}} />
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Conditional Picker */}
+      {showPicker.visible && (
+        <DateTimePicker
+          value={pickerValue}
+          mode={showPicker.mode}
+          display="default"
+          onChange={handlePickerChange}
+        />
+      )}
 
       {/* Save Button */}
       <TouchableOpacity onPress={handleAddReward} style={styles.saveButton}>
@@ -271,6 +307,15 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     marginBottom: 20,
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+  },
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
   }
 });
 

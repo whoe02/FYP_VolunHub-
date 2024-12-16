@@ -74,10 +74,12 @@ def start_capture():
             except Exception as e:
                 return jsonify({'success': False, 'message': 'Error during face detection'}), 500
 
-        if not faces_data:
-            return jsonify({'success': False, 'message': 'No valid faces detected'}), 400
+        # if not faces_data:
+        #     return jsonify({'success': False, 'message': 'No valid faces detected'}), 400
+        if len(faces_data) < 8:
+            return jsonify({'success': False, 'message': 'Please make sure follow the guild for face data collecting!'}), 400
 
-        return jsonify({'success': True, 'message': 'Faces data captured successfully', 'count': len(faces_data)})
+        return jsonify({'success': True, 'message': 'Faces data captured successfully'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -132,14 +134,13 @@ def edit_face_data():
             except Exception as e:
                 return jsonify({'success': False, 'message': 'Error during face detection'}), 500
 
-        if not faces_data:
-            return jsonify({'success': False, 'message': 'No valid faces detected'}), 400
+        if len(faces_data) < 8:
+            return jsonify({'success': False, 'message': 'Please make sure follow the guild for face data collecting!'}), 400
 
-        return jsonify({'success': True, 'message': 'Faces data captured successfully', 'count': len(faces_data)})
+        return jsonify({'success': True, 'message': 'Faces data captured successfully'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -147,7 +148,7 @@ def register():
 
     try:
         if not faces_data or not names_data:
-            return jsonify({'success': False, 'message': 'No valid face data captured'}), 400
+            return jsonify({'success': False, 'message': 'No data captured please add the face follow by guild'}), 400
 
         # Save face data and names
         save_face_data(np.array(faces_data), names_data)
@@ -155,7 +156,7 @@ def register():
         # Train and save the updated KNN model
         train_knn_model()
 
-        return jsonify({'success': True, 'message': 'Registered successfully and model updated!'})
+        return jsonify({'success': True, 'message': 'Face registered successfully !'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -209,7 +210,7 @@ def confirm_edit_face():
         # Train and save the updated KNN model
         train_knn_model()
 
-        return jsonify({'success': True, 'message': 'Face data updated successfully and model retrained!'})
+        return jsonify({'success': True, 'message': 'Face data updated successfully !'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -219,7 +220,7 @@ def mark_attendance():
     global knn
 
     if knn is None:
-        return jsonify({'success': False, 'message': 'KNN model is not available. Please register users first.'}), 500
+        return jsonify({'success': False, 'message': 'Error during mark attendance please contact the organization !'}), 500
 
     try:
 
@@ -230,7 +231,7 @@ def mark_attendance():
 
         faces = DeepFace.extract_faces(uploaded_image, enforce_detection=False)
         if len(faces) != 1:
-            return jsonify({'success': False, 'message': 'Please provide an image with exactly one face.'}), 400
+            return jsonify({'success': False, 'message': 'Please provide snap with exactly one face.'}), 400
 
         # Extract face embedding
         face_image = faces[0]['face']
@@ -244,7 +245,7 @@ def mark_attendance():
         min_distance = distances[0][0]
         print(min_distance)
         # Set a threshold for attendance marking
-        threshold = 0.57
+        threshold = 0.5
         if min_distance < threshold:
             predicted_name = predicted_label[0]
             return jsonify({'success': True, 'message': f"Attendance marked successfully for {predicted_name}!"})
@@ -304,7 +305,6 @@ try:
     print("✅ KNN model loaded successfully.")
 except FileNotFoundError:
     print("⚠️ No KNN model found. Train the model first by registering users.")
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -47,7 +47,7 @@ const FaceRecognitionScreen = ({ route, navigation }) => {
 
     try {
       // Update the endpoint to use `mark_attendance`
-      const response = await fetch('https://fair-casual-garfish.ngrok-free.app/register', {
+      const response = await fetch('https://fair-casual-garfish.ngrok-free.app/mark_attendance', {
       // const response = await fetch('http://192.168.0.12:5000/mark_attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { firestore } from '../firebaseConfig';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import InputField from '../components/InputField'; // Import InputField component
 import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 
 const EditRewardScreen = ({ route, navigation }) => {
   const { rewardId } = route.params;
@@ -17,6 +19,9 @@ const EditRewardScreen = ({ route, navigation }) => {
   const [remainingStock, setRemainingStock] = useState('');
   const [rewardType, setRewardType] = useState('');
   const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
+  const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
 
   useEffect(() => {
     const fetchRewardData = async () => {
@@ -32,7 +37,7 @@ const EditRewardScreen = ({ route, navigation }) => {
           setPointsRequired(rewardData.pointsRequired.toString());
           setRemainingStock(rewardData.remainingStock.toString());
           setRewardType(rewardData.type);
-          setDate(rewardData.date);
+          setStartDate(new Date(rewardData.date));
         } else {
           Alert.alert('Error', 'Reward not found');
         }
@@ -57,6 +62,24 @@ const EditRewardScreen = ({ route, navigation }) => {
       setNewImageUri(result.uri);
     }
   };
+
+  const openPicker = (type, mode) => {
+    setShowPicker({ visible: true, mode, pickerType: type });
+  };
+
+  const handlePickerChange = (event, selectedValue) => {
+    setShowPicker({ ...showPicker, visible: false });
+    if (selectedValue) {
+      const newValue = new Date(selectedValue); // Ensure it's a Date object
+      if (showPicker.pickerType === 'startDate') setStartDate(newValue);
+      setDate(newValue ? newValue.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
+    }
+  };
+
+  const pickerValue = useMemo(() => {
+    if (showPicker.pickerType === 'startDate') return startDate || new Date();
+    return new Date(); // Default to current date/time
+  }, [showPicker.pickerType, startDate]);
 
   const handleUpdateReward = async () => {
     if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
@@ -190,15 +213,26 @@ const EditRewardScreen = ({ route, navigation }) => {
         </Picker>
       </View>
 
-      {/* Date Input */}
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Date (YYYY-MM-DD):</Text>
-        <InputField
-          value={date}
-          onChangeText={setDate}
-          placeholder="Enter Date (YYYY-MM-DD)"
-        />
+        <Text style={styles.inputLabel}>Expired Date:</Text>
+        {/* Start Date Picker */}
+        <View style={styles.pickerButtonStyle}>
+          <Ionicons name="calendar-outline" size={20} color="#666" style={{marginRight:10}} />
+          <TouchableOpacity onPress={() => openPicker('startDate', 'date')}>
+            <Text style={styles.datePickerText}>{formatDate(startDate)}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Conditional Picker */}
+      {showPicker.visible && (
+        <DateTimePicker
+          value={pickerValue}
+          mode={showPicker.mode}
+          display="default"
+          onChange={handlePickerChange}
+        />
+      )}
 
       {/* Buttons */}
       <View style={styles.buttonContainer}>
@@ -287,6 +321,15 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     marginBottom: 20,
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+  },
+  pickerButtonStyle:{
+    flexDirection: 'row',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    paddingVertical: 15,
+    marginBottom: 10,
   }
 });
 

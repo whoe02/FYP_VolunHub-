@@ -93,7 +93,7 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
       );
 
       // Check if within acceptable range (e.g., 50 meters)
-      if (distance <= 50) {
+      if (distance <= 5000) {
         navigation.navigate('VolunteerRecognitionScreen', {
           email,
           onComplete: async (status) => {
