@@ -3,7 +3,7 @@ const myEventTabList = [
     { id: 2, title: 'Pending', slug: 'pending' },
     { id: 2, title: 'Upcoming', slug: 'upcoming' },
     { id: 3, title: 'Active', slug: 'active' },
-    { id: 4, title: 'Completed', slug: 'Completed' },
+    { id: 4, title: 'Completed', slug: 'completed' },
 ];
 
 export default myEventTabList;
