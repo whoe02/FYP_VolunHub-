@@ -363,7 +363,7 @@ const RegisterScreen = ({ route, navigation }) => {
         <View style={styles.pickerButtonStyle}>
           <Ionicons name="location-outline" size={25} color="#666" style={{marginRight:15}} />
           <TouchableOpacity onPress={navigateToLocationScreen}>
-            <Text style={styles.addressButtonText}>
+            <Text style={{ color: '#666'}}>
               {address || 'Select Address'}
             </Text>
           </TouchableOpacity>

@@ -189,7 +189,7 @@ const AddUser = ({ navigation, route }) => {
 
                 {/* Loading Spinner */}
                 {loading ? (
-                    <ActivityIndicator size="large" color="#6a8a6d" style={styles.loading} />
+                    <ActivityIndicator size="large" color="#666" style={styles.loading} />
                 ) : (
                     <>
                         <View style={styles.section}>
@@ -197,12 +197,12 @@ const AddUser = ({ navigation, route }) => {
                                 label="Full Name"
                                 value={fullName}
                                 onChangeText={setFullName}
-                                icon={<Ionicons name="person" size={20} color="#6a8a6d" style={styles.icon} />}
+                                icon={<Ionicons name="person-outline" size={20} color="#666" style={styles.icon} />}
                             />
                             <View style={styles.pickerButtonStyle}>
                                 <Ionicons name="location-outline" size={25} color="#666" style={{ marginRight: 15 }} />
                                 <TouchableOpacity onPress={navigateToLocationScreen}>
-                                    <Text style={styles.addressButtonText}>
+                                    <Text style={{color: '#666'}}>
                                         {address || 'Select Address'}
                                     </Text>
                                 </TouchableOpacity>
@@ -211,14 +211,14 @@ const AddUser = ({ navigation, route }) => {
                                 label="Email ID"
                                 value={email}
                                 onChangeText={setEmail}
-                                icon={<MaterialIcons name="alternate-email" size={20} color="#6a8a6d" style={styles.icon} />}
+                                icon={<MaterialIcons name="alternate-email" size={20} color="#666" style={styles.icon} />}
                                 keyboardType="email-address"
                             />
                             <InputField
                                 label="Phone Number"
                                 value={phoneNumber}
                                 onChangeText={setPhoneNumber}
-                                icon={<Ionicons name="call" size={20} color="#6a8a6d" style={styles.icon} />}
+                                icon={<Ionicons name="call-outline" size={20} color="#666" style={styles.icon} />}
                                 keyboardType="phone-pad"
                             />
                             {userType !== 'Organization' && (
@@ -226,7 +226,7 @@ const AddUser = ({ navigation, route }) => {
                                     label="IC Number"
                                     value={icNumber}
                                     onChangeText={setIcNumber}
-                                    icon={<Ionicons name="id-card" size={20} color="#6a8a6d" style={styles.icon} />}
+                                    icon={<Ionicons name="id-card-outline" size={20} color="#666" style={styles.icon} />}
                                 />
                             )}
 
@@ -239,7 +239,7 @@ const AddUser = ({ navigation, route }) => {
                                     marginBottom: 10,
                                 }}
                             >
-                                <Ionicons name="calendar" size={20} color="#6a8a6d" style={{ marginRight: 10 }} />
+                                <Ionicons name="calendar-outline" size={20} color="#666" style={{ marginRight: 10 }} />
                                 <TouchableOpacity onPress={() => setShow(true)}>
                                     <Text style={{ color: '#666', marginLeft: 10, fontSize: 16 }}>{dobLabel}</Text>
                                 </TouchableOpacity>
@@ -256,7 +256,7 @@ const AddUser = ({ navigation, route }) => {
                                     marginBottom: 10,
                                 }}
                             >
-                                <Ionicons name="male-female" size={20} color="#6a8a6d" />
+                                <Ionicons name="male-female-outline" size={20} color="#666" />
                                 <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)} style={{ flex: 1, color: gender ? '#333' : '#666', marginLeft: 3 }}>
                                     <Picker.Item label="Select Gender" value="" color="#aaa" />
                                     <Picker.Item label="Male" value="Male" />
@@ -277,7 +277,7 @@ const AddUser = ({ navigation, route }) => {
                                 marginBottom: 10,
                             }}
                         >
-                            <Ionicons name="person" size={20} color="#6a8a6d" />
+                            <Ionicons name="person-outline" size={20} color="#666" />
 
                             <Picker
                                 selectedValue={userType}
@@ -296,7 +296,7 @@ const AddUser = ({ navigation, route }) => {
                                 value={password}
                                 inputType="password"
                                 onChangeText={setPassword}
-                                icon={<Ionicons name="lock-closed" size={20} color="#6a8a6d" style={styles.icon} />}
+                                icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.icon} />}
                                 secureTextEntry
                             />
                             <InputField
@@ -304,7 +304,7 @@ const AddUser = ({ navigation, route }) => {
                                 value={confirmPassword}
                                 inputType="password"
                                 onChangeText={setConfirmPassword}
-                                icon={<Ionicons name="lock-closed" size={20} color="#6a8a6d" style={styles.icon} />}
+                                icon={<Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.icon} />}
                                 secureTextEntry
                             />
                         </View>
