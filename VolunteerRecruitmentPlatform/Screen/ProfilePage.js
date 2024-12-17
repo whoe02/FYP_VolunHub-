@@ -3,7 +3,8 @@ import { View, ScrollView, StyleSheet, Image, Text, TouchableOpacity, SafeAreaVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { useUserContext } from '../UserContext';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, setDoc, addDoc} from "firebase/firestore";
+
 import { firestore } from "../firebaseConfig"; // Ensure this is correctly initialized
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -35,6 +36,94 @@ const ProfileScreen = ({ navigation }) => {
   const handleProfileUpdate = () => {
     fetchUserData(); // Re-fetch profile data after update
   };
+
+  // Function to get a random admin ID from a given admin pool
+const getRandomAdmin = (adminPool) => {
+  const randomIndex = Math.floor(Math.random() * adminPool.length);
+  return adminPool[randomIndex];
+};
+
+const handleHelp = async () => {
+  if (!user?.userId) return;
+
+  const adminPool = ['AD00001', 'AD00002', 'AD00003', 'AD00004']; // Predefined admin pool
+  let randomAdminId = null; // To hold the assigned admin ID
+
+  try {
+    const chatRef = collection(firestore, 'Chat');
+
+    // Query Firestore for existing chat involving the user
+    const chatQuery = query(chatRef, where('participants', 'array-contains', user.userId));
+    const querySnapshot = await getDocs(chatQuery);
+
+    let chatItem = null;
+
+    // Check for an existing chat and retrieve the adminId if available
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.participants.includes(user.userId) && data.adminId) {
+        chatItem = { id: doc.id, ...data };
+        randomAdminId = data.adminId; // Use the existing adminId
+      }
+    });
+
+    // If no chat exists, create a new one
+    if (!chatItem) {
+      // Get a random admin ID only the first time
+      randomAdminId = adminPool[Math.floor(Math.random() * adminPool.length)];
+
+      const newChatRef = doc(chatRef); // Generate a new document reference
+      chatItem = {
+        chatId: newChatRef.id,
+        participants: [user.userId, randomAdminId],
+        adminId: randomAdminId, // Store the selected admin ID
+        lastMessage: {
+          text: "",
+          senderId: "",
+          timestamp: "",
+        },
+        timestamp: new Date(),
+        text: "",
+        senderId: "",
+        hide: true,
+      };
+
+      await setDoc(newChatRef, chatItem);
+
+      // Add a placeholder message to the `Message` subcollection
+      const messageRef = collection(newChatRef, 'Message');
+      await addDoc(messageRef, {
+        isPlaceholder: true,
+        timestamp: new Date(),
+      });
+
+      chatItem = {
+        ...chatItem,
+        id: newChatRef.id,
+      };
+    }
+
+    // Fetch admin details
+    const adminDoc = await getDoc(doc(firestore, 'User', randomAdminId));
+    const adminData = adminDoc.data();
+
+    // Attach admin's name and avatar to the chat item
+    chatItem = {
+      ...chatItem,
+      name: adminData.name || 'Admin',
+      avatar: adminData.image || null,
+      otherParticipant: randomAdminId,
+    };
+
+    // Navigate to the Chat screen
+    navigation.navigate('Chat', { chat: chatItem });
+    console.log('Chat created or fetched successfully:', chatItem);
+
+  } catch (error) {
+    console.error('Error creating chat with admin:', error);
+    Alert.alert('Error', 'Unable to start a chat with an admin.');
+  }
+};
 
   if (!userData) {
     return (
@@ -112,7 +201,7 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.sp}></View>
           </TouchableOpacity>
           {user?.role != 'admin' && (
-          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.buttonSection} activeOpacity={0.9} onPress={handleHelp}>
             <View style={styles.buttonArea}>
               <View style={styles.iconArea}>
                 <Ionicons name="help-circle" size={25} color={'#6a8a6d'} />
