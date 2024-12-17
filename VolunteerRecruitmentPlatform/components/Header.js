@@ -38,7 +38,7 @@ function Header({ user }) {
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Notification', { user: user })}>
                 <View style={styles.notificationIconContainer}>
-                    <Ionicons name="notifications-outline" size={24} color={Colors.black} />
+                    <Ionicons name="notifications-outline" size={24} color="#666" />
                     {unreadCount > 0 && (
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{unreadCount}</Text>

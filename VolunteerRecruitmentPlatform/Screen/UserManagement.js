@@ -15,7 +15,8 @@ const UserManagement = ({ navigation }) => {
 
   // Filter users based on search query
   const filteredData = users.filter((user) =>
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) // Optional chaining to handle undefined `name`
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || // Check `name`
+    user.userId?.toLowerCase().includes(searchQuery.toLowerCase())  // Check `userId`
   );
 
   // Fetch data based on the selected tab
