@@ -93,12 +93,11 @@ interaction_matrix_csr = csr_matrix(interaction_matrix.values)
 knn = NearestNeighbors(n_neighbors=20, metric='cosine', algorithm='auto')
 knn.fit(interaction_matrix_csr)  # Fit KNN model to the interaction matrix
 
-# Recommendation Logic
 def content_based_recommend(user_id, num_recommendations=20):
     """Provides content-based recommendations."""
     user = users_df[users_df['userId'] == user_id]
     if user.empty:
-        return {"error": "User not found"}
+        return []  # Return an empty list instead of an error dict
     
     # Create user profile based on preferences and skills
     user_features = user['preference'].fillna('').astype(str) + ' ' + \
@@ -109,21 +108,23 @@ def content_based_recommend(user_id, num_recommendations=20):
     # Compute cosine similarity between user profile and event TF-IDF matrix
     cosine_sim = cosine_similarity(user_tfidf, tfidf_matrix).flatten()
     
+    # If the maximum similarity score is too low, return an empty list
+    if np.max(cosine_sim) < 0.1:
+        return []  # No good recommendations found
+    
     # Rank events by similarity
     event_indices = cosine_sim.argsort()[-num_recommendations:][::-1]
     recommended_events = events_df.iloc[event_indices][['eventId', 'title']].copy()
-    # Add the Score column based on cosine similarity
     recommended_events['Score'] = cosine_sim[event_indices]
-    # Normalize scores
     recommended_events['Normalized Score'] = normalize_scores(recommended_events['Score'])
     
     return recommended_events.to_dict(orient='records')
 
-# Generate Collaborative Recommendations using KNN
+
 def collaborative_recommend(user_id, num_recommendations=20):
     """Generates collaborative recommendations using KNN."""
     if user_id not in interaction_matrix.index:
-        return {"error": "User not found"}
+        return []  # Return an empty list instead of an error dict
     
     user_idx = interaction_matrix.index.get_loc(user_id)
     user_interactions = interaction_matrix_csr[user_idx].reshape(1, -1)  # Get user's interaction vector
@@ -131,13 +132,15 @@ def collaborative_recommend(user_id, num_recommendations=20):
     # Find similar users using KNN
     distances, indices = knn.kneighbors(user_interactions, n_neighbors=num_recommendations)
     
-    # Collect all recommended events from similar users
     recommended_events = {}
     for idx in indices.flatten():
         user_events = interaction_matrix.iloc[idx]
         for event_id, score in user_events.items():
             if score > 0:  # Only consider events with interactions
                 recommended_events[event_id] = recommended_events.get(event_id, 0) + score
+    
+    if not recommended_events:
+        return []  # No good recommendations found
     
     # Rank events by total score
     top_events = sorted(recommended_events.items(), key=lambda x: x[1], reverse=True)[:num_recommendations]
@@ -147,6 +150,7 @@ def collaborative_recommend(user_id, num_recommendations=20):
     recommended_df['Normalized Score'] = normalize_scores(recommended_df['Score'])
 
     return recommended_df.sort_values('Normalized Score', ascending=False).to_dict(orient='records')
+
 
 # Hybrid Recommendation Logic
 def hybrid_recommendation(user_id, num_recommendations=20):
@@ -195,10 +199,14 @@ def collaborative_recommend_route():
 
 @app.route('/hybrid_recommend', methods=['GET'])
 def hybrid_recommend_route():
-    print('hi')
     user_id = request.args.get('user_id')
     num_recommendations = int(request.args.get('n', 5))
-    return jsonify(hybrid_recommendation(user_id, num_recommendations))
+    
+    hybrid_recs = hybrid_recommendation(user_id, num_recommendations)
+    if not hybrid_recs:
+        return jsonify([])  # Return an empty array instead of a message
+    
+    return jsonify(hybrid_recs)
 
 
 # Performance Evaluation
@@ -231,7 +239,10 @@ def evaluate_recommendations():
 
         # Evaluate Content-Based Filtering
         cb_recommended = content_based_recommend(user_id=user_id, num_recommendations=5)
-        cb_recommended_ids = set([rec['eventId'] for rec in cb_recommended])
+        if isinstance(cb_recommended, list):
+            cb_recommended_ids = set([rec['eventId'] for rec in cb_recommended])
+        else:
+            cb_recommended_ids = set()  # Empty set if recommendations are invalid
         precision, recall, f1 = calculate_metrics(actual_events, cb_recommended_ids)
         metrics["content_based"]["precision"].append(precision)
         metrics["content_based"]["recall"].append(recall)
@@ -287,4 +298,3 @@ if __name__ == '__main__':
       f"Recall: {metrics['hybrid']['recall']:.2f}, "
       f"F1-Score: {metrics['hybrid']['f1_score']:.2f}")
     app.run(host='0.0.0.0', port=5000, debug=True)
-
