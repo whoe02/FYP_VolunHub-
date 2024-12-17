@@ -98,6 +98,7 @@ const EventDetail = ({ route, navigation }) => {
                     timestamp: new Date(),
                     text: "",
                     senderId: "",
+                    hide: true,
                 };
 
                 await setDoc(newChatRef, chatItem);

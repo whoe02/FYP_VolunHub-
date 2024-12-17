@@ -57,7 +57,8 @@ const LiveChatList = ({ navigation }) => {
         // Real-time listener to fetch chats for the user
         const chatQuery = query(
             collection(firestore, "Chat"),
-            where("participants", "array-contains", user.userId)
+            where("participants", "array-contains", user.userId),
+            where("hide", '==', false)
         );
 
         const unsubscribe = onSnapshot(chatQuery, async (chatSnapshots) => {

@@ -1,8 +1,8 @@
 // NotificationPage.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, getDocs, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig'; // Ensure your Firestore instance is correctly imported
 
 const NotificationPage = ({ route, navigation }) => {
@@ -157,11 +157,42 @@ const NotificationPage = ({ route, navigation }) => {
         fetchNotifications();
     }, [user.userId]);
 
-    const clearAllNotifications = async () => {
-        // Clear local notifications list
-        setNotifications([]);
-        // Optionally, implement Firestore deletion logic here if needed
+    const markAllNotificationsAsRead = async () => {
+        try {
+            const batch = writeBatch(firestore); // Initialize a batch operation
+            const userRef = collection(firestore, `User/${user.userId}/Notification`);
+
+            // Query all unread notifications
+            const unreadQuery = query(userRef, where('read', '==', false));
+            const querySnapshot = await getDocs(unreadQuery);
+
+            if (querySnapshot.empty) {
+                Alert.alert('Info', 'All notifications are already marked as read.');
+                return;
+            }
+
+            // Update all notifications in batch
+            querySnapshot.forEach((docSnapshot) => {
+                const notificationRef = doc(firestore, `User/${user.userId}/Notification/${docSnapshot.id}`);
+                batch.update(notificationRef, { read: true });
+            });
+
+            await batch.commit(); // Commit all updates
+
+            // Update local state to reflect the changes
+            setNotifications((prevNotifications) =>
+                prevNotifications.map((notification) => ({
+                    ...notification,
+                    read: true,
+                }))
+            );
+
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+            Alert.alert('Error', 'Unable to mark all notifications as read.');
+        }
     };
+
 
     const markNotificationAsRead = async (notificationId) => {
         try {
@@ -256,8 +287,8 @@ const NotificationPage = ({ route, navigation }) => {
             <View style={styles.headerContainer}>
                 <Text style={styles.header}>Notifications</Text>
                 {notifications.length > 0 && (
-                    <TouchableOpacity onPress={clearAllNotifications}>
-                        <Text style={styles.clearAllText}>Clear All</Text>
+                    <TouchableOpacity onPress={markAllNotificationsAsRead}>
+                        <Text style={styles.clearAllText}>Mark as Read</Text>
                     </TouchableOpacity>
                 )}
             </View>

@@ -301,6 +301,7 @@ const Chat = ({ route, navigation }) => {
                     senderId: user.userId,
                     timestamp: new Date(),
                 },
+                hide: false,
             });
             setInputMessage('');
             setSelectedImage(null);
@@ -323,10 +324,6 @@ const Chat = ({ route, navigation }) => {
                     if (recipientToken && isNotificationEnabled) {
                         // Send push notification to the recipient if the token exists
                         sendNotification(recipientToken, inputMessage, oppname);
-                    } else {
-
-                        console.warn(`The notification did not sent.`);
-
                     }
                 } else {
                     console.warn(`Recipient document not found for ID: ${recipientId}`);
