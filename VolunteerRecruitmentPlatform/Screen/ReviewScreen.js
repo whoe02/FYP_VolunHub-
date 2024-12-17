@@ -450,7 +450,7 @@ const ReviewScreen = ({ route }) => {
       );
 
       setReviews(reviewsData);
-
+      console.log(reviews);
       // Check if the user has already submitted a review
       const existingUserReview = reviewsData.find((review) => review.userId === user.userId);
       if (existingUserReview) {
@@ -668,17 +668,19 @@ const ReviewScreen = ({ route }) => {
             </TouchableOpacity>
           ))}
         </View>
-        <FlatList
-          data={
-            selectedTab === 'all'
-              ? reviews
-              : reviews.filter((r) => Math.floor(r.rating) === parseInt(selectedTab))
-          }
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderReview}
-          contentContainerStyle={{ paddingBottom: 100 }} // To ensure space for Add Review Section
-          keyboardShouldPersistTaps="handled"
-        />
+        <View style={{ flex: 1, paddingHorizontal: 10, maxHeight:400}}>
+          <FlatList
+            data={
+              selectedTab === 'all'
+                ? reviews
+                : reviews.filter((r) => Math.floor(r.rating) === parseInt(selectedTab))
+            }
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderReview}
+            contentContainerStyle={{ paddingBottom: 100 }} // To ensure space for Add Review Section
+            keyboardShouldPersistTaps="handled"
+          />
+      </View>
       </KeyboardAvoidingView>
 
       {/* Fixed Add Review Section */}
@@ -838,12 +840,11 @@ const styles = StyleSheet.create({
   },
   addReviewSection: {
     position: 'absolute',
-    height: 220,
+    height: 180,
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
-    padding: 15,
     borderTopWidth: 1,
     borderTopColor: '#ccc',
     shadowColor: '#000',
@@ -852,14 +853,15 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
     padding: 15,
+    marginTop:1500,
   },
   addReviewTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: 'bold',
     marginBottom: 5,
   },
   descriptionInput: {
-    height: 70,
+    height: 50,
     borderColor: 'gray',
     borderWidth: 1,
     borderRadius: 10,
@@ -871,7 +873,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     width: 120,
     borderRadius: 10,
-    marginTop: 10,
   },
   submitButtonText: {
     textAlign: 'center',
@@ -880,6 +881,8 @@ const styles = StyleSheet.create({
   },
   flatList: {
     flex: 1,
+    display: 'none',
+    maxHeight: 50
   },
   scrollView: {
     flexGrow: 1,
@@ -895,7 +898,6 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     paddingVertical: 10,
     borderRadius: 10,
-    marginTop: 10,
     width: 120,
   },
   deleteButtonText: {

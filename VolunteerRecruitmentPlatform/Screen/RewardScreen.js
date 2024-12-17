@@ -167,7 +167,7 @@ const fetchUserCheckInStreak = async () => {
       'Confirm Redemption',
       `Are you sure you want to redeem "${item.title}" for ${item.pointsRequired} points?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel',onPress: () => {setLoading(false);} },
         {
           text: 'Redeem',
           onPress: async () => {

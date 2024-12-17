@@ -12,8 +12,9 @@ const loginImage = require('../assets/misc/login.png');
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
 
-  const [secretQuestion, setSecretQuestion] = useState('');
+  const [secretQuestion, setSecretQuestion] = useState(0);
   const [secretAnswer, setSecretAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     // Basic validation to ensure all fields are filled
@@ -27,7 +28,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-
+    setLoading(true);
     // Fetch the user data based on the email entered
     const fetchUserData = async () => {
       const q = query(collection(firestore, 'User'), where('email', '==', email));
@@ -51,6 +52,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     // Trigger the user data fetch and validation process
     fetchUserData();
+    setLoading(false);
   };
 
   return (
@@ -94,10 +96,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
         />
       </View>
 
-      <CustomButton
-        label="Submit"
-        onPress={handleSubmit}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginVertical: 20 }} />
+      ) : (
+        <CustomButton label="Submit" onPress={handleSubmit} />
+      )}
     </View>
   );
 };

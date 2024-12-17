@@ -109,10 +109,10 @@ const MyRewardsScreen = () => {
         <ActivityIndicator size="large" color="#6a8a6d" />
       ) : userRewards.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Image
+          {/* <Image
             source={require('../assets/img/prof.png')} 
             style={styles.emptyImage}
-          />
+          /> */}
           <Text style={styles.emptyText}>No Rewards Available</Text>
           <Text style={styles.emptySubText}>
             You haven't redeemed any rewards yet. Start exploring and redeeming!

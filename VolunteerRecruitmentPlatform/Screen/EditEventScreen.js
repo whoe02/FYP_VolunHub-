@@ -57,6 +57,25 @@ const EditEventScreen = ({route, navigation }) => {
       },
     });
   };
+
+  const getEventStatus = () => {
+    const today = new Date();
+    const eventStartDate = new Date(startDate); // Ensure the start date is a Date object
+    const eventEndDate = new Date(endDate); // Ensure the end date is a Date object
+  
+    // If the event is today or in the future
+    if (eventStartDate > today) {
+      return 'upcoming';
+    } 
+    // If the event has ended
+    else if (eventEndDate < today) {
+      return 'completed';
+    } 
+    // If the event is currently happening
+    else {
+      return 'inprogress';
+    }
+  };
   
   const pickerValue = useMemo(() => {
     if (showPicker.pickerType === 'startDate') return startDate || new Date();
@@ -265,13 +284,7 @@ const EditEventScreen = ({route, navigation }) => {
       setIsLoading(false);
       return;
     }
-
-    const today = new Date();
-    if (startDate <= today) {
-      Alert.alert('Error', 'Start date cannot be today or earlier');
-      setIsLoading(false);
-      return;
-    }
+    const eventStatus = getEventStatus();
   
     // Check if the end date is before the start date
     if (endDate && startDate && endDate < startDate) {
@@ -301,7 +314,7 @@ const EditEventScreen = ({route, navigation }) => {
         startTime: startTime || '',
         endDate: Timestamp.fromDate(endDate),
         endTime: endTime || '',
-        status: 'upcoming',
+        status: eventStatus,
         location: location || '',
         skills: selectedSkills || [],
         preferences: selectedPreferences || [],
