@@ -1,7 +1,7 @@
 import React, { useState, useEffect,useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { firestore } from '../firebaseConfig';
-import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs ,query, orderBy, limit} from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import InputField from '../components/InputField'; // Import InputField component
@@ -72,12 +72,31 @@ const AddRewardScreen = ({ navigation }) => {
   };
 
   const generateRewardId = async () => {
-    const rewardsRef = collection(firestore, 'Rewards');
-    const rewardsSnapshot = await getDocs(rewardsRef);
-
-    return `RW${(rewardsSnapshot.size + 1).toString().padStart(5, '0')}`;
+    try {
+      // Reference to the user's rewards collection
+      const userRewardsRef = collection(firestore, 'Rewards');
+      const rewardsSnapshot = await getDocs(userRewardsRef);
+  
+      let maxId = 0;
+  
+      // Loop through each reward document to find the highest ID
+      rewardsSnapshot.forEach((doc) => {
+        const docId = doc.id; // e.g., "RWD00001"
+        const numericPart = parseInt(docId.replace('RW', ''), 10); // Extract numeric part
+        if (numericPart > maxId) {
+          maxId = numericPart;
+        }
+      });
+  
+      // Generate the next ID by incrementing the highest found ID
+      const newId = `RW${(maxId + 1).toString().padStart(5, '0')}`;
+      return newId;
+    } catch (error) {
+      console.error('Error generating new reward ID:', error);
+      throw new Error('Could not generate a new reward ID.');
+    }
   };
-
+  
   const handleAddReward = async () => {
     // Validate inputs
     if (!title || !description || !pointsRequired || !remainingStock || !rewardType) {
@@ -139,7 +158,6 @@ const AddRewardScreen = ({ navigation }) => {
     }
   };
   
-
   const pickerValue = useMemo(() => {
     if (showPicker.pickerType === 'startDate') return startDate || new Date();
     return new Date(); // Default to current date/time

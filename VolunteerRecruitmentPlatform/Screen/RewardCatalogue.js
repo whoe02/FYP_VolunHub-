@@ -56,6 +56,32 @@ const CatalogueScreen = () => {
     }
   };
 
+  const generateIncrementalRewardId = async (userId) => {
+    try {
+      // Reference to the user's rewards collection
+      const userRewardsRef = collection(firestore, 'User', userId, 'usersReward');
+      const rewardsSnapshot = await getDocs(userRewardsRef);
+  
+      let maxId = 0;
+  
+      // Loop through each reward document to find the highest ID
+      rewardsSnapshot.forEach((doc) => {
+        const docId = doc.id; // e.g., "RWD00001"
+        const numericPart = parseInt(docId.replace('RWD', ''), 10); // Extract numeric part
+        if (numericPart > maxId) {
+          maxId = numericPart;
+        }
+      });
+  
+      // Generate the next ID by incrementing the highest found ID
+      const newId = `RWD${(maxId + 1).toString().padStart(5, '0')}`;
+      return newId;
+    } catch (error) {
+      console.error('Error generating new reward ID:', error);
+      throw new Error('Could not generate a new reward ID.');
+    }
+  };
+
   const handleRedeem = async (item) => {
     if (userPoints < item.pointsRequired) {
       Alert.alert('Not Enough Points', 'You do not have enough points to redeem this voucher.');
@@ -87,7 +113,7 @@ const CatalogueScreen = () => {
               // Generate new Reward ID
               const userRewardsRef = collection(firestore, 'User', user.userId, 'usersReward');
               const rewardsSnapshot = await getDocs(userRewardsRef);
-              const newRewardId = `RWD${(rewardsSnapshot.size + 1).toString().padStart(5, '0')}`;
+              const newRewardId = await generateIncrementalRewardId(user.userId);
               console.log('Generated Reward ID:', newRewardId);
   
               // Generate QR code
@@ -104,7 +130,7 @@ const CatalogueScreen = () => {
                 userRewardId: newRewardId,
                 title: item.title,
                 description: item.description,
-                expirationDate: item.expirationDate || 'No Expiry',
+                expirationDate: item.date || 'No Expiry',
                 pointsRequired: -item.pointsRequired,
                 image: item.imageVoucher,
                 dateUsed : '',

@@ -1,10 +1,10 @@
-import React, { useState, useEffect,useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { firestore } from '../firebaseConfig';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
-import InputField from '../components/InputField'; // Import InputField component
-import { Picker } from '@react-native-picker/picker'; // Import Picker for dropdown
+import InputField from '../components/InputField';
+import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,6 +21,7 @@ const EditRewardScreen = ({ route, navigation }) => {
   const [date, setDate] = useState('');
   const [startDate, setStartDate] = useState(null);
   const [showPicker, setShowPicker] = useState({ visible: false, mode: 'date', pickerType: '' });
+
   const formatDate = (date) => (date instanceof Date ? date.toLocaleDateString() : 'Select Date');
 
   useEffect(() => {
@@ -32,17 +33,15 @@ const EditRewardScreen = ({ route, navigation }) => {
         if (rewardDoc.exists()) {
           const rewardData = rewardDoc.data();
           setReward(rewardData);
-          console.log("Reward Image URI:", rewardData.imageVoucher);
           setTitle(rewardData.title);
           setDescription(rewardData.description);
           setPointsRequired(rewardData.pointsRequired.toString());
           setRemainingStock(rewardData.remainingStock.toString());
           setRewardType(rewardData.type);
-          
-          // Ensure the date is in the correct format
+
           const fetchedDate = rewardData.date ? new Date(rewardData.date) : null;
           setStartDate(fetchedDate);
-          setDate(fetchedDate ? fetchedDate.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
+          setDate(fetchedDate ? fetchedDate.toISOString().split('T')[0] : '');
         } else {
           Alert.alert('Error', 'Reward not found');
         }
@@ -53,68 +52,27 @@ const EditRewardScreen = ({ route, navigation }) => {
         setLoading(false);
       }
     };
-  
+
     fetchRewardData();
   }, [rewardId]);
-  
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setNewImageUri(result.uri);
-    }
-  };
 
   const openPicker = (type, mode) => {
     setShowPicker({ visible: true, mode, pickerType: type });
   };
 
-  const handlePickerChange = (event, selectedValue) => {
-    setShowPicker({ ...showPicker, visible: false });
-    if (selectedValue) {
-      const newValue = new Date(selectedValue); // Ensure it's a Date object
-      if (showPicker.pickerType === 'startDate') setStartDate(newValue);
-      setDate(newValue ? newValue.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
-    }
-  };
-
-  const pickerValue = useMemo(() => {
-    if (showPicker.pickerType === 'startDate') return startDate || new Date();
-    return new Date(); // Default to current date/time
-  }, [showPicker.pickerType, startDate]);
-
-  const handleUpdateReward = async () => {
-    if (!title || !description || !pointsRequired || !remainingStock || !rewardType ||!date) {
-      Alert.alert('Error', 'Please fill all fields');
-      return;
-    }
-
-    setLoading(true);
+  const pickImage = async () => {
     try {
-      const rewardDocRef = doc(firestore, 'Rewards', rewardId);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
 
-      const updatedReward = {
-        title,
-        description,
-        pointsRequired: parseInt(pointsRequired),
-        imageVoucher: newImageUri || reward.imageVoucher,
-        remainingStock: parseInt(remainingStock),
-        type: rewardType,
-        date,
-      };
-
-      await updateDoc(rewardDocRef, updatedReward);
-      Alert.alert('Success', 'Reward updated successfully');
-      navigation.goBack();
+      if (!result.canceled && result.assets) {
+        setNewImageUri(result.assets[0].uri);
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update reward');
-      console.error('Error updating reward:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick an image');
     }
   };
 
@@ -146,16 +104,89 @@ const EditRewardScreen = ({ route, navigation }) => {
     );
   };
 
+  const uploadImageToCloudinary = async (localUri) => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: localUri,
+      name: 'reward_image.jpg',
+      type: 'image/jpeg',
+    });
+    formData.append('upload_preset', 'rewardqr');
+    formData.append('cloud_name', 'dnj0n4m7k');
+    formData.append('folder', 'rewardPic');
+
+    try {
+      const response = await fetch('https://api.cloudinary.com/v1_1/dnj0n4m7k/image/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      return data.secure_url; // Return the uploaded image's URL
+    } catch (error) {
+      console.error('Error uploading image to Cloudinary:', error);
+      Alert.alert('Error', 'Failed to upload image');
+      throw error;
+    }
+  };
+
+  const handlePickerChange = (event, selectedValue) => {
+    setShowPicker({ ...showPicker, visible: false });
+    if (selectedValue) {
+      const newValue = new Date(selectedValue); // Ensure it's a Date object
+      if (showPicker.pickerType === 'startDate') setStartDate(newValue);
+      setDate(newValue ? newValue.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
+    }
+  };
+  
+  const pickerValue = useMemo(() => {
+    if (showPicker.pickerType === 'startDate') return startDate || new Date();
+    return new Date(); // Default to current date/time
+  }, [showPicker.pickerType, startDate]);
+
+  const handleUpdateReward = async () => {
+    if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const rewardDocRef = doc(firestore, 'Rewards', rewardId);
+      let imageUrl = reward.imageVoucher || '';
+      if (newImageUri) {
+        imageUrl = await uploadImageToCloudinary(newImageUri);
+      }
+
+      const updatedReward = {
+        title,
+        description,
+        pointsRequired: parseInt(pointsRequired),
+        imageVoucher: imageUrl,
+        remainingStock: parseInt(remainingStock),
+        type: rewardType,
+        date,
+      };
+
+      await updateDoc(rewardDocRef, updatedReward);
+      Alert.alert('Success', 'Reward updated successfully');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update reward');
+      console.error('Error updating reward:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading || !reward) {
     return <ActivityIndicator size="large" color="#6a8a6d" />;
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Image picker */}
       <TouchableOpacity onPress={pickImage} style={styles.imagePickerContainer}>
         <Image
-          source={{ uri: newImageUri || reward.imageVoucher }}
+          source={{ uri: newImageUri || reward.imageVoucher || 'https://via.placeholder.com/150' }}
           style={styles.rewardImage}
         />
         <Text style={styles.changeImageText}>Change Image</Text>
