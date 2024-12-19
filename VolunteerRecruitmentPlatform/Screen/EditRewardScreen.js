@@ -32,12 +32,17 @@ const EditRewardScreen = ({ route, navigation }) => {
         if (rewardDoc.exists()) {
           const rewardData = rewardDoc.data();
           setReward(rewardData);
+          console.log("Reward Image URI:", rewardData.imageVoucher);
           setTitle(rewardData.title);
           setDescription(rewardData.description);
           setPointsRequired(rewardData.pointsRequired.toString());
           setRemainingStock(rewardData.remainingStock.toString());
           setRewardType(rewardData.type);
-          setStartDate(new Date(rewardData.date));
+          
+          // Ensure the date is in the correct format
+          const fetchedDate = rewardData.date ? new Date(rewardData.date) : null;
+          setStartDate(fetchedDate);
+          setDate(fetchedDate ? fetchedDate.toISOString().split('T')[0] : ''); // Save in YYYY-MM-DD format
         } else {
           Alert.alert('Error', 'Reward not found');
         }
@@ -48,9 +53,10 @@ const EditRewardScreen = ({ route, navigation }) => {
         setLoading(false);
       }
     };
-
+  
     fetchRewardData();
   }, [rewardId]);
+  
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -82,7 +88,7 @@ const EditRewardScreen = ({ route, navigation }) => {
   }, [showPicker.pickerType, startDate]);
 
   const handleUpdateReward = async () => {
-    if (!title || !description || !pointsRequired || !remainingStock || !rewardType || !date) {
+    if (!title || !description || !pointsRequired || !remainingStock || !rewardType ||!date) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
