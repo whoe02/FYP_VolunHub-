@@ -12,8 +12,8 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchRecommendedEvents = async () => {
     setLoading(true);
     try {
-    //  const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
-    const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
+      const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+        //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
 
@@ -94,9 +94,9 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     try {
       const eventCollection = collection(firestore, 'Event');
       let eventQuery;
-  
+
       console.log(`Fetching events for tab: ${activeTab}, userId: ${user.userId}`);
-  
+
       if (isSearchResult) {
         const eventIds = event.map((Event) => Event.id); // Use the correct field for the ID
         eventQuery = query(
@@ -106,12 +106,13 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       } else if (activeTab === 'foryou') {
         // Fetch recommended events first
         const recommendedEvents = await fetchRecommendedEvents();
-  
+
         const recommendedIds = recommendedEvents.map(event => event.eventId); // Extract event IDs
-  
+
         if (recommendedIds.length === 0) {
-          console.warn('No recommendations available. Fetching fallback events.');
-          eventQuery = query(eventCollection, orderBy('createdAt', 'desc'), limit(10)); // Fallback query
+          console.log('No recommended events available.');
+          setEvents([]); // Set empty events
+          return; // Exit early
         } else {
           eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
         }
@@ -147,19 +148,19 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
           eventQuery = query(eventCollection, orderBy('createdAt', 'desc'));
         }
       }
-  
+
       // Execute the Firestore query
       const querySnapshot = await getDocs(eventQuery);
-  
+
       const fetchedEvents = querySnapshot.docs.map((doc) => {
         const data = doc.data();
-  
+
         // Convert Firestore Timestamp fields to Date if necessary
         const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
         const endDate = data.endDate ? new Date(data.endDate.seconds * 1000) : null;
         const startTime = data.startTime ? new Date(data.startTime.seconds * 1000) : null;
         const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
-  
+
         return {
           id: doc.id,
           ...data,
@@ -169,43 +170,43 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
           endTime,
         };
       });
-  
+
       // Fetch additional details like category and organization names
       const allCategoryIds = [
         ...new Set(fetchedEvents.flatMap((event) => event.categoryIds || [])), // Default to empty array if categoryIds is undefined
       ];
-  
+
       const allUserIds = [...new Set(fetchedEvents.map((event) => event.userId))];
-  
+
       const categoryMap = await fetchCategoryNames(allCategoryIds);
       const organizationMap = await fetchOrganizationNames(allUserIds);
-  
+
       const eventsWithDetails = fetchedEvents.map((event) => {
         const mappedCategories = event.categoryIds
           ? event.categoryIds.map((id) => categoryMap[id] || 'Unknown')
           : [];
-  
+
         const organizationName = organizationMap[event.userId] || 'Unknown Organization';
-  
+
         return {
           ...event,
           categories: mappedCategories,
           organizationName,
         };
       });
-  
+
       if (activeTab === 'foryou') {
         const eventsWithScore = eventsWithDetails.map((event) => {
           const recommendedEvent = recommendedEventsWithScores.find(
             (recommended) => recommended.eventId === event.id
           );
-  
+
           return {
             ...event,
             score: recommendedEvent ? recommendedEvent.score : 0,
           };
         });
-  
+
         const sortedEvents = eventsWithScore.sort((a, b) => b.score - a.score);
         setEvents(sortedEvents);
       } else {
@@ -217,7 +218,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       setLoading(false);
     }
   };
-  
+
 
   useEffect(() => {
     fetchEvents(); // Fetch events based on the current user role and active tab
@@ -287,14 +288,21 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
     <View style={styles.container}>
       {loading ? (
         <ActivityIndicator size="large" color="#6a8a6d" />
-      ) : (
+      ) : events.length > 0 ? (
         <FlatList
           data={events}
           keyExtractor={(item) => item.id}
           renderItem={renderEventItem}
           contentContainerStyle={styles.listContent}
         />
+      ) : (
+        <View style={styles.noEventsContainer}>
+          <Text style={styles.noEventsText}>
+            No rcommended event available. Set event preference or interact more to get recommendation.
+          </Text>
+        </View>
       )}
+
     </View>
   );
 };
@@ -363,6 +371,17 @@ const styles = StyleSheet.create({
   organizationName: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  noEventsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noEventsText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#555',
   },
 });
 
