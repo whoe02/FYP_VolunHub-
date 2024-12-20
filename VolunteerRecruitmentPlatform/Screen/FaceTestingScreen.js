@@ -57,7 +57,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     picturesTakenRef.current = 0;
   
     const captureInterval = setInterval(async () => {
-      if (picturesTakenRef.current < 12) {
+      if (picturesTakenRef.current < 10) {
         const picture = await takePicture();
   
         if (picture) {
@@ -72,7 +72,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
         setCapturedImages(tempCapturedImages);
   
         // Directly pass the local array to the upload function
-        if (tempCapturedImages.length === 12) {
+        if (tempCapturedImages.length === 10) {
           uploadCapturedImages(email, tempCapturedImages);
         } else {
           console.error(
@@ -166,7 +166,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
           </TouchableOpacity>
         </View>
         <ProgressBar
-          progress={picturesTaken / 12 } 
+          progress={picturesTaken / 10 } 
           color="#4CAF50" 
           style={styles.progressBar}
         />
