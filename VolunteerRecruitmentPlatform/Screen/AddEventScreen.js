@@ -107,7 +107,6 @@ const AddEventScreen = ({route, navigation }) => {
     try {
       const categorySnapshot = await getDocs(collection(firestore, 'Category'));
       const categoryData = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log('Fetched Categories:', categoryData);
       // Separate into skills and preferences based on the categoryType
       const fetchedSkills = categoryData.filter(category => category.categoryType === 'skills');
       const fetchedPreferences = categoryData.filter(category => category.categoryType === 'preference');
@@ -138,15 +137,29 @@ const AddEventScreen = ({route, navigation }) => {
       setLocation('location_Other');
     }
   
-    console.log(`Address: ${address}`);
-    console.log(`Set Location: ${matchedCategory ? matchedCategory.categoryName : 'Other'}`);
   };
   
   const generateEventId = async () => {
-    const eventsRef = collection(firestore, 'Event');
-    const eventsSnapshot = await getDocs(eventsRef);
+    try {
+      const eventsRef = collection(firestore, 'Event');
+      const querySnapshot = await getDocs(
+        query(eventsRef, orderBy('createdAt', 'desc'), limit(1))
+      );
   
-    return `EV${(eventsSnapshot.size + 1).toString().padStart(5, '0')}`;
+      // Get the last eventId
+      const lastEvent = querySnapshot.docs[0]?.data()?.eventId;
+  
+      // Extract the numeric part and increment
+      const nextId = lastEvent
+        ? parseInt(lastEvent.substring(2), 10) + 1
+        : 1; // Start from 1 if no events exist
+  
+      // Return formatted eventId
+      return `EV${nextId.toString().padStart(5, '0')}`;
+    } catch (error) {
+      console.error('Error generating Event ID:', error);
+      throw new Error('Failed to generate Event ID');
+    }
   };
 
   const uploadToCloudinary = async (uris) => {
@@ -154,7 +167,6 @@ const AddEventScreen = ({route, navigation }) => {
       const uploadedUrls = [];
   
       for (let uri of uris) {
-        console.log('Uploading image:', uri);
   
         const formData = new FormData();
         formData.append('file', {
@@ -173,7 +185,6 @@ const AddEventScreen = ({route, navigation }) => {
         );
   
         if (response.data.secure_url) {
-          console.log('Image uploaded:', response.data.secure_url);
           uploadedUrls.push(response.data.secure_url);
         } else {
           throw new Error('Secure URL not found in Cloudinary response');

@@ -286,7 +286,6 @@ const RegisterScreen = ({ route, navigation }) => {
 
         <Text
           style={{
-            fontFamily: 'Roboto-Medium',
             fontWeight: 'bold',
             fontSize: 22,
             color: '#4CAF50',

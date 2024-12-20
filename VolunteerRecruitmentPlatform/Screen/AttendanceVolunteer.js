@@ -46,16 +46,23 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
     try {
       const eventRef = doc(firestore, 'Event', eventId);
       const participantDocRef = doc(eventRef, 'EventParticipant', userId);
-
+  
       const attendanceRef = collection(participantDocRef, 'Attendance');
       const attendanceSnapshot = await getDocs(attendanceRef);
-
-      const attendanceData = attendanceSnapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-
-      setAttendanceRecords(attendanceData);
+  
+      const attendanceData = attendanceSnapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          timestamp: data.timestamp.toDate(), // Ensure timestamp is a JavaScript Date object
+        };
+      });
+  
+      // Sort records by timestamp (most recent first)
+      setAttendanceRecords(
+        attendanceData.sort((a, b) => b.timestamp - a.timestamp)
+      );
     } catch (error) {
       console.error('Error fetching attendance records:', error);
     }
@@ -117,29 +124,27 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
   };
 
   const handleAttendance = async () => {
-    // Fetch the latest attendance record
-    const latestAttendance = attendanceRecords[0];
+    // Ensure attendance records are sorted
+    const sortedRecords = [...attendanceRecords].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+  
+    const latestAttendance = sortedRecords[0];
     const currentTime = new Date();
-    const lastStatus = latestAttendance?.status; // Get the last status if exists
+    const lastStatus = latestAttendance?.status;
   
-    // If there's no previous attendance record, this is the first one of the day, so it must be "check-in"
-    if (!latestAttendance || !lastStatus) {
-      await saveAttendance('check-in');
+    let nextStatus;
+  
+    // Determine next status based on the last status
+    if (!latestAttendance || lastStatus === 'check-out') {
+      nextStatus = 'check-in';
     } else {
-      // If there's a record, check the last status and decide whether to check-in or check-out
-      const currentHour = currentTime.getHours();
-      const isNewDay = currentHour < 12; // This can be adjusted based on your needs
-  
-      // If it's a new day or last status was check-out, we must check-in
-      if (isNewDay || lastStatus === 'check-out') {
-        // Save check-in status
-        await saveAttendance('check-in');
-      } else {
-        // Otherwise, it's check-out
-        await saveAttendance('check-out');
-      }
+      nextStatus = 'check-out';
     }
+  
+    await saveAttendance(nextStatus);
   };
+  
 
   const saveAttendance = async (status) => {
     try {

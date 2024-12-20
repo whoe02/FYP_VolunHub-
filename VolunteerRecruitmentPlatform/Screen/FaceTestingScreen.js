@@ -117,7 +117,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
       const result = await response.json();
       if (result.success) {
         onComplete(true);
-        Alert.alert('Success', result.message + ` (${result.count} faces detected)`);
+        Alert.alert('Success', result.message);
         navigation.goBack();
       } else {
         Alert.alert('Error', result.message);

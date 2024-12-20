@@ -15,7 +15,7 @@ import { collection, doc, query, onSnapshot, updateDoc, deleteDoc, getDocs,where
 const ParticipantListScreen = ({ route }) => {
     const { event } = route.params;
     const eventId = event.eventId;
-  
+    const [filter, setFilter] = useState('all');
     const [tab, setTab] = useState('approved'); // Default tab
     const [approvedParticipants, setApprovedParticipants] = useState([]);
     const [attendanceRecords, setAttendanceRecords] = useState([]); // For attendance record
@@ -131,7 +131,6 @@ const ParticipantListScreen = ({ route }) => {
     };
   
     const renderTabContent = () => {
-
       if (tab === 'approved') {
         return (
           <FlatList
@@ -142,38 +141,73 @@ const ParticipantListScreen = ({ route }) => {
           />
         );
       }
-  
+    
       if (tab === 'attendance') {
+        const filteredRecords = filterAttendanceRecords();
+    
         return (
-          <FlatList
-            data={attendanceRecords}
-            renderItem={({ item }) => {
-              const formattedDate =
-                item.timestamp && item.timestamp.toDate
-                  ? formatDateTime(item.timestamp.toDate())
-                  : 'N/A';
-      
-              return (
-                <View style={styles.card}>
-                  <View style={{flexDirection: 'row',justifyContent: 'space-between', alignItems: 'center'}}>
-                    <Text style={styles.name}>{item.userName || 'N/A'}</Text>
-                    <Text style={{fontWeight:'bold'}}>{item.status || 'N/A'}</Text>
-                  </View>
-                  <Text style={styles.date}>
-                    <Text style={{ fontWeight: 'bold' }}>Timestamp: </Text>
-                    {formattedDate}
+          <View style={{ flex: 1 }}>
+            {/* Filter Buttons */}
+            <ScrollView
+              horizontal={true}
+              contentContainerStyle={styles.filterButtonsContainer}
+              showsHorizontalScrollIndicator={false} // Hide horizontal scroll bar
+              style={styles.filterScrollView}
+            >
+              {['all', 'today', 'weekly', 'monthly', 'check-in', 'check-out'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.filterButton,
+                    filter === option && styles.activeFilterButton,
+                  ]}
+                  onPress={() => setFilter(option)}
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      filter === option && styles.activeFilterButtonText,
+                    ]}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
                   </Text>
-                </View>
-              );
-            }}
-            keyExtractor={(item) => item.id}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No attendance records found.</Text>
-            }
-          />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+    
+            {/* Filtered Attendance Records */}
+            <FlatList
+              style={styles.flatList}
+              data={filteredRecords}
+              renderItem={({ item }) => {
+                const formattedDate =
+                  item.timestamp && item.timestamp.toDate
+                    ? formatDateTime(item.timestamp.toDate())
+                    : 'N/A';
+    
+                return (
+                  <View style={styles.card}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.name}>{item.userName || 'N/A'}</Text>
+                      <Text style={{ fontWeight: 'bold' }}>{item.status || 'N/A'}</Text>
+                    </View>
+                    <Text style={styles.date}>
+                      <Text style={{ fontWeight: 'bold' }}>Timestamp: </Text>
+                      {formattedDate}
+                    </Text>
+                  </View>
+                );
+              }}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No attendance records found.</Text>
+              }
+              // contentContainerStyle={{ paddingTop: 10 }}
+            />
+          </View>
         );
       }
-    };
+    };    
   
     const renderParticipantCard = (item, type) => (
       <View style={styles.card}>
@@ -194,6 +228,42 @@ const ParticipantListScreen = ({ route }) => {
         </View>
       </View>
     );
+
+    const filterAttendanceRecords = () => {
+      const now = new Date();
+      let filteredRecords = attendanceRecords;
+  
+      if (filter === 'today') {
+        filteredRecords = attendanceRecords.filter((record) => {
+          const recordDate = record.timestamp?.toDate();
+          return recordDate.toDateString() === now.toDateString();
+        });
+      } else if (filter === 'weekly') {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        filteredRecords = attendanceRecords.filter((record) => {
+          const recordDate = record.timestamp?.toDate();
+          return recordDate >= oneWeekAgo && recordDate <= now;
+        });
+      } else if (filter === 'monthly') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        filteredRecords = attendanceRecords.filter((record) => {
+          const recordDate = record.timestamp?.toDate();
+          return recordDate >= oneMonthAgo && recordDate <= now;
+        });
+      } else if (filter === 'check-in') {
+        filteredRecords = attendanceRecords.filter(
+          (record) => record.status === 'check-in'
+        );
+      } else if (filter === 'check-out') {
+        filteredRecords = attendanceRecords.filter(
+          (record) => record.status === 'check-out'
+        );
+      }
+  
+      return filteredRecords;
+    };
   
     return (
       <View style={styles.container}>
@@ -255,8 +325,6 @@ const ParticipantListScreen = ({ route }) => {
       </View>
     );
   };
-  
-
 
 const styles = StyleSheet.create({
   container: {
@@ -362,6 +430,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#616161',
     marginBottom: 5,
+  },
+
+  //filter button 
+  filterButtonsContainer: {
+    flexDirection: 'row', // Arrange buttons in a row
+    alignItems: 'center', // Vertically center buttons
+    paddingVertical: 10,
+  },
+  filterButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 20,
+    marginHorizontal: 5, // Add spacing between buttons
+  },
+  activeFilterButton: {
+    backgroundColor: '#6a8a6d',
+  },
+  filterButtonText: {
+    color: '#616161',
+    fontSize: 14,
+  },
+  activeFilterButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  filterScrollView: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 10,
+    zIndex: 10, // Ensure it stays on top of other content
+  },
+  flatList: {
+    position: 'absolute',
+    top: 75, 
+    left: 0,
+    right: 0,
+    bottom: 0, 
   },
 });
 
