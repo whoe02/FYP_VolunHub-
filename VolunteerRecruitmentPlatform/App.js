@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { UserProvider } from './UserContext';
 
 import LoginScreen from './Screen/LoginScreen';
-import RegisterScreen from './Screen/RegisterScreen'; 
+import RegisterScreen from './Screen/RegisterScreen';
 import ForgotPasswordScreen from './Screen/ForgotPasswordScreen';
 import ChangePasswordScreen from './Screen/ChangePasswordScreen';
 import Home from './Screen/Browse';
@@ -45,6 +45,9 @@ import SearchResult from './Screen/SearchResult';
 import PushNotification from './Screen/PushNotification';
 import Announcement from './Screen/Announcement';
 import NotificationPreferences from './Screen/NotificationPreference';
+import CategoryManagement from './Screen/CategoryManagement';
+import AddCategory from './Screen/AddCategory';
+import CategoryDetail from './Screen/CategoryDetail';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -110,7 +113,8 @@ const App = () => {
           <Stack.Screen name="Push Notification" component={PushNotification} />
           <Stack.Screen name="Announcement" component={Announcement} />
           <Stack.Screen name="NotificationPreference" component={NotificationPreferences} />
-
+          <Stack.Screen name="AddCategory" component={AddCategory} />
+          <Stack.Screen name="CategoryDetail" component={CategoryDetail} />
         </Stack.Navigator>
       </NavigationContainer>
     </UserProvider>
@@ -119,7 +123,7 @@ const App = () => {
 
 // Define Bottom Tab Navigator
 const TabNavigator = ({ route }) => {
-  const { role } = route.params || {}; 
+  const { role } = route.params || {};
   const getTabsForRole = () => {
     if (role === 'volunteer') {
       return (
@@ -144,6 +148,7 @@ const TabNavigator = ({ route }) => {
         <>
           <Tab.Screen name="User" component={UserMan} />
           <Tab.Screen name="Rewards" component={RewardManagement} />
+          <Tab.Screen name="Category" component={CategoryManagement} />
           <Tab.Screen name="Push Notification" component={PushNotification} />
           <Tab.Screen name="Live Chat" component={LiveChat} />
           <Tab.Screen name="Profile" component={Profile} />
@@ -173,6 +178,8 @@ const TabNavigator = ({ route }) => {
             iconName = focused ? 'megaphone' : 'megaphone-outline';
           } else if (route.name === 'User') {
             iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Category') {
+            iconName = focused ? 'library' : 'library-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
