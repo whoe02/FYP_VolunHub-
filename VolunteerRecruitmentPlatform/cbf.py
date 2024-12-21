@@ -1,76 +1,54 @@
 import pandas as pd
-import firebase_admin
-from firebase_admin import credentials, firestore
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
-from datetime import datetime, timedelta
 from scipy.sparse import csr_matrix
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize Firebase app
-cred = credentials.Certificate("test-e6569-firebase-adminsdk-2pshh-c356a436fc.json")
-firebase_admin.initialize_app(cred)
+# CSV file paths (update with your actual file paths)
+events_csv_path = 'test_events.csv'
+users_csv_path = 'test_users.csv'
+interactions_csv_path = 'test_user_interactions.csv'
 
-# Firestore client
-db = firestore.client()
-
-# Firestore Collections
-events_collection = db.collection('Event')
-users_collection = db.collection('User')
-interactions_collection = db.collection('Interactions')
-
-# Fetch data from Firestore
-def fetch_events_data():
+# Read data from CSV files
+def read_csv_data(file_path):
+    """Reads data from a CSV file and returns a pandas DataFrame."""
     try:
-        events_ref = events_collection.stream()
-        events = [{"eventId": event.id, **event.to_dict()} for event in events_ref]
-        return events
+        return pd.read_csv(file_path)
     except Exception as e:
-        return {"error": f"Error fetching events data: {str(e)}"}
+        return {"error": f"Error reading CSV file: {str(e)}"}
+
+def fetch_events_data():
+    return read_csv_data(events_csv_path)
 
 def fetch_users_data():
-    try:
-        users_ref = users_collection.stream()
-        users = [{"User ID": user.id, **user.to_dict()} for user in users_ref]
-        return users
-    except Exception as e:
-        return {"error": f"Error fetching users data: {str(e)}"}
+    return read_csv_data(users_csv_path)
 
 def fetch_interactions_data():
-    try:
-        interactions_ref = interactions_collection.stream()
-        interactions = [{"User ID": interaction.id, **interaction.to_dict()} for interaction in interactions_ref]
-        return interactions
-    except Exception as e:
-        return {"error": f"Error fetching interactions data: {str(e)}"}
+    return read_csv_data(interactions_csv_path)
 
 def get_upcoming_events(events_df):
     """Filters and returns upcoming events based on the 'Status' column."""
-    return [event for event in events_df if event['status'] == 'upcoming']
+    return events_df[events_df['Status'] == 'upcoming']  # Assuming 'Status' column marks upcoming events
 
 def get_historical_events(events_df):
     """Filters and returns historical events based on the 'Status' column."""
-    return [event for event in events_df if event['status'] != 'upcoming']
+    return events_df[events_df['Status'] != 'upcoming']  # Assuming any event that's not 'upcoming' is historical
 
 
+# Preprocessing Functions
 def preprocess_text(df, column):
     """Combines multiple textual columns into a single feature."""
-    # Ensure all columns are strings (join lists if necessary)
-    df['preferences'] = df['preferences'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
-    df['skills'] = df['skills'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
-    df['location'] = df['location'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
-    
-    df[column] = df['preferences'].fillna('') + ' ' + \
-                 df['skills'].fillna('') + ' ' + \
-                 df['location'].fillna('')
+    df[column] = df['Preferences'].fillna('').astype(str) + ' ' + \
+                 df['Skills Required'].fillna('').astype(str) + ' ' + \
+                 df['Location'].fillna('').astype(str)
     return df
-
 
 def normalize_scores(scores):
     """Normalizes a list of scores using min-max normalization."""
@@ -80,26 +58,23 @@ def normalize_scores(scores):
         return [0 for _ in scores]
     return [(score - min_score) / (max_score - min_score) for score in scores]
 
-
 # Recommendation Functions
 def content_based_recommend(user_id, num_recommendations=20):
     """Provides content-based recommendations with only upcoming events."""
     # Fetch all events and filter for upcoming events
     events_df = fetch_events_data()
     upcoming_events = get_upcoming_events(events_df)  # Filter for upcoming events
-    users_df = fetch_users_data()
-    # Convert upcoming_events to a DataFrame
-    upcoming_events_df = pd.DataFrame(upcoming_events)
     
     # Fetch users and interactions data
-    users_df = pd.DataFrame(users_df)
+    users_df = fetch_users_data()
+    interactions_df = fetch_interactions_data()
 
     # Preprocess events data to create content features
-    upcoming_events_df = preprocess_text(upcoming_events_df, 'content_features')
+    upcoming_events = preprocess_text(upcoming_events, 'content_features')
 
     # Vectorize the content features using TF-IDF
     vectorizer = TfidfVectorizer(stop_words='english')
-    tfidf_matrix = vectorizer.fit_transform(upcoming_events_df['content_features'])
+    tfidf_matrix = vectorizer.fit_transform(upcoming_events['content_features'])
 
     # Get user data and make sure the user exists
     user = users_df[users_df['User ID'] == user_id]
@@ -107,9 +82,9 @@ def content_based_recommend(user_id, num_recommendations=20):
         return {"error": "User not found"}
 
     # Prepare the user’s features (Preferences, Skills, Location)
-    user_features = user['preference'].fillna('').astype(str) + ' ' + \
-                    user['skills'].fillna('').astype(str) + ' ' + \
-                    user['location'].fillna('').astype(str)
+    user_features = user['Preferences'].fillna('').astype(str) + ' ' + \
+                    user['Skills'].fillna('').astype(str) + ' ' + \
+                    user['Location'].fillna('').astype(str)
     user_tfidf = vectorizer.transform(user_features)
 
     # Compute cosine similarity between the user and all events
@@ -119,14 +94,13 @@ def content_based_recommend(user_id, num_recommendations=20):
 
     # Sort the events by similarity and select top recommendations
     event_indices = cosine_sim.argsort()[-num_recommendations:][::-1]
-    recommended_events = upcoming_events_df.iloc[event_indices][['eventId', 'title']].copy()
+    recommended_events = upcoming_events.iloc[event_indices][['Event ID', 'Title']].copy()
     
     # Add the similarity score and normalize it
     recommended_events['Score'] = cosine_sim[event_indices]
     recommended_events['Normalized Score'] = normalize_scores(recommended_events['Score'])
 
     return recommended_events.to_dict(orient='records')
-
 
 
 from datetime import datetime, timedelta
@@ -136,22 +110,18 @@ def collaborative_recommend(user_id, num_recommendations=20):
     interactions_df = fetch_interactions_data()
     events_df = fetch_events_data()
     upcoming_events = get_upcoming_events(events_df)
-    events_df = pd.DataFrame(events_df)
-    interactions_df = pd.DataFrame(interactions_df)
-    upcoming_events = pd.DataFrame(upcoming_events)
+    
     # Filter interactions to include only upcoming events
-    interactions_df = interactions_df[interactions_df['eventId'].isin(upcoming_events['eventId'])]
+    interactions_df = interactions_df[interactions_df['Event ID'].isin(upcoming_events['Event ID'])]
     
         # Adjust to parse ISO-8601 timestamps
     try:
-        interactions_df['timestamp'] = pd.to_datetime(interactions_df['timestamp'])
+        interactions_df['Timestamp'] = pd.to_datetime(interactions_df['Timestamp'])
     except Exception as e:
         return {"error": f"Failed to parse timestamps: {str(e)}"}
     # Restrict interactions to the last 1 week
-    # Remove timezone information from 'timestamp' if present
-    interactions_df['timestamp'] = interactions_df['timestamp'].dt.tz_localize(None)
-    one_week_ago = datetime.now() - timedelta(days=30)
-    interactions_df = interactions_df[interactions_df['timestamp'] >= one_week_ago]
+    one_week_ago = datetime.now() - timedelta(days=7)
+    interactions_df = interactions_df[interactions_df['Timestamp'] >= one_week_ago]
     
     # Check if there are any interactions within the last week
     if interactions_df.empty:
@@ -165,10 +135,10 @@ def collaborative_recommend(user_id, num_recommendations=20):
         'apply': 5
     }
     
-    interactions_df['Interaction'] = interactions_df['type'].map(interaction_weights)
-    interactions_df = interactions_df.groupby(['userId', 'eventId'], as_index=False).agg({'Interaction': 'sum'})
+    interactions_df['Interaction'] = interactions_df['Type'].map(interaction_weights)
+    interactions_df = interactions_df.groupby(['User ID', 'Event ID'], as_index=False).agg({'Interaction': 'sum'})
 
-    interaction_matrix = interactions_df.pivot(index='userId', columns='eventId', values='Interaction').fillna(0)
+    interaction_matrix = interactions_df.pivot(index='User ID', columns='Event ID', values='Interaction').fillna(0)
     interaction_matrix_csr = csr_matrix(interaction_matrix.values)
 
     if user_id not in interaction_matrix.index:
@@ -189,8 +159,8 @@ def collaborative_recommend(user_id, num_recommendations=20):
 
     top_events = sorted(recommended_events.items(), key=lambda x: x[1], reverse=True)[:num_recommendations]
     event_ids = [event[0] for event in top_events]
-    recommended_df = events_df[events_df['eventId'].isin(event_ids)][['eventId', 'title']].copy()
-    recommended_df['Score'] = [recommended_events[event_id] for event_id in recommended_df['eventId']]
+    recommended_df = events_df[events_df['Event ID'].isin(event_ids)][['Event ID', 'Title']].copy()
+    recommended_df['Score'] = [recommended_events[event_id] for event_id in recommended_df['Event ID']]
     recommended_df['Normalized Score'] = normalize_scores(recommended_df['Score'])
 
     return recommended_df.sort_values('Normalized Score', ascending=False).to_dict(orient='records')
@@ -201,35 +171,33 @@ def popularity_based_recommendation(num_recommendations=10):
     interactions_df = fetch_interactions_data()
     events_df = fetch_events_data()
     upcoming_events = get_upcoming_events(events_df)
-    events_df = pd.DataFrame(events_df)
-    interactions_df = pd.DataFrame(interactions_df)
-    upcoming_events = pd.DataFrame(upcoming_events)
+    
     # Filter interactions to include only those related to upcoming events
-    interactions_df = interactions_df[interactions_df['eventId'].isin(upcoming_events['eventId'])]
+    interactions_df = interactions_df[interactions_df['Event ID'].isin(upcoming_events['Event ID'])]
 
     # Adjust to parse ISO-8601 timestamps
     try:
-        interactions_df['timestamp'] = pd.to_datetime(interactions_df['timestamp'])
+        interactions_df['Timestamp'] = pd.to_datetime(interactions_df['Timestamp'])
     except Exception as e:
         return {"error": f"Failed to parse timestamps: {str(e)}"}
-    interactions_df['timestamp'] = interactions_df['timestamp'].dt.tz_localize(None)
+
     one_week_ago = datetime.now() - timedelta(days=21)  # Adjusted to 21 days as per your code
-    recent_interactions = interactions_df[interactions_df['timestamp'] >= one_week_ago]
+    recent_interactions = interactions_df[interactions_df['Timestamp'] >= one_week_ago]
 
     # Get the popularity of events based on the number of interactions
-    popular_events = recent_interactions.groupby('eventId').size().sort_values(ascending=False).head(num_recommendations)
+    popular_events = recent_interactions.groupby('Event ID').size().sort_values(ascending=False).head(num_recommendations)
     popular_event_ids = popular_events.index.tolist()
 
     # Get event details for the popular events
-    recommended_events = events_df[events_df['eventId'].isin(popular_event_ids)][['eventId', 'title']]
+    recommended_events = events_df[events_df['Event ID'].isin(popular_event_ids)][['Event ID', 'Title']]
 
     # Add the popularity score to the recommended events
-    recommended_events['Score'] = recommended_events['eventId'].map(popular_events.to_dict())
+    recommended_events['Score'] = recommended_events['Event ID'].map(popular_events.to_dict())
 
     # Order by the popularity score
     recommended_events = recommended_events.sort_values('Score', ascending=False)
 
-    return recommended_events[['eventId', 'title', 'Score']].to_dict(orient='records')
+    return recommended_events[['Event ID', 'Title', 'Score']].to_dict(orient='records')
 
 
 
@@ -239,9 +207,9 @@ def hybrid_recommendation(user_id, num_recommendations=20):
     if "error" in collaborative_recs:
         return content_based_recommend(user_id, num_recommendations)
 
-    collaborative_scores = {rec['eventId']: rec['Normalized Score'] for rec in collaborative_recs}
+    collaborative_scores = {rec['Event ID']: rec['Normalized Score'] for rec in collaborative_recs}
     content_recs = content_based_recommend(user_id, num_recommendations)
-    content_scores = {rec['eventId']: rec['Normalized Score'] for rec in content_recs}
+    content_scores = {rec['Event ID']: rec['Normalized Score'] for rec in content_recs}
 
     combined_scores = {}
     for event_id in set(collaborative_scores.keys()).union(content_scores.keys()):
@@ -252,9 +220,8 @@ def hybrid_recommendation(user_id, num_recommendations=20):
 
     top_events = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:num_recommendations]
     events_df = fetch_events_data()
-    events_df = pd.DataFrame(events_df)
-    recommended_events = events_df[events_df['eventId'].isin(dict(top_events).keys())][['eventId', 'title']].copy()
-    recommended_events['Score'] = [combined_scores[event_id] for event_id in recommended_events['eventId']]
+    recommended_events = events_df[events_df['Event ID'].isin(dict(top_events).keys())][['Event ID', 'Title']].copy()
+    recommended_events['Score'] = [combined_scores[event_id] for event_id in recommended_events['Event ID']]
 
     return recommended_events.sort_values('Score', ascending=False).to_dict(orient='records')
 
