@@ -83,6 +83,7 @@ def start_capture():
             # Step 1: Detect faces using OpenCV
             faces_opencv = detect_face_using_opencv(img)
             if len(faces_opencv) == 0:
+                print("Step 1")
                 continue  # No face detected, skip this image
 
             try:
@@ -99,11 +100,13 @@ def start_capture():
 
                     # Step 3: Check if the face is valid (face size and properties)
                     if not is_valid_face(face_image):
+                        print("Step 3")
                         continue  # Skip invalid face (too small)
 
                     # Extract the face embedding and store it
                     face_embedding = extract_face_embedding(face_image)
                     if face_embedding is None:
+                        print("Step 4")
                         continue  # Skip if embedding extraction failed
 
                     faces_data.append(face_embedding)
@@ -161,6 +164,7 @@ def edit_face_data():
             # Step 1: Detect faces using OpenCV
             faces_opencv = detect_face_using_opencv(img)
             if len(faces_opencv) == 0:
+                print("Step 1")
                 continue  # No face detected, skip this image
 
             try:
@@ -178,11 +182,13 @@ def edit_face_data():
 
                     # Step 3: Check if the face is valid (face size and properties)
                     if not is_valid_face(face_image):
+                        print("Step 3")
                         continue  # Skip invalid face (too small)
 
                     # Extract the face embedding and store it
                     face_embedding = extract_face_embedding(face_image)
                     if face_embedding is None:
+                        print("Step 4")
                         continue  # Skip if embedding extraction failed
 
                     faces_data.append(face_embedding)
