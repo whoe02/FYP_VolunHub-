@@ -13,12 +13,18 @@ const homeTabList = [
     },
     {
         id: 3,
+        title: 'People Also Liked',
+        slug: 'people',
+        selected: false,
+    },
+    {
+        id: 4,
         title: 'Latest',
         slug: 'latest',
         selected: false,
     },
     {
-        id: 4,
+        id: 5,
         title: 'Trending',
         slug: 'trending',
         selected: false,

@@ -12,7 +12,61 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchRecommendedEvents = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://192.168.100.31:5000/hybrid_recommend?user_id=${user.userId}&n=5`, {
+      const response = await fetch(`http://192.168.164.131:5000/recommend?user_id=${user.userId}&n=5`, {
+        //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const recommendedEvents = await response.json();  // Parse the response as JSON
+      setRecommendedEventsWithScores(recommendedEvents.map(event => ({
+        eventId: event.eventId,
+        score: event.Score || 0, // Default to 0 if no score exists
+      })));
+      console.log(recommendedEventsWithScores)
+      return recommendedEvents;  // Ensure the function returns the actual data
+    } catch (error) {
+      console.error('Error fetching recommended events:', error);
+      return [];  // Return an empty array if there's an error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPeopleAlsoLiked = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://192.168.164.131:5000/collaborative_recommend?user_id=${user.userId}&n=5`, {
+        //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const recommendedEvents = await response.json();  // Parse the response as JSON
+      setRecommendedEventsWithScores(recommendedEvents.map(event => ({
+        eventId: event.eventId,
+        score: event.Score || 0, // Default to 0 if no score exists
+      })));
+      console.log(recommendedEventsWithScores)
+      return recommendedEvents;  // Ensure the function returns the actual data
+    } catch (error) {
+      console.error('Error fetching recommended events:', error);
+      return [];  // Return an empty array if there's an error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrendingEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://192.168.164.131:5000/popularity_recommend?n=5`, {
         //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/hybrid_recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
@@ -106,6 +160,32 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       } else if (activeTab === 'foryou') {
         // Fetch recommended events first
         const recommendedEvents = await fetchRecommendedEvents();
+
+        const recommendedIds = recommendedEvents.map(event => event.eventId); // Extract event IDs
+
+        if (recommendedIds.length === 0) {
+          console.log('No recommended events available.');
+          setEvents([]); // Set empty events
+          return; // Exit early
+        } else {
+          eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
+        }
+      } else if (activeTab === 'people') {
+        // Fetch recommended events first
+        const recommendedEvents = await fetchPeopleAlsoLiked();
+
+        const recommendedIds = recommendedEvents.map(event => event.eventId); // Extract event IDs
+
+        if (recommendedIds.length === 0) {
+          console.log('No recommended events available.');
+          setEvents([]); // Set empty events
+          return; // Exit early
+        } else {
+          eventQuery = query(eventCollection, where('__name__', 'in', recommendedIds));
+        }
+      } else if (activeTab === 'trending') {
+        // Fetch recommended events first
+        const recommendedEvents = await fetchTrendingEvents();
 
         const recommendedIds = recommendedEvents.map(event => event.eventId); // Extract event IDs
 
@@ -298,7 +378,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
       ) : (
         <View style={styles.noEventsContainer}>
           <Text style={styles.noEventsText}>
-            No rcommended event available. Set event preference or interact more to get recommendation.
+            No Events Available
           </Text>
         </View>
       )}
