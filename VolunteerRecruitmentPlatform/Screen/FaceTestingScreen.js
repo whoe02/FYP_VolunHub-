@@ -138,10 +138,15 @@ const FaceTestingScreen = ({ route, navigation }) => {
   const showHelp = () => {
     Alert.alert(
       'How to Scan Your Face',
-      '1. Keep your face centered in the circle\n2. Rotate your head slowly in all directions\n3. Avoid covering your face or changing expressions\n4. Ensure proper lighting for better results',
+      '1. Keep your face centered in the camera view.\n' +
+      '2. Ensure that your forehead is visible in the frame.\n' + 
+      '3. Rotate your head slowly in all directions.\n' +
+      '4. Avoid covering your face or changing expressions too much.\n' +
+      '5. Ensure proper lighting for better results.',
       [{ text: 'Got it!' }]
     );
   };
+  
 
   return (
     <View style={styles.container}>

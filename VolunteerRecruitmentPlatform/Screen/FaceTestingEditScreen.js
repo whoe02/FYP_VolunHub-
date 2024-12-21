@@ -1,9 +1,12 @@
 import React, { useState, useRef,useEffect  } from 'react';
-import { StyleSheet, Text, View, Alert, ActivityIndicator,TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Alert, ActivityIndicator,TouchableOpacity,Dimensions } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { ProgressBar } from 'react-native-paper'; // Importing ProgressBar
 import Button from '../components/Button';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+
+const { width, height } = Dimensions.get('window');
+const CIRCLE_SIZE = width * 0.8;
 
 const FaceTestingScreen = ({ route,navigation  }) => {
   const [capturedImages, setCapturedImages] = useState([]);
@@ -15,10 +18,16 @@ const FaceTestingScreen = ({ route,navigation  }) => {
   const picturesTakenRef = useRef(0);
   const { email, onComplete } = route.params;
 
+  const cropRegion = {
+    x: (width - CIRCLE_SIZE) / (2 * width),
+    y: (height * 0.35 - CIRCLE_SIZE / 2) / height,
+    width: CIRCLE_SIZE / width,
+    height: CIRCLE_SIZE / width,
+  };
+
   // Function to take a single picture silently
   const takePicture = async () => {
     if (!cameraRef.current || !isCameraReady) {
-      // console.log('Camera is not ready or ref not set.');
       return null;
     }
   
@@ -26,16 +35,17 @@ const FaceTestingScreen = ({ route,navigation  }) => {
       console.log(`Taking picture ${picturesTakenRef.current + 1}...`);
       const picture = await cameraRef.current.takePictureAsync({
         base64: true,
-        skipProcessing: true,
+        quality: 1,
+        skipProcessing: false,
+        // Add camera options for cropping
+        ratio: "1:1", // Ensure square aspect ratio
+        exif: false,
       });
   
       if (picture.base64) {
         setPicturesTaken((prev) => prev + 1);
         picturesTakenRef.current += 1;
-        // console.log(`Picture ${picturesTakenRef.current} captured.`);
-        return picture; // Return the captured picture
-      } else {
-        console.error('Failed to capture image.');
+        return picture.base64;
       }
     } catch (err) {
       console.error('Error while taking a picture:', err);
@@ -51,42 +61,39 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     }
   
     setIsCapturing(true);
-    const tempCapturedImages = []; // Local array for synchronous tracking
-    setCapturedImages([]); // Reset state for a new capture session
+    const tempCapturedImages = [];
+    setCapturedImages([]);
     setPicturesTaken(0);
     picturesTakenRef.current = 0;
   
     const captureInterval = setInterval(async () => {
-      if (picturesTakenRef.current < 12) {
-        const picture = await takePicture();
+      if (picturesTakenRef.current < 10) {
+        const base64Image = await takePicture();
   
-        if (picture) {
-          tempCapturedImages.push(picture.base64); // Store in local array
-          // console.log(`Stored image in local array. Count: ${tempCapturedImages.length}`);
+        if (base64Image) {
+          tempCapturedImages.push(base64Image);
         }
       } else {
         clearInterval(captureInterval);
         setIsCapturing(false);
   
-        // Update state for UI purposes
         setCapturedImages(tempCapturedImages);
   
-        // Directly pass the local array to the upload function
-        if (tempCapturedImages.length === 12) {
+        if (tempCapturedImages.length === 10) {
           uploadCapturedImages(email, tempCapturedImages);
         } else {
           console.error(
-            'Captured images count mismatch or no images found:',
+            'Captured images count mismatch:',
             tempCapturedImages.length
           );
           Alert.alert('Error', 'Failed to capture the required number of images.');
         }
       }
-    }, 1500); // Capture a picture every second
+    }, 1500);
   };
 
   // Function to upload captured images
-  const uploadCapturedImages = async (email,images) => {
+  const uploadCapturedImages = async (email, images) => {
     if (!images || images.length === 0) {
       Alert.alert('Error', 'No images to upload.');
       return;
@@ -95,7 +102,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
     setIsUploading(true);
   
     const formData = new FormData();
-    formData.append('email', email); // add email to form data
+    formData.append('email', email);
   
     images.forEach((image, index) => {
       formData.append(`image${index}`, {
@@ -107,7 +114,6 @@ const FaceTestingScreen = ({ route,navigation  }) => {
   
     try {
       const response = await fetch('https://fair-casual-garfish.ngrok-free.app/edit_face_data', {
-      // const response = await fetch('http://192.168.0.12:5000/edit_face_data', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
@@ -116,7 +122,7 @@ const FaceTestingScreen = ({ route,navigation  }) => {
       const result = await response.json();
       if (result.success) {
         onComplete(true);
-        Alert.alert('Success', result.message + ` (${result.count} faces detected)`);
+        Alert.alert('Success', result.message);
         navigation.goBack();
       } else {
         Alert.alert('Error', result.message);
@@ -134,10 +140,15 @@ const FaceTestingScreen = ({ route,navigation  }) => {
   const showHelp = () => {
     Alert.alert(
       'How to Scan Your Face',
-      '1. Keep your face centered in the camera view.\n2. Rotate your head slowly in all directions.\n3. Avoid covering your face or changing expressions too much.\n4. Ensure proper lighting for better results.',
+      '1. Keep your face centered in the camera view.\n' +
+      '2. Ensure that your forehead is visible in the frame.\n' + 
+      '3. Rotate your head slowly in all directions.\n' +
+      '4. Avoid covering your face or changing expressions too much.\n' +
+      '5. Ensure proper lighting for better results.',
       [{ text: 'Got it!' }]
     );
   };
+  
 
   return (
     <View style={styles.container}>
@@ -145,28 +156,37 @@ const FaceTestingScreen = ({ route,navigation  }) => {
         <CameraView
           style={styles.camera}
           ref={cameraRef}
-          facing="front" // Use front camera for selfies
-          onCameraReady={() => {
-            // console.log('Camera ready');
-            setIsCameraReady(true);
-          }}
+          facing="front"
+          onCameraReady={() => setIsCameraReady(true)}
+          // Add camera props for cropping
+          ratio="1:1"
+          zoom={0}
+          autoFocus={true}
         />
+        {/* Semi-transparent overlay with circular cutout */}
+        <View style={styles.overlay}>
+          <View style={styles.transparentCircle} />
+        </View>
+        {/* Guide circle */}
+        <View style={styles.circleGuide} />
       </View>
 
-      {/* Progress Bar */}
+      <View style={styles.guideContainer}>
+        <Text style={styles.guideText}>Position your face within the circle</Text>
+      </View>
+
       <View style={styles.progressContainer}>
-        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom:20}}>
+        <View style={styles.headerRow}>
           <Text style={styles.pictureCountText}>
-            {/* {picturesTaken} / 15 Pictures Taken */}
             Progress Face Data...
           </Text>
           <TouchableOpacity onPress={showHelp}>
-              <Ionicons name="help-circle-outline" size={25} color="#6a8a6d" />
+            <Ionicons name="help-circle-outline" size={25} color="#6a8a6d" />
           </TouchableOpacity>
         </View>
         <ProgressBar
-          progress={picturesTaken / 12 } // Progress is a value between 0 and 1
-          color="#4CAF50" // Green color for progress bar
+          progress={picturesTaken / 10}
+          color="#4CAF50"
           style={styles.progressBar}
         />
       </View>
@@ -182,8 +202,6 @@ const FaceTestingScreen = ({ route,navigation  }) => {
       ) : (
         <Text style={styles.captureMessage}>Collecting Face Data...</Text>
       )}
-
-
     </View>
   );
 };
@@ -197,16 +215,64 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   cameraContainer: {
-    width: '100%',
-    height: '70%',
+    width: CIRCLE_SIZE,  // Match the circle size
+    height: CIRCLE_SIZE, // Make it square
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: CIRCLE_SIZE / 2,
+    marginTop: 50,
   },
   camera: {
     flex: 1,
     width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  transparentCircle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    backgroundColor: 'transparent',
+  },
+  circleGuide: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    borderWidth: 3,
+    borderColor: '#4CAF50',
+    borderStyle: 'dashed',
+  },
+  guideContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  guideText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   progressContainer: {
     width: '80%',
     marginTop: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   progressBar: {
     height: 10,
@@ -214,8 +280,6 @@ const styles = StyleSheet.create({
   },
   pictureCountText: {
     fontSize: 16,
-    textAlign: 'center',
-    marginTop: 10,
   },
   captureButton: {
     marginTop: 20,

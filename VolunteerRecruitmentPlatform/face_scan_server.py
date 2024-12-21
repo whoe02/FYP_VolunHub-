@@ -171,7 +171,9 @@ def edit_face_data():
                 # Step 2: Extract faces using DeepFace
                 faces = DeepFace.extract_faces(img, enforce_detection=False)
 
-                if len(faces) > 1:
+                if len(faces) == 0:
+                    continue  # No face detected after DeepFace extraction, skip this image
+                elif len(faces) > 1:
                     print("Multiple faces detected in an image. Skipping this image...")
                     continue  # Skip images with multiple faces
 
