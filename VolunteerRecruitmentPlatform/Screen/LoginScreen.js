@@ -11,7 +11,7 @@ import {
 import CheckBox from '@react-native-community/checkbox';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { getDoc, getDocs, collection, updateDoc, doc } from 'firebase/firestore';
+import { getDoc, getDocs, collection, updateDoc, doc, getFirestore, writeBatch } from 'firebase/firestore';
 import { firestore } from '../firebaseConfig';
 import { UserContext } from '../UserContext'; // Import UserContext
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -73,6 +73,42 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const updateEventStatuses = async () => {
+    try {
+      const currentDate = new Date(); // Get the current date
+      currentDate.setHours(0, 0, 0, 0); // Normalize to date-only comparison
+  
+      const eventsQuery = await getDocs(collection(firestore, 'Event'));
+      const batch = writeBatch(firestore); // Initialize batch with the Firestore instance
+  
+      eventsQuery.forEach((docSnapshot) => {
+        const eventData = docSnapshot.data();
+        const startDate = eventData.startDate.toDate(); // Firestore Timestamp to Date
+        const endDate = eventData.endDate.toDate(); // Firestore Timestamp to Date
+        const status = eventData.status;
+  
+        startDate.setHours(0, 0, 0, 0); // Normalize startDate time
+        endDate.setHours(0, 0, 0, 0); // Normalize endDate time
+  
+        if (
+          currentDate >= startDate &&
+          currentDate <= endDate &&
+          status === 'upcoming'
+        ) {
+          batch.update(docSnapshot.ref, { status: 'inprogress' });
+        } else if (currentDate > endDate && status === 'inprogress') {
+          batch.update(docSnapshot.ref, { status: 'completed' });
+        }
+      });
+  
+      // Commit batch update
+      await batch.commit();
+      console.log('Event statuses updated successfully.');
+    } catch (error) {
+      console.error('Error updating event statuses:', error);
+    }
+  };
+  
   const handleLogin = async () => {
     if (email.trim() === '' || password.trim() === '') {
       Alert.alert('Error', 'Please fill in all fields');
@@ -130,6 +166,10 @@ const LoginScreen = ({ navigation }) => {
       await updateDoc(doc(firestore, 'User', userData.userId), {
         preferencesSkipped: false, // Reset the skipped flag
       });
+
+          // Update event statuses after login
+    await updateEventStatuses();
+
       navigation.replace('VolunHub', { role: userData.role });
     } catch (error) {
       console.error('Error logging in:', error);
