@@ -59,7 +59,7 @@ const MyEventList = ({ activeTab, navigation, user }) => {
     setLoading(true);
     try {
       let userEventQuery;
-  
+
       // Define query conditions for UserEvent based on activeTab
       if (activeTab === 'watchlist') {
         userEventQuery = query(
@@ -79,29 +79,29 @@ const MyEventList = ({ activeTab, navigation, user }) => {
       } else {
         throw new Error('Invalid activeTab condition');
       }
-  
+
       const userEventSnapshot = await getDocs(userEventQuery);
       const userEventData = userEventSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-  
+
       // Stop further processing if no events are found
       if (userEventData.length === 0) {
         setEvents([]);
         setLoading(false);
         return;
       }
-  
+
       // Extract eventIds to query Event collection
       const eventIds = userEventData.map((userEvent) => userEvent.eventId);
-  
+
       const eventQuery = query(
         collection(firestore, 'Event'),
         where('__name__', 'in', eventIds)
       );
       const eventSnapshot = await getDocs(eventQuery);
-  
+
       const eventsData = eventSnapshot.docs.map((doc) => {
         const data = doc.data();
         const startDate = data.startDate ? new Date(data.startDate.seconds * 1000) : null;
@@ -110,21 +110,21 @@ const MyEventList = ({ activeTab, navigation, user }) => {
         const endTime = data.endTime ? new Date(data.endTime.seconds * 1000) : null;
         return { id: doc.id, ...data, startDate, endDate, startTime, endTime };
       });
-  
+
       const userIds = [...new Set(eventsData.map((event) => event.userId))];
       const categoryIds = [...new Set(eventsData.flatMap((event) => event.categoryIds || []))];
-  
+
       const [organizationMap, categoryMap] = await Promise.all([
         fetchOrganizationNames(userIds),
         fetchCategoryNames(categoryIds),
       ]);
-  
+
       const combinedEvents = userEventData.map((userEvent) => {
         const eventData = eventsData.find((event) => event.id === userEvent.eventId);
-  
+
         // Filter events based on activeTab status
         if (!eventData) return null;
-  
+
         if (
           (activeTab === 'pending' && eventData.status !== 'upcoming') ||
           (activeTab === 'upcoming' && eventData.status !== 'upcoming') ||
@@ -133,7 +133,7 @@ const MyEventList = ({ activeTab, navigation, user }) => {
         ) {
           return null;
         }
-  
+
         return {
           ...userEvent,
           ...eventData,
@@ -141,7 +141,7 @@ const MyEventList = ({ activeTab, navigation, user }) => {
           categories: (eventData.categoryIds || []).map((id) => categoryMap[id] || 'Unknown Category'),
         };
       }).filter(Boolean);
-  
+
       setEvents(combinedEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -149,7 +149,7 @@ const MyEventList = ({ activeTab, navigation, user }) => {
       setLoading(false);
     }
   };
-  
+
 
   useEffect(() => {
     fetchEvents();
@@ -224,13 +224,19 @@ const MyEventList = ({ activeTab, navigation, user }) => {
     <View style={styles.container}>
       {loading ? (
         <ActivityIndicator size="large" color="#6a8a6d" />
-      ) : (
+      ) : events.length > 0 ? (
         <FlatList
           data={events}
           keyExtractor={(item) => item.id}
           renderItem={renderEventItem}
           contentContainerStyle={styles.listContent}
         />
+      ) : (
+        <View style={styles.noEventsContainer}>
+          <Text style={styles.noEventsText}>
+            No Events Available
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -304,5 +310,16 @@ const styles = StyleSheet.create({
   organizationName: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  noEventsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noEventsText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#555',
   },
 });
