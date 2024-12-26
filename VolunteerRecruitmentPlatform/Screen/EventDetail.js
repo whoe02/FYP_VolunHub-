@@ -243,8 +243,7 @@ const EventDetail = ({ route, navigation }) => {
       const sendNotification = async (recipientToken, message, notificationData, recipientId) => {
         try {
           // Fetch notification preferences for the recipient
-          const preferences = await fetchNotificationPreferences(recipientId);
-      
+          const preferences = await fetchNotificationPreferences(recipientId);   
           // Check if the notification type is enabled in preferences
           const notificationType = notificationData.type;
           if (!preferences[notificationType]) {
@@ -252,8 +251,7 @@ const EventDetail = ({ route, navigation }) => {
             // Save the notification in Firestore without pushing it
             await saveNotificationToFirestore(recipientId, notificationData);
             return;
-          }
-      
+          } 
           // Send push notification
           const messageBody = {
             to: recipientToken,
@@ -264,8 +262,7 @@ const EventDetail = ({ route, navigation }) => {
               type: notificationData.type,
               content: notificationData.content,
             },
-          };
-      
+          };   
           await fetch('https://exp.host/--/api/v2/push/send', {
             method: 'POST',
             headers: {
@@ -273,10 +270,8 @@ const EventDetail = ({ route, navigation }) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(messageBody),
-          });
-      
+          }); 
           console.log('Push notification sent successfully.');
-      
           // Save notification to Firestore
           await saveNotificationToFirestore(recipientId, notificationData);
         } catch (error) {

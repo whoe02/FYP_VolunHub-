@@ -50,18 +50,11 @@ def fetch_interactions_data():
     except Exception as e:
         return {"error": f"Error fetching interactions data: {str(e)}"}
 
-def get_upcoming_events(events_df):
-    """Filters and returns upcoming events based on the 'Status' column."""
-    return [event for event in events_df if event['status'] == 'upcoming']
 
-def get_historical_events(events_df):
-    """Filters and returns historical events based on the 'Status' column."""
-    return [event for event in events_df if event['status'] != 'upcoming']
 
 
 def preprocess_text(df, column):
     """Combines multiple textual columns into a single feature."""
-    # Ensure all columns are strings (join lists if necessary)
     df['preferences'] = df['preferences'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
     df['skills'] = df['skills'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
     df['location'] = df['location'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
@@ -104,7 +97,7 @@ def content_based_recommend(user_id, num_recommendations=20):
     # Get user data and make sure the user exists
     user = users_df[users_df['User ID'] == user_id]
     if user.empty:
-        return {"error": "User not found"}
+        return []
 
     # Prepare the user’s features (Preferences, Skills, Location)
     user_features = user['preference'].fillna('').astype(str) + ' ' + \
@@ -123,7 +116,7 @@ def content_based_recommend(user_id, num_recommendations=20):
     
     # Add the similarity score and normalize it
     recommended_events['Score'] = cosine_sim[event_indices]
-    recommended_events['Normalized Score'] = normalize_scores(recommended_events['Score'])
+    recommended_events['Score'] = normalize_scores(recommended_events['Score'])
 
     return recommended_events.to_dict(orient='records')
 
@@ -139,24 +132,25 @@ def collaborative_recommend(user_id, num_recommendations=20):
     events_df = pd.DataFrame(events_df)
     interactions_df = pd.DataFrame(interactions_df)
     upcoming_events = pd.DataFrame(upcoming_events)
+
     # Filter interactions to include only upcoming events
     interactions_df = interactions_df[interactions_df['eventId'].isin(upcoming_events['eventId'])]
-    
-        # Adjust to parse ISO-8601 timestamps
+
     try:
         interactions_df['timestamp'] = pd.to_datetime(interactions_df['timestamp'])
     except Exception as e:
         return {"error": f"Failed to parse timestamps: {str(e)}"}
-    # Restrict interactions to the last 1 week
-    # Remove timezone information from 'timestamp' if present
+
+    # Restrict interactions to the last week
     interactions_df['timestamp'] = interactions_df['timestamp'].dt.tz_localize(None)
-    one_week_ago = datetime.now() - timedelta(days=30)
+    one_week_ago = datetime.now() - timedelta(days=28)
     interactions_df = interactions_df[interactions_df['timestamp'] >= one_week_ago]
-    
+
     # Check if there are any interactions within the last week
     if interactions_df.empty:
-        return {"error": "No interactions in the last week."}
-    
+        return []
+
+    # Map interaction weights and aggregate scores
     interaction_weights = {
         'view': 0.5,
         'review': 2,
@@ -164,16 +158,22 @@ def collaborative_recommend(user_id, num_recommendations=20):
         'enquiry': 4,
         'apply': 5
     }
-    
     interactions_df['Interaction'] = interactions_df['type'].map(interaction_weights)
     interactions_df = interactions_df.groupby(['userId', 'eventId'], as_index=False).agg({'Interaction': 'sum'})
 
+    # Create user-event interaction matrix
     interaction_matrix = interactions_df.pivot(index='userId', columns='eventId', values='Interaction').fillna(0)
     interaction_matrix_csr = csr_matrix(interaction_matrix.values)
 
     if user_id not in interaction_matrix.index:
-        return {"error": "User not found"}
+        return []
 
+    # Print similar users
+    similarity_df = calculate_user_similarity(interactions_df)
+    similar_users = get_similar_users(user_id, similarity_df, top_n=5)
+    print(f"Top 5 similar users to {user_id}: {similar_users}")
+
+    # KNN-based recommendations
     knn = NearestNeighbors(n_neighbors=20, metric='cosine', algorithm='auto')
     knn.fit(interaction_matrix_csr)
     user_idx = interaction_matrix.index.get_loc(user_id)
@@ -186,14 +186,19 @@ def collaborative_recommend(user_id, num_recommendations=20):
         for event_id, score in user_events.items():
             if score > 0:
                 recommended_events[event_id] = recommended_events.get(event_id, 0) + score
-
+    # Return an empty list if no recommendations exist
+    if not recommended_events:
+        return []
+    # Get top event recommendations
     top_events = sorted(recommended_events.items(), key=lambda x: x[1], reverse=True)[:num_recommendations]
     event_ids = [event[0] for event in top_events]
     recommended_df = events_df[events_df['eventId'].isin(event_ids)][['eventId', 'title']].copy()
     recommended_df['Score'] = [recommended_events[event_id] for event_id in recommended_df['eventId']]
-    recommended_df['Normalized Score'] = normalize_scores(recommended_df['Score'])
-
-    return recommended_df.sort_values('Normalized Score', ascending=False).to_dict(orient='records')
+    recommended_df['Score'] = normalize_scores(recommended_df['Score'])
+    # Return an empty list if normalized scores are too low
+    if recommended_df['Score'].max() < 0.1:
+        return []
+    return recommended_df.sort_values('Score', ascending=False).to_dict(orient='records')
 
 
 def popularity_based_recommendation(num_recommendations=10):
@@ -207,13 +212,12 @@ def popularity_based_recommendation(num_recommendations=10):
     # Filter interactions to include only those related to upcoming events
     interactions_df = interactions_df[interactions_df['eventId'].isin(upcoming_events['eventId'])]
 
-    # Adjust to parse ISO-8601 timestamps
     try:
         interactions_df['timestamp'] = pd.to_datetime(interactions_df['timestamp'])
     except Exception as e:
         return {"error": f"Failed to parse timestamps: {str(e)}"}
     interactions_df['timestamp'] = interactions_df['timestamp'].dt.tz_localize(None)
-    one_week_ago = datetime.now() - timedelta(days=21)  # Adjusted to 21 days as per your code
+    one_week_ago = datetime.now() - timedelta(days=28)
     recent_interactions = interactions_df[interactions_df['timestamp'] >= one_week_ago]
 
     # Get the popularity of events based on the number of interactions
@@ -257,6 +261,35 @@ def hybrid_recommendation(user_id, num_recommendations=20):
     recommended_events['Score'] = [combined_scores[event_id] for event_id in recommended_events['eventId']]
 
     return recommended_events.sort_values('Score', ascending=False).to_dict(orient='records')
+
+def get_upcoming_events(events_df):
+    """Filters and returns upcoming events based on the 'Status' column."""
+    return [event for event in events_df if event['status'] == 'upcoming']
+
+def get_historical_events(events_df):
+    """Filters and returns historical events based on the 'Status' column."""
+    return [event for event in events_df if event['status'] != 'upcoming']
+
+def calculate_user_similarity(interactions_df):
+    """
+    Calculate the cosine similarity between users based on their event interactions.
+    """
+    # Create a user-event matrix (rows: users, columns: events)
+    user_event_matrix = interactions_df.pivot_table(index='userId', columns='eventId', aggfunc='size', fill_value=0)
+    
+    # Calculate cosine similarity between users
+    similarity_matrix = cosine_similarity(user_event_matrix)
+    
+    # Convert similarity matrix to DataFrame for easy lookup
+    similarity_df = pd.DataFrame(similarity_matrix, index=user_event_matrix.index, columns=user_event_matrix.index)
+    return similarity_df
+
+def get_similar_users(user_id, similarity_df, top_n=5):
+    """
+    Get the most similar users to the given user based on the similarity matrix.
+    """
+    similar_users = similarity_df[user_id].sort_values(ascending=False).iloc[1:top_n+1]
+    return similar_users.index.tolist()
 
 # Flask API Routes
 @app.route('/recommend', methods=['GET'])
