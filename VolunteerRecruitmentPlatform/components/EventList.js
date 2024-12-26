@@ -12,7 +12,7 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchRecommendedEvents = async () => {
     setLoading(true);
     try {
-      //const response = await fetch(`http://192.168.164.131:5000/recommend?user_id=${user.userId}&n=5`, {
+      //const response = await fetch(`http://192.168.100.31:5000/recommend?user_id=${user.userId}&n=5`, {
       const response = await fetch('https://fair-casual-garfish.ngrok-free.app/recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
@@ -39,8 +39,8 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchPeopleAlsoLiked = async () => {
     setLoading(true);
     try {
-      //const response = await fetch(`http://192.168.164.131:5000/collaborative_recommend?user_id=${user.userId}&n=5`, {
-      const response = await fetch('https://fair-casual-garfish.ngrok-free.app/collaborative_recommend?user_id=${user.userId}&n=5', {
+      const response = await fetch(`http://192.168.100.31:5000/collaborative_recommend?user_id=${user.userId}&n=5`, {
+      //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/collaborative_recommend?user_id=${user.userId}&n=5', {
         method: 'GET',
       });
 
@@ -66,8 +66,8 @@ const EventList = ({ activeTab, navigation, user, event, isSearchResult }) => {
   const fetchTrendingEvents = async () => {
     setLoading(true);
     try {
-      //const response = await fetch(`http://192.168.164.131:5000/popularity_recommend?n=5`, {
-      const response = await fetch('https://fair-casual-garfish.ngrok-free.app/popularity_recommend?n=5', {
+      const response = await fetch(`http://192.168.100.31:5000/popularity_recommend?n=5`, {
+      //const response = await fetch('https://fair-casual-garfish.ngrok-free.app/popularity_recommend?n=5', {
         method: 'GET',
       });
 

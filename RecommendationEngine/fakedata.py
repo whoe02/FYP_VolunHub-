@@ -1,24 +1,42 @@
 import random
 import csv
 from faker import Faker
-
+from datetime import datetime, timedelta
 # Initialize Faker
 faker = Faker()
 
 # Define Locations, Preferences, and Skills
 LOCATIONS = [
-    "location_Alor Setar", "location_George Town", "location_Ipoh", "location_Johor Bahru", "location_Kota Kinabalu",
-    "location_Kuala Lumpur", "location_Kuching", "location_Malacca", "location_Sandakan", "location_Shah Alam"
+    "location_Johor", "location_Kelantan", "location_Kuala Lumpur", "location_Labuan",
+    "location_Malacca", "location_Negeri Sembilan", "location_Pahang", "location_Penang", "location_Perak",
+    "location_Perlis", "location_Sabah", "location_Sarawak", "location_Selangor", "location_Terrenganu"
 ]
 
 PREFERENCES = [
     "preference_Art", "preference_Community Service", "preference_Education", "preference_Environment", "preference_Health",
-    "preference_Sports", "preference_Volunteer"
+    "preference_Sports", "preference_Volunteer", "preference_Outdoor"
 ]
 
 SKILLS = [
     "skills_Event Management", "skills_First Aid", "skills_Fundraising", "skills_Teaching", "skills_Communication",
     "skills_Cooking", "skills_Technical Support", "skills_Leadership", "skills_Marketing"
+]
+
+PROFILEPIC = [
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926669/UserProfilePic/foemfntjhv7ro7qte4rq.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926650/UserProfilePic/e5qkq9pnlfalpk9x4ngh.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926635/UserProfilePic/loarfiz2eoiwxdv9e3dd.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926601/UserProfilePic/vlavjfwhmktjvpyrc9kf.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926583/UserProfilePic/wbw1a7bsiz7vr3mjftpc.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926568/UserProfilePic/d1s1u2wivfn3asjmrmso.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1734926517/UserProfilePic/mwxwoafwc3u4pmruranw.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/daeogkboj4lzmx6mkrqk.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/fx8qvjepyyb4ifakjv3i.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/daeogkboj4lzmx6mkrqk.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/d8or1ix2r8rg5fsz7fgy.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663774/UserProfilePic/l3hcsly51prvzrirbliq.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663773/UserProfilePic/njehb69k53qb45rrdrm2.jpg",
+    "https://res.cloudinary.com/dnj0n4m7k/image/upload/v1731663773/UserProfilePic/vdoarj0jyqriptpu4jpw.jpg",
 ]
 
 STATUSES = ["active"]
@@ -120,11 +138,11 @@ def generate_users(num_users):
         birth_date = faker.date_of_birth(minimum_age=18, maximum_age=65).strftime("%Y-%m-%d")
         email = faker.email()
         ic_num = ''.join(random.choices("0123456789", k=12))
-        phone_num = faker.phone_number()
+        phone_num = ''.join(random.choices("0123456789", k=10))
         check_in_streak = random.randint(0, 6)
         reward_points = random.randint(0, 500)
         password = faker.password()
-        image = "https://via.placeholder.com/150/0000FF"
+        image = random.choice(PROFILEPIC)
         status = random.choice(STATUSES)
         last_check_in_date = faker.date_this_year().strftime("%Y-%m-%d")
         secret_question = faker.paragraph(nb_sentences=5)
@@ -165,8 +183,18 @@ def generate_user_interactions(users, events, num_interactions):
     for _ in range(num_interactions):
         user = random.choice(volunteers)  # Only select volunteers
         event = random.choice(events)
-        interaction_type = random.choices(INTERACTION_TYPES, weights=[normalized_weights[it] for it in INTERACTION_TYPES])[0]
-        timestamp = faker.date_time_this_year().isoformat()
+        interaction_type = random.choices(
+            INTERACTION_TYPES, 
+            weights=[normalized_weights[it] for it in INTERACTION_TYPES]
+        )[0]
+        
+        # Generate a timestamp within the last week
+        now = datetime.now()
+        start_of_last_week = now - timedelta(days=7)
+        timestamp = faker.date_time_between_dates(
+            datetime_start=start_of_last_week,
+            datetime_end=now
+        ).isoformat()
 
         interactions.append({
             "Event ID": event["Event ID"],
@@ -188,7 +216,7 @@ def save_to_csv(file_name, fieldnames, data):
 # Main Function
 def main():
     # Parameters
-    num_events = 10
+    num_events = 13
     num_users = 100
     num_interactions = 500
 
