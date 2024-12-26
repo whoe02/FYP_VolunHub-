@@ -60,7 +60,7 @@ console.log(user?.userId);
 
   const fetchEvents = async () => {
     try {
-      const eventQuery = query(collection(firestore, 'Event'));
+      const eventQuery = query(collection(firestore, 'Event'),where('status', '==', 'upcoming'));
       const eventSnapshot = await getDocs(eventQuery);
 
       const filteredEvents = [];

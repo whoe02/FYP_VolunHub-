@@ -158,5 +158,5 @@ if __name__ == "__main__":
     interaction_csv_file = "user_interactions.csv"
 
     upload_users_to_firestore(user_csv_file)
-    upload_events_to_firestore(event_csv_file)
+    upload_interactions_to_firestore(interaction_csv_file)
 
