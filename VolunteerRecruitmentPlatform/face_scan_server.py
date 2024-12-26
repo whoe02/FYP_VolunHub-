@@ -19,16 +19,13 @@ names_data = []
 # Initialize the KNN model
 knn = None
 
-# Function to extract face embedding using DeepFace
 def extract_face_embedding(image):
     embedding = DeepFace.represent(image, model_name="VGG-Face", enforce_detection=False)
     if embedding:
         return embedding[0]['embedding']
     return None
 
-# Function to check if a valid face is detected using OpenCV's Haar Cascade
 def detect_face_using_opencv(image):
-    # Load pre-trained face detection model (Haar Cascade or DNN model)
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     # Convert the image to grayscale for better face detection
@@ -39,9 +36,7 @@ def detect_face_using_opencv(image):
 
     return faces
 
-# Function to check if the face is valid (face size and other properties)
 def is_valid_face(face_image):
-    # Check for minimum face size (50x50 or greater)
     if face_image.shape[0] < 50 or face_image.shape[1] < 50:
         return False
     return True
@@ -54,14 +49,12 @@ def start_capture():
         if 'image0' not in request.files:
             return jsonify({'success': False, 'message': 'No images uploaded'}), 400
 
-        name = request.form.get('email')  # Retrieve the name
+        name = request.form.get('email')  
         files = [file for key, file in request.files.items()]
 
-        # Clear the previous faces_data and names_data
         faces_data = []
         names_data = []
 
-        # Validate if name already exists
         names_file_path = 'data/names_data.pkl'
         if os.path.exists(names_file_path):
             with open(names_file_path, 'rb') as f:
@@ -70,7 +63,6 @@ def start_capture():
             if name in existing_names:
                 return jsonify({'success': False, 'message': f"The email - '{name}' already exists. Please use a different email."}), 400
 
-        # Track the number of valid faces
         valid_faces_count = 0
 
         for file in files:
@@ -80,49 +72,42 @@ def start_capture():
             if img is None:
                 return jsonify({'success': False, 'message': 'Invalid image file'}), 400
 
-            # Step 1: Detect faces using OpenCV
             faces_opencv = detect_face_using_opencv(img)
             if len(faces_opencv) == 0:
                 print("Step 1")
-                continue  # No face detected, skip this image
+                continue  
 
             try:
-                # Step 2: Extract faces using DeepFace
                 faces = DeepFace.extract_faces(img, enforce_detection=False)
 
                 if len(faces) == 0:
-                    continue  # No face detected after DeepFace extraction, skip this image
+                    continue  
                 elif len(faces) > 1:
                     print("Multiple faces detected in an image. Skipping this image...")
-                    continue  # Skip images with multiple faces
+                    continue  
                 for face in faces:
                     face_image = face['face']
 
-                    # Step 3: Check if the face is valid (face size and properties)
                     if not is_valid_face(face_image):
                         print("Step 3")
-                        continue  # Skip invalid face (too small)
+                        continue  
 
-                    # Extract the face embedding and store it
                     face_embedding = extract_face_embedding(face_image)
                     if face_embedding is None:
                         print("Step 4")
                         continue  # Skip if embedding extraction failed
 
                     faces_data.append(face_embedding)
-                    names_data.append(name)  # Store the name corresponding to the face
+                    names_data.append(name) 
                     
-                    # Increment the valid face count
                     valid_faces_count += 1
                 print('valid face',valid_faces_count)
             except Exception as e:
                 return jsonify({'success': False, 'message': f'Error during face detection: {str(e)}'}), 500
 
-        # If less than 6 valid faces are detected, return an error
         if valid_faces_count < 4:
             return jsonify({'success': False, 'message': 'Insufficient valid faces detected. Please upload more images with clear faces.'}), 400
 
-        # Return success after storing enough valid data
         return jsonify({'success': True, 'message': 'Faces data captured successfully'})
 
     except Exception as e:
@@ -293,8 +278,6 @@ def mark_attendance():
         return jsonify({'success': False, 'message': 'Error during mark attendance please contact the organization !'}), 500
 
     try:
-
-        # Load uploaded image
         file = request.files['image']
         file_bytes = np.frombuffer(file.read(), np.uint8)
         uploaded_image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
@@ -303,18 +286,15 @@ def mark_attendance():
         if len(faces) != 1:
             return jsonify({'success': False, 'message': 'Please provide snap with exactly one face.'}), 400
 
-        # Extract face embedding
         face_image = faces[0]['face']
         if face_image.dtype == np.float64:
             face_image = (face_image * 255).astype(np.uint8)
         face_embedding = extract_face_embedding(face_image)
 
-        # Predict using KNN
         predicted_label = knn.predict([face_embedding])
         distances, indices = knn.kneighbors([face_embedding])
         min_distance = distances[0][0]
         print(min_distance)
-        # Set a threshold for attendance marking
         threshold = 0.57
         if min_distance < threshold:
             predicted_name = predicted_label[0]

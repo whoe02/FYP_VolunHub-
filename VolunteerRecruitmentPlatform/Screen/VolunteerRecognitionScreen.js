@@ -62,9 +62,7 @@ const FaceRecognitionScreen = ({ route, navigation }) => {
     });
 
     try {
-      // Update the endpoint to use `mark_attendance`
       const response = await fetch('https://fair-casual-garfish.ngrok-free.app/mark_attendance', {
-      // const response = await fetch('http://192.168.0.12:5000/mark_attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
@@ -73,10 +71,9 @@ const FaceRecognitionScreen = ({ route, navigation }) => {
       const result = await response.json();
 
       if (result.success) {
-        // Handle successful attendance marking
         Alert.alert('Success', 'Face is matched! Attendance marked successfully.');
-        onComplete(true); // Callback to notify success
-        navigation.goBack(); // Navigate back
+        onComplete(true); 
+        navigation.goBack();
       } else {
         // Handle failure cases
         Alert.alert('Error', result.message || 'Face recognition failed.');

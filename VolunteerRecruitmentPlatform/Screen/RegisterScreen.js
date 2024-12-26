@@ -230,7 +230,6 @@ const RegisterScreen = ({ route, navigation }) => {
       try {
         if (role === 'volunteer') {
           const response = await fetch('https://fair-casual-garfish.ngrok-free.app/register', {
-          // const response = await fetch('http://192.168.0.12:5000/register', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
