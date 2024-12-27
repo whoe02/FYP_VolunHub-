@@ -171,15 +171,15 @@ const CatalogueScreen = () => {
         qrCodeRef.current
           .capture()
           .then((uri) => {
-            console.log('QR Code captured URI:', uri); // Add this log to verify URI
+            console.log('QR Code captured URI:', uri); 
             if (!uri) {
               throw new Error('Failed to capture QR code');
             }
-            resolve(uri); // Proceed if URI is valid
+            resolve(uri); 
           })
           .catch((error) => {
             console.error('Error capturing QR code:', error);
-            reject(error); // Reject if capture fails
+            reject(error); 
           });
       } else {
         console.error('QR Code reference is null or not ready');

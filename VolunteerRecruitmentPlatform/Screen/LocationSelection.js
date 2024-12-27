@@ -5,11 +5,9 @@ import MapView, { Marker } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import Geocoder from 'react-native-geocoding';
 import { useNavigation } from '@react-navigation/native';
-
-Geocoder.init('AIzaSyDmpiHdkyhItoKFv5HWfx0XBixlK2vWqno'); // Initialize Geocoding
-
+Geocoder.init('AIzaSyDmpiHdkyhItoKFv5HWfx0XBixlK2vWqno'); 
 const MapWithSearch = ({route }) => {
-  const navigation = useNavigation(); // Access navigation object
+  const navigation = useNavigation(); 
   const mapRef = useRef(null);
   const [region, setRegion] = useState({
     latitude: 4.2105, // Malaysia latitude
@@ -39,19 +37,11 @@ const MapWithSearch = ({route }) => {
   };
 
   const confirmLocation = () => {
-    // setLatitude(selectedLocation.latitude);
-    // setLongitude(selectedLocation.longitude);
-
-    console.log("Address:", selectedAddress);
-    console.log("Latitude:", latitude);
-    console.log("Longitude:", longitude);
     if (selectedAddress && latitude && longitude) {
       // Pass data back to the previous screen using the callback
       if (route.params?.onLocationSelected) {
         route.params.onLocationSelected(selectedAddress, latitude, longitude);  // Pass each value separately
       }
-  
-      // Navigate back to the previous screen
       navigation.goBack();
     }
   };

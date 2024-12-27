@@ -85,7 +85,6 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
     }
 
     try {
-      // Use Google Maps Geolocation API to get the current location
       const response = await axios.post(
         `https://www.googleapis.com/geolocation/v1/geolocate?key=${GOOGLE_API_KEY}`,
         {}
@@ -99,15 +98,13 @@ const VolunteerAttendanceScreen = ({ route, navigation }) => {
         { latitude: event.latitude, longitude: event.longitude }
       );
 
-      // Check if within acceptable range (e.g., 50 meters)
-      if (distance <= 5000) {
+      if (distance <= 500) {
         navigation.navigate('VolunteerRecognitionScreen', {
           email,
           onComplete: async (status) => {
             if (status) {
               Alert.alert('Success', 'Face recognition completed successfully!');
 
-              // Now handle the attendance check-in/check-out
               await handleAttendance();
             } else {
               Alert.alert('Error', 'Face recognition failed.');
